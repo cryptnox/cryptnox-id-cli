@@ -1,0 +1,12 @@
+# Paths semgrep skips (native mechanism; the former top-level `exclude:` key in
+# .semgrep.yml was not valid semgrep schema and was never honored).
+*.pyc
+**/__pycache__/
+build/
+dist/
+*.egg-info/
+venv/
+.venv/
+docs/
+tests/
+.git/

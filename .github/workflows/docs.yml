@@ -1,0 +1,74 @@
+name: Build and deploy documentation
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.12'
+
+      # 3. Install Sphinx and dependencies
+      - name: Install Sphinx and dependencies
+        run: pip install -r docs/requirements.txt
+
+      # 4. Build the HTML documentation (warnings are fatal)
+      - name: Generate Sphinx docs
+        run: sphinx-build -W --keep-going -b html docs docs/_build/html
+
+      # 5. Fetch what is currently published, to carry earlier versions over
+      #    (continue-on-error: the branch does not exist on the very first deploy)
+      - name: Fetch previously published versions
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages-prev
+
+      # 6. Assemble the versioned site, like docs.cryptnox.com/cryptnox-hardware-wallet:
+      #    this build under /vMAJ.MIN/ (docs_version in docs/conf.py), earlier
+      #    /v*/ trees kept as published, and the site root redirecting to the
+      #    version being built.
+      - name: Assemble versioned site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          SLUG=$(python -c 'import runpy; print(runpy.run_path("docs/conf.py")["docs_version"])')
+          rm -rf docs/_site
+          mkdir -p docs/_site
+          for d in gh-pages-prev/v*/ ; do
+            [ -d "$d" ] && cp -R "$d" "docs/_site/$(basename "$d")"
+          done
+          rm -rf "docs/_site/$SLUG"
+          cp -R docs/_build/html "docs/_site/$SLUG"
+          printf '<meta http-equiv="refresh" content="0; url=./%s/">\n' "$SLUG" > docs/_site/index.html
+
+      # 7. Deploy to GitHub Pages (only on push to main)
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453  # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_site
+          publish_branch: gh-pages
+          allow_empty_commit: false
+          keep_files: false
+          force_orphan: false
+          enable_jekyll: false

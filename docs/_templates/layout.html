@@ -1,0 +1,27 @@
+{% extends "!layout.html" %}
+{#- Sidebar version dropdown, same mechanism as the cryptnox-hardware-wallet
+    docs: the container is rendered just before </body> and _static/custom.js
+    moves it into the sidebar above the search box. data-url climbs to the doc
+    root via the pagename depth so it also works from nested pages (piv/…,
+    factory/…, genuine/…). -#}
+{% block footer %}
+{{ super() }}
+{%- set to_root = '../' * pagename.count('/') %}
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version {{ docs_version }}</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      {%- for v in docs_versions %}
+      {%- if v == docs_version %}
+      <li role="option" class="version-option selected" data-url="{{ to_root }}{{ pagename }}.html">CLI version {{ v }}</li>
+      {%- else %}
+      <li role="option" class="version-option" data-url="{{ to_root }}../{{ v }}/{{ pagename }}.html">CLI version {{ v }}</li>
+      {%- endif %}
+      {%- endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

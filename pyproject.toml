@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cryptnox-id-cli"
+version = "1.0.0"
+description = "Polished CLI for the Cryptnox multi-applet smartcard (PIV / FIDO2 / MIFARE DESFire EV2)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "LGPL-3.0-or-later" }
+authors = [{ name = "Cryptnox" }]
+keywords = ["smartcard", "pcsc", "piv", "fido2", "ctap", "desfire", "openfips201"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security :: Cryptography",
+    "Topic :: System :: Hardware",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pyscard>=2.0",
+    "click>=8.1",
+    "rich>=13.0",
+    "cryptography>=41.0",
+    # Cap below 6: cbor2 6.x is a Rust build with no Intel-macOS wheel, so a plain
+    # `pip install` fails there without a Rust toolchain. Our CBOR use is trivial
+    # (CTAP dumps/loads) and 5.x ships wheels everywhere.
+    "cbor2>=5.4,<6",
+    "asn1crypto>=1.5",
+    "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://cryptnox.com/"
+Documentation = "https://docs.cryptnox.com/cryptnox-id-cli/"
+Repository = "https://github.com/cryptnox/cryptnox-id-cli"
+Issues = "https://github.com/cryptnox/cryptnox-id-cli/issues"
+Changelog = "https://github.com/cryptnox/cryptnox-id-cli/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.4",
+    "mypy>=1.8",
+    "pyinstaller>=6.0",
+    # Release tooling: `python -m build` produces the wheel/sdist, twine uploads them.
+    "build>=1.0",
+    "twine>=5.0",
+]
+
+[project.scripts]
+cryptnox-id = "cryptnox_id_cli.cli.main:main"
+cnx-id = "cryptnox_id_cli.cli.main:main"
+cryptnox-id-card = "cryptnox_id_cli.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Bundle pinned attestation trust anchors (PEM) into the wheel: the Cryptnox root plus
+# the intermediates. See src/cryptnox_id_cli/trust/genuine/README.md.
+[tool.setuptools.package-data]
+cryptnox_id_cli = ["trust/genuine/*.pem"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["B008"]  # click uses callables as defaults
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["cryptnox_id_cli"]
+mypy_path = "src"
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+# pyscard ships no type stubs; yaml stubs are an optional dev extra.
+[[tool.mypy.overrides]]
+module = ["smartcard.*", "yaml", "asn1crypto.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "real_card: test requires a physical card on the ACS reader (opt-in)",
+    "destructive: test mutates the card; requires CRYPTNOX_ALLOW_DESTRUCTIVE_TESTS=1",
+]
+addopts = "-ra"
