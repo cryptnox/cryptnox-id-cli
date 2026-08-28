@@ -65,9 +65,22 @@ Linux install `pcscd` + `libccid`).
 
 ### From PyPI
 
+Recommended: [pipx](https://pipx.pypa.io/) — makes `cryptnox-id` available
+globally while keeping its dependencies isolated, and works on current Linux
+distributions where installing into the system Python is blocked (PEP 668):
+
+```bash
+pipx install cryptnox-id-cli
+```
+
+Plain pip also works where the environment allows it (e.g. Windows):
+
 ```bash
 pip install cryptnox-id-cli
 ```
+
+A virtual environment works too, but the command is then only available while
+the venv is activated — fine for development, not for day-to-day use.
 
 Three interchangeable console commands are installed: `cryptnox-id`, the short
 `cnx-id`, and `cryptnox-id-card`.

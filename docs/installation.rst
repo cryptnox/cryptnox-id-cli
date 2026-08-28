@@ -6,27 +6,31 @@ Installation
 Install
 ---------
 
-Use a virtual environment — the tool has real dependencies (``click``, ``rich``,
-``cbor2``, ``cryptography``, ``pyscard``, …) unlikely to be on a bare
-interpreter.
-
-**Windows (PowerShell):**
-
-.. code-block:: powershell
-
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install cryptnox-id-cli
-   cryptnox-id --version
-
-**Linux / macOS (bash):**
+Install with `pipx <https://pipx.pypa.io/>`__ — it puts ``cryptnox-id`` on your
+``PATH`` **globally** while keeping the tool's dependencies (``click``, ``rich``,
+``cbor2``, ``cryptography``, ``pyscard``, …) in their own isolated environment.
+It is also the method that works out of the box on current Linux distributions,
+where installing into the system Python is blocked (PEP 668).
 
 .. code-block:: console
 
-   $ python3 -m venv .venv
-   $ source .venv/bin/activate
-   $ pip install cryptnox-id-cli
+   $ pipx install cryptnox-id-cli
    $ cryptnox-id --version
+
+(pipx itself: ``apt install pipx`` / ``dnf install pipx`` / ``brew install pipx``,
+or on Windows ``py -m pip install --user pipx`` then ``py -m pipx ensurepath``.)
+
+**Windows alternative** — plain pip works there and gives a global command too,
+as long as your Python ``Scripts`` directory is on ``PATH``:
+
+.. code-block:: powershell
+
+   pip install cryptnox-id-cli
+   cryptnox-id --version
+
+A classic virtual environment also works, but the command is then available
+only while that venv is activated — fine for development (see the README),
+not what you want for day-to-day card management.
 
 Three console entry points are installed and interchangeable: ``cryptnox-id``,
 the short ``cnx-id``, and ``cryptnox-id-card``.
