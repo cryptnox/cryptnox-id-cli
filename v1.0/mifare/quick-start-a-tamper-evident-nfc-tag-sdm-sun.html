@@ -1,0 +1,259 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick start: a tamper-evident NFC tag (SDM/SUN) &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="MIFARE DESFire guide" href="mifare-desfire-guide.html" />
+    <link rel="prev" title="FIDO2 commands" href="../fido2/fido2-commands.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-create-an-application">Step 1 — create an application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-set-up-the-sdm-file">Step 2 — set up the SDM file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-read-and-verify">Step 3 — read and verify</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scope-and-production-notes">Scope and production notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quick start: a tamper-evident NFC tag (SDM/SUN)</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quick-start-a-tamper-evident-nfc-tag-sdm-sun">
+<h1>Quick start: a tamper-evident NFC tag (SDM/SUN)<a class="headerlink" href="#quick-start-a-tamper-evident-nfc-tag-sdm-sun" title="Link to this heading"></a></h1>
+<p>MIFARE DESFire EV3 <strong>Secure Dynamic Messaging</strong> (SDM), also marketed as
+<strong>Secure Unique NFC</strong> (SUN), turns a free-read file into a self-authenticating
+tag: on <em>every</em> read, the card mirrors a freshly encrypted copy of its UID and
+an incrementing read counter into the file content, plus a MAC over them. A
+backend that knows the key can prove each read came from the genuine card — and
+detect replayed or cloned URLs — without any session or pairing.</p>
+<p>This guide configures SDM on a Cryptnox card and verifies the whole loop with
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>. It follows the public NXP application note <a class="reference external" href="https://www.nxp.com/docs/en/application-note/AN12196.pdf">AN12196</a>.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A <strong>DESFire-capable contactless reader</strong> (the ACS ACR1252 is verified; some
+contactless readers do not pass native DESFire commands through).</p></li>
+<li><p>A Cryptnox card with the DESFire EV3 function — check with:</p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>version
+</pre></div>
+</div>
+</section>
+<section id="step-1-create-an-application">
+<h2>Step 1 — create an application<a class="headerlink" href="#step-1-create-an-application" title="Link to this heading"></a></h2>
+<p>SDM uses two application keys besides the master key: one to encrypt the
+mirrored UID + counter (key 2) and one for the MAC (key 1). Create the
+application with at least 3 AES keys — on a fresh application all keys are
+all-zero:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>app<span class="w"> </span>create<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--keys<span class="w"> </span><span class="m">3</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-set-up-the-sdm-file">
+<h2>Step 2 — set up the SDM file<a class="headerlink" href="#step-2-set-up-the-sdm-file" title="Link to this heading"></a></h2>
+<p>One command creates the file (SDM must be enabled at file creation on EV3),
+writes an NDEF-style URL template with placeholders for the two mirrors, and
+configures the SDM options:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>sdm<span class="w"> </span>setup<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--url<span class="w"> </span><span class="s2">"https://example.com/t"</span>
+</pre></div>
+</div>
+<p>(<code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> authenticates with the publicly known all-zero factory-default
+key - right for a fresh application; use <code class="docutils literal notranslate"><span class="pre">--key-env</span></code> once keys are rotated.)</p>
+<p>The stored content becomes:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>https://example.com/t?picc=00000000000000000000000000000000&amp;c=0000000000000000
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">picc=</span></code> receives the encrypted UID + read counter (32 hex characters) and
+<code class="docutils literal notranslate"><span class="pre">c=</span></code> the SDMMAC (16 hex characters), re-computed by the card on every read.</p>
+</section>
+<section id="step-3-read-and-verify">
+<h2>Step 3 — read and verify<a class="headerlink" href="#step-3-read-and-verify" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>sdm<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span>
+<span class="go">NDEF: https://example.com/t?picc=1F44...&amp;c=9A02...</span>
+<span class="go">  decrypted UID: 046F9C6A7B7180</span>
+<span class="go">  read counter:  3</span>
+<span class="go">  SDMMAC: verified (with the all-zero factory default keys)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">sdm</span> <span class="pre">read</span></code> does exactly what a verification backend would: free-read the
+file, decrypt the <code class="docutils literal notranslate"><span class="pre">picc=</span></code> mirror into the card UID and read counter, derive
+the per-read session key, and check the <code class="docutils literal notranslate"><span class="pre">c=</span></code> MAC. Run it twice — the
+ciphertext changes completely, the counter increments, and the MAC stays valid.
+That is the SUN property: every read is a fresh, verifiable proof.</p>
+</section>
+<section id="scope-and-production-notes">
+<h2>Scope and production notes<a class="headerlink" href="#scope-and-production-notes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>What this demonstrates</strong> is the complete SDM/SUN mechanism, with <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>
+acting as both tag programmer and verification backend. Exposing the file
+as a <em>phone-tappable</em> NFC tag additionally requires the standard NDEF
+Type 4 application layout — that is an
+integration step outside this quick start.</p></li>
+<li><p><strong>Rotate the keys.</strong> The demo runs with the factory all-zero application
+keys. For production, change keys 1 and 2 (and the application master key)
+first — <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">keys</span> <span class="pre">change</span></code>, see <a class="reference internal" href="mifare-desfire-guide.html"><span class="doc">MIFARE DESFire guide</span></a> — and keep
+the verification keys server-side only.</p></li>
+<li><p>A verification backend should also check the read counter is <strong>strictly
+increasing</strong> per UID to reject replays of older URLs.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="mifare-desfire-guide.html"><span class="doc">MIFARE DESFire guide</span></a> — applications, files, authentication, value and
+record files, key rotation</p></li>
+<li><p><a class="reference internal" href="mifare-desfire-commands.html"><span class="doc">MIFARE DESFire commands</span></a> — every <code class="docutils literal notranslate"><span class="pre">mifare</span></code> command</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../fido2/fido2-commands.html" class="btn btn-neutral float-left" title="FIDO2 commands" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mifare-desfire-guide.html" class="btn btn-neutral float-right" title="MIFARE DESFire guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

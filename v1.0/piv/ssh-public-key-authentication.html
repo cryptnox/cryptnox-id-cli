@@ -1,0 +1,399 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSH public-key authentication &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/ssh-public-key-authentication.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SSH user certificates" href="ssh-user-certificates.html" />
+    <link rel="prev" title="Windows logon &amp; Remote Desktop" href="windows-logon-and-remote-desktop.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SSH public-key authentication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#why-it-fails-on-cryptnox-default">Why it fails on cryptnox-default</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-0-find-the-pkcs-11-module-path">Step 0 — find the PKCS#11 module path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-get-the-ssh-public-key-off-the-card">Step 1 — get the SSH public key off the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-authorize-it">Step 2 — authorize it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-load-it-into-ssh-agent">Step 3 — load it into ssh-agent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-4-connect">Step 4 — connect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSH public-key authentication</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssh-public-key-authentication">
+<h1>SSH public-key authentication<a class="headerlink" href="#ssh-public-key-authentication" title="Link to this heading"></a></h1>
+<p>SSH via PIV means the private key never leaves the card: <code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> loads
+it through PKCS#11 (OpenSC), signs the challenge on-card after a PIN prompt,
+and the server authorizes it like any other public key in
+<code class="docutils literal notranslate"><span class="pre">authorized_keys</span></code>. No card-specific server-side support needed.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Everything below that references <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> applies to a card
+provisioned with that specific built-in profile — one option among
+several (see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>), not necessarily what any given
+card actually has. Check which profile your card was provisioned with
+(<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code>, or ask whoever personalized it)
+before assuming this section applies to you.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>9C cannot be used for SSH on the ``cryptnox-default`` profile.</strong>
+Steps 3/4 below fail with <code class="docutils literal notranslate"><span class="pre">Permission</span> <span class="pre">denied</span> <span class="pre">(publickey)</span></code> /
+<code class="docutils literal notranslate"><span class="pre">agent</span> <span class="pre">refused</span> <span class="pre">operation</span></code> even with the correct PIN, with or without
+<code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> in the loop — see <a class="reference internal" href="#why-it-fails-on-cryptnox-default">Why it fails on cryptnox-default</a>. Use
+<strong>9A with the SIGN role added</strong> instead — the built-in <code class="docutils literal notranslate"><span class="pre">ssh</span></code> profile
+does exactly this — see <a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a> below.</p>
+</div>
+<section id="how-it-has-to-look">
+<h2>How it has to look<a class="headerlink" href="#how-it-has-to-look" title="Link to this heading"></a></h2>
+<p>The applet only performs challenge-response signing (what SSH auth needs)
+for keys created with a <strong>SIGN-capable role</strong>. On <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> that’s
+slot 9C — but 9C’s PIN policy makes it unusable for SSH regardless (see
+below). 9A (PIV Authentication) is <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>-role only on
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> and returns <code class="docutils literal notranslate"><span class="pre">6985</span></code> on a sign attempt, so it needs a
+profile change before it can be used — the built-in <strong>ssh</strong> profile changes
+only 9A’s role (no extra objects, unlike <strong>ms-logon</strong>, which also adds
+<code class="docutils literal notranslate"><span class="pre">SIGN+AUTHENTICATE</span></code> to 9A but includes an importable RSA-2048 object for
+AD-issued credentials you don’t need here) — see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>
+and <a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a>.</p>
+<p>This guide’s steps below use whichever slot has your key + certificate —
+<a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> puts them on 9C by default, which per the warning
+above will not work for SSH. Provision 9A instead (next section) before
+following Steps 0–4.</p>
+</section>
+<section id="why-it-fails-on-cryptnox-default">
+<span id="ssh-why-it-fails-cryptnox-default"></span><h2>Why it fails on cryptnox-default<a class="headerlink" href="#why-it-fails-on-cryptnox-default" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pkcs11-tool</span> <span class="pre">--login</span> <span class="pre">--sign</span></code> against the 9C key succeeds, but prompts
+for the PIN <strong>twice</strong> — once for normal login, then again for
+“context specific PIN”. That second prompt is PKCS#11’s
+<code class="docutils literal notranslate"><span class="pre">CKA_ALWAYS_AUTHENTICATE</span></code>: a fresh re-login is required immediately
+before <em>every single</em> signing operation, not just once per session.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">-s</span></code> then <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-I</span></code> (agent-mediated) fails: the agent only ever
+prompts once, at load time, and has no way to supply that second
+re-authentication later when a connection actually needs a signature —
+hence <code class="docutils literal notranslate"><span class="pre">agent</span> <span class="pre">refused</span> <span class="pre">operation</span></code>.</p></li>
+<li><p>Bypassing the agent entirely — <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-I</span> <span class="pre">&quot;$PKCS11_MODULE&quot;</span></code> run directly,
+foreground, no agent involved — fails the same way. OpenSSH’s own built-in
+PKCS#11 client only performs the normal login, not the context-specific
+re-login <code class="docutils literal notranslate"><span class="pre">CKA_ALWAYS_AUTHENTICATE</span></code> demands before signing. Only tools
+that explicitly implement that second step (like <code class="docutils literal notranslate"><span class="pre">pkcs11-tool</span></code>) can use
+this key at all.</p></li>
+</ul>
+<p><strong>Why it has to be 9A specifically:</strong> <code class="docutils literal notranslate"><span class="pre">pkcs15-tool</span> <span class="pre">--dump</span></code> shows why 9C
+behaves this way — its private key object reports
+<code class="docutils literal notranslate"><span class="pre">Usage:</span> <span class="pre">[0x204],</span> <span class="pre">sign,</span> <span class="pre">nonRepudiation</span></code>. The <code class="docutils literal notranslate"><span class="pre">nonRepudiation</span></code> bit is what
+triggers OpenSC’s always-reauth handling; it matches PIV convention (slot
+9C, “Digital Signature”, is spec’d for non-repudiation, so the standard
+expects fresh PIN verification before each signature). This is assigned by
+OpenSC’s PIV driver for key reference 0x9C specifically, independent of the
+card’s own profile or certificate — 9A’s private key object reports plain
+<code class="docutils literal notranslate"><span class="pre">Usage:</span> <span class="pre">[0x04],</span> <span class="pre">sign</span></code>, with no <code class="docutils literal notranslate"><span class="pre">nonRepudiation</span></code> bit, so it is not
+subject to the always-reauth requirement. 9A is also the slot PIV itself
+designates for cardholder-to-system authentication, and its access mode on
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> requires a PIN — <strong>over the contact interface only</strong>;
+9A’s contactless access mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>, so none of this works over a
+contactless-only reader (see Prerequisites below).</p>
+</section>
+<section id="fixing-it-give-9a-the-sign-role">
+<span id="ssh-fix-9a-sign-role"></span><h2>Fixing it: give 9A the SIGN role<a class="headerlink" href="#fixing-it-give-9a-the-sign-role" title="Link to this heading"></a></h2>
+<p>You don’t need the full <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile for this — the built-in <code class="docutils literal notranslate"><span class="pre">ssh</span></code>
+profile changes only 9A’s <code class="docutils literal notranslate"><span class="pre">role</span></code> (<code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code> → <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE,</span>
+<span class="pre">SIGN</span></code>); everything else is identical to <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>. See
+<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> for the full built-in profile list.</p>
+<p>This only applies at <strong>pre-personalization</strong> — it defines the key’s role at
+the structural level, not something a later <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code> step can change.
+If your card already has a different profile applied (e.g. it already went
+through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> on 9C), it needs a factory-level applet
+reinstall before this profile can be loaded — that’s a manufacturing
+operation outside this guide’s (and this CLI’s) scope; a blank/pre-perso
+card needs no such step.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ssh<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-puk<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-pin<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>ECCP256<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--out<span class="w"> </span>9a.pub.pem<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>self-sign-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Test User"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--public-key<span class="w"> </span>9a.pub.pem<span class="w"> </span>--out<span class="w"> </span>9a.crt.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a.crt.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>write-standard-objects<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Every step above must explicitly say <code class="docutils literal notranslate"><span class="pre">--slot</span> <span class="pre">9A</span></code>. <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a>
+defaults everywhere to 9C, and copy-pasting those defaults here silently
+provisions the wrong slot.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">smoke-test</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">--slot</span> <span class="pre">9C</span></code>. On this profile 9C
+was never populated, so the plain command fails with a <strong>misleading</strong>
+<code class="docutils literal notranslate"><span class="pre">Authentication</span> <span class="pre">method</span> <span class="pre">blocked</span></code> / “PIN or PUK is likely blocked” error —
+the PIN is not actually blocked; there’s simply no key on 9C. Always run
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">smoke-test</span> <span class="pre">--slot</span> <span class="pre">9A</span></code> here.</p>
+</div>
+<p>With that done, the card has a SIGN-capable, PIN-protected key on 9A and
+Steps 0–4 below work as written.</p>
+</section>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A card already through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> (PIN set, a key + certificate
+in the slot you’re using).</p></li>
+<li><p>OpenSC (<code class="docutils literal notranslate"><span class="pre">opensc-pkcs11.so</span></code>) installed on the client. Debian/Ubuntu:
+<code class="docutils literal notranslate"><span class="pre">apt</span> <span class="pre">install</span> <span class="pre">opensc</span></code>; Fedora: <code class="docutils literal notranslate"><span class="pre">dnf</span> <span class="pre">install</span> <span class="pre">opensc</span></code>; macOS:
+<code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">opensc</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> running (<code class="docutils literal notranslate"><span class="pre">eval</span> <span class="pre">&quot;$(ssh-agent)&quot;</span></code>).</p></li>
+<li><p><strong>A contact reader</strong> — 9A’s contactless access mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code> on both
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> and <code class="docutils literal notranslate"><span class="pre">ssh</span></code>, so every step below fails over a
+contactless-only reader, distinctly from the 9C issue above. The card
+behaves identically whether inserted or read by a different physical
+reader, as long as it’s the contact interface — reader model doesn’t
+matter, only contact vs. contactless.</p></li>
+</ul>
+</section>
+<section id="step-0-find-the-pkcs-11-module-path">
+<h2>Step 0 — find the PKCS#11 module path<a class="headerlink" href="#step-0-find-the-pkcs-11-module-path" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>find<span class="w"> </span>/<span class="w"> </span>-name<span class="w"> </span><span class="s2">"opensc-pkcs11.so"</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</pre></div>
+</div>
+<p>Typical locations: <code class="docutils literal notranslate"><span class="pre">/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so</span></code> (Debian/Ubuntu),
+<code class="docutils literal notranslate"><span class="pre">/usr/lib64/pkcs11/opensc-pkcs11.so</span></code> (Fedora), <code class="docutils literal notranslate"><span class="pre">/usr/local/lib/opensc-pkcs11.so</span></code>
+(Homebrew). The rest of this guide calls it <code class="docutils literal notranslate"><span class="pre">$PKCS11_MODULE</span></code>.</p>
+</section>
+<section id="step-1-get-the-ssh-public-key-off-the-card">
+<h2>Step 1 — get the SSH public key off the card<a class="headerlink" href="#step-1-get-the-ssh-public-key-off-the-card" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh-keygen<span class="w"> </span>-D<span class="w"> </span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span><span class="w"> </span>-e
+</pre></div>
+</div>
+<p>This lists every card object OpenSC can present as an SSH key — one line per
+certificate/key pair. If the card has more than one usable slot populated
+(e.g. both 9C and a retired key-management slot), match by fingerprint/label
+against <code class="docutils literal notranslate"><span class="pre">pkcs15-tool</span> <span class="pre">--list-certificates</span></code>.</p>
+</section>
+<section id="step-2-authorize-it">
+<h2>Step 2 — authorize it<a class="headerlink" href="#step-2-authorize-it" title="Link to this heading"></a></h2>
+<p>Append that public-key line to the target account’s
+<code class="docutils literal notranslate"><span class="pre">~/.ssh/authorized_keys</span></code> — same as any other SSH key, nothing card-specific
+on the server side:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh-keygen<span class="w"> </span>-D<span class="w"> </span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span><span class="w"> </span>-e<span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.ssh/authorized_keys<span class="w">   </span><span class="c1"># on the server, or copy manually</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-load-it-into-ssh-agent">
+<h2>Step 3 — load it into ssh-agent<a class="headerlink" href="#step-3-load-it-into-ssh-agent" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh-add<span class="w"> </span>-s<span class="w"> </span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span>
+</pre></div>
+</div>
+<p>Prompts for the PIV PIN once (per <code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> lifetime, not per connection —
+the applet’s PIN state persists until the card is removed or the session
+ends). <code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">-l</span></code> confirms the card key is loaded.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>On <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> this step succeeds (<code class="docutils literal notranslate"><span class="pre">Card</span> <span class="pre">added</span></code>) and the key
+<em>lists</em> in <code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">-l</span></code> — but see the warning at the top of this guide:
+the actual sign at connection time still fails for 9C. A successful
+<code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">-s</span></code> does not mean the setup will work end-to-end.</p>
+</div>
+</section>
+<section id="step-4-connect">
+<h2>Step 4 — connect<a class="headerlink" href="#step-4-connect" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh<span class="w"> </span>-I<span class="w"> </span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span><span class="w"> </span>user@host
+</pre></div>
+</div>
+<p>Or make it permanent in <code class="docutils literal notranslate"><span class="pre">~/.ssh/config</span></code> so plain <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">user&#64;host</span></code> picks it
+up automatically:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Host host
+    PKCS11Provider /usr/lib64/pkcs11/opensc-pkcs11.so
+</pre></div>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>No keys listed in Step 1</strong> — the slot has a key but no certificate (or
+vice versa); OpenSC needs both to expose an SSH-usable object. Check
+<code class="docutils literal notranslate"><span class="pre">pkcs15-tool</span> <span class="pre">--list-certificates</span></code> and <code class="docutils literal notranslate"><span class="pre">pkcs15-tool</span> <span class="pre">--list-keys</span></code>.</p></li>
+<li><p><strong>Sign operation fails / card returns 6985</strong> — the slot’s role doesn’t
+include <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>. On unmodified <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> that’s 9A — see
+<a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a>.</p></li>
+<li><p><strong>``ssh-add -s`` succeeds, PIN is correct, but connecting still fails with
+“Permission denied (publickey)” or “agent refused operation”, and you’re
+using 9C</strong> — this is the <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>/9C issue described in
+<a class="reference internal" href="#why-it-fails-on-cryptnox-default">Why it fails on cryptnox-default</a> above, not a misconfiguration. It
+reproduces identically with or without <code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> in the loop, so
+retrying agent setup won’t fix it — switch to 9A instead
+(<a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a>).</p></li>
+<li><p><strong>``piv perso smoke-test`` says the PIN/PUK is blocked, but ``piv pin
+status`` shows full tries remaining</strong> — you’re on 9A and forgot
+<code class="docutils literal notranslate"><span class="pre">--slot</span> <span class="pre">9A</span></code> (the command defaults to 9C); see the note in
+<a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a>.</p></li>
+<li><p><strong>Login fails against a PKCS#11 tool (``CKR_USER_NOT_LOGGED_IN`` / similar)
+even with the correct PIN, and the reader is contactless</strong> — 9A’s
+contactless access mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>; this is the card correctly refusing
+the interface, not a PIN or software problem. Switch to a contact reader —
+see Prerequisites.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
+<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile YAML grammar (role, access mode, mechanisms)</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="windows-logon-and-remote-desktop.html" class="btn btn-neutral float-left" title="Windows logon &amp; Remote Desktop" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssh-user-certificates.html" class="btn btn-neutral float-right" title="SSH user certificates" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/ssh-public-key-authentication.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/ssh-public-key-authentication.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

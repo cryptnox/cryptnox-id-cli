@@ -1,0 +1,288 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/troubleshooting.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a12e3537"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/custom.js?v=7a631626"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Factory &amp; provisioning" href="factory/index.html" />
+    <link rel="prev" title="Exit codes" href="exit-codes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#reader-and-transport">Reader and transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#status-words-and-errors">Status words and errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fido2">FIDO2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#genuineness">Genuineness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#yubico-piv-tool-interop">yubico-piv-tool interop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-a-shareable-diagnostic">Getting a shareable diagnostic</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Troubleshooting</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h1>
+<p>First stop, always:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>doctor
+</pre></div>
+</div>
+<p>It checks the PC/SC service, readers, transport, and each card function, and
+says what to fix.</p>
+<p>Quick hits:</p>
+<ul class="simple">
+<li><p><strong>FIDO commands fail on Windows</strong> — run from an Administrator terminal.</p></li>
+<li><p><strong>DESFire not answering</strong> — use a DESFire-capable <em>contactless</em> reader.</p></li>
+<li><p><strong>PIV admin/perso fails over NFC</strong> — administration is contact-only.</p></li>
+<li><p><strong>yubico-piv-tool sees nothing</strong> — pass your reader: <code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">&lt;substring&gt;</span></code>.</p></li>
+<li><p><strong>Two readers hold a card</strong> — the CLI refuses to guess; pass <code class="docutils literal notranslate"><span class="pre">--reader</span></code>.</p></li>
+</ul>
+<section id="reader-and-transport">
+<h2>Reader and transport<a class="headerlink" href="#reader-and-transport" title="Link to this heading"></a></h2>
+<p><strong>“No PC/SC readers found” / cannot reach the PC/SC service.</strong>
+Windows: ensure the <em>Smart Card</em> service (<code class="docutils literal notranslate"><span class="pre">SCardSvr</span></code>) is running. Linux: start
+<code class="docutils literal notranslate"><span class="pre">pcscd</span></code> and install <code class="docutils literal notranslate"><span class="pre">libccid</span></code>. macOS: PC/SC is built in.</p>
+<p><strong>Multiple readers, wrong one picked.</strong>
+The CLI prefers ACS readers. Pass <code class="docutils literal notranslate"><span class="pre">--reader</span> <span class="pre">&lt;index&gt;</span></code> or a name substring
+(<code class="docutils literal notranslate"><span class="pre">--reader</span> <span class="pre">&quot;ACR1252</span> <span class="pre">1S</span> <span class="pre">CL</span> <span class="pre">Reader</span> <span class="pre">PICC&quot;</span></code>). <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span> <span class="pre">readers</span></code> shows the
+indices.</p>
+<p><strong>Reader compatibility (DESFire).</strong>
+DESFire native commands are passed through correctly by the <strong>ACS ACR1252</strong>
+(PICC interface). The <strong>HID OMNIKEY 5422CL is incompatible</strong> — DESFire frames go
+unanswered (and the link can wedge into <code class="docutils literal notranslate"><span class="pre">SCARD_E_READER_UNAVAILABLE</span></code>); PIV and
+GlobalPlatform still work on it. Use a DESFire-capable reader for <code class="docutils literal notranslate"><span class="pre">mifare</span></code>
+commands.</p>
+</section>
+<section id="status-words-and-errors">
+<h2>Status words and errors<a class="headerlink" href="#status-words-and-errors" title="Link to this heading"></a></h2>
+<p><strong>``SCARD_E_NO_ACCESS 0x80100027`` on ``fido`` commands.</strong>
+Windows blocks non-elevated PC/SC access to the FIDO CTAP AID. Run the command
+from an <strong>Administrator terminal</strong>; the CLI prints exactly this guidance and can
+relaunch itself elevated.</p>
+<p><strong>``6D00`` to DESFire commands (even contactless).</strong>
+A JavaCard applet (e.g. PIV) is currently selected and answering the interface.
+DESFire is the card’s <strong>default applet</strong>: re-present the card or open a fresh
+connection without selecting anything, on a DESFire-capable reader. The CLI’s
+detector probes DESFire first for this reason.</p>
+<p><strong>``6700`` (wrong length) on large PIV writes.</strong>
+A full certificate does not fit one short APDU, and extended length is rejected
+on these transports. The CLI sends large objects via <strong>ISO command chaining</strong>
+(CLA <code class="docutils literal notranslate"><span class="pre">0x10</span></code>); <code class="docutils literal notranslate"><span class="pre">import-cert</span></code> does this automatically.</p>
+<p><strong>``6700`` on ``SELECT PIV``, only over a contactless reader
+(``info`` shows PIV as ``Unknown``).</strong>
+The multi-applet card rejects the <em>first</em> case-4 ISO SELECT (data <strong>+ Le</strong>)
+issued right after a DESFire native-command session, and the composite detector
+(<code class="docutils literal notranslate"><span class="pre">info</span></code> / <code class="docutils literal notranslate"><span class="pre">doctor</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">full</span></code>) probes DESFire first. The identical
+SELECT sent as <strong>case-3</strong> (no Le) is accepted and returns the FCI, so the CLI
+retries once without Le. Standalone <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">…</span></code> commands are never affected. If
+you script raw <code class="docutils literal notranslate"><span class="pre">apdu</span></code> calls, drop the trailing Le on the SELECT that follows
+DESFire native commands.</p>
+<p><strong>``6E27``-style failure on the second admin command in one SCP03 session.</strong>
+This JCOP 4.5 card accepts only <strong>one application APDU per applet-directed SCP03
+session</strong>. The CLI opens a fresh SCP03 channel per admin/perso command (and uses
+ISO command chaining when one logical command must span blocks), so you should
+not hit this in normal use — only when scripting raw <code class="docutils literal notranslate"><span class="pre">apdu</span></code> calls.</p>
+<p><strong>``6985`` (conditions not satisfied) on ``generate-csr`` / signing.</strong>
+The slot’s key has the wrong role. Signing needs a <strong>SIGN-role</strong> slot such as
+<strong>9C</strong> (or a 9A provisioned with the <code class="docutils literal notranslate"><span class="pre">ssh</span></code> / <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile); a
+default-profile 9A is AUTHENTICATE-only and refuses <code class="docutils literal notranslate"><span class="pre">GENERAL</span> <span class="pre">AUTHENTICATE</span></code>
+signing. See <a class="reference internal" href="factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p>
+<p><strong>``0xAE AUTHENTICATION_ERROR`` on ``mifare app delete``.</strong>
+Deleting an application requires authentication. Pass <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (factory
+default) or <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code>; the CLI then authenticates and sends a MACed
+DeleteApplication.</p>
+<p><strong>``0x9D PERMISSION_DENIED`` on ``mifare write``.</strong>
+The file’s write access condition needs a key you have not authenticated with,
+or you authenticated with the wrong key number. Check <code class="docutils literal notranslate"><span class="pre">--key-no</span></code> and the
+file’s access rights.</p>
+</section>
+<section id="fido2">
+<h2>FIDO2<a class="headerlink" href="#fido2" title="Link to this heading"></a></h2>
+<p><strong>Nothing happens / access denied even as Administrator.</strong>
+Confirm the terminal is truly elevated (<code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">info</span></code> prints a non-elevated
+warning otherwise). Some security software also brokers WebAuthn; close other
+FIDO clients.</p>
+</section>
+<section id="genuineness">
+<h2>Genuineness<a class="headerlink" href="#genuineness" title="Link to this heading"></a></h2>
+<p><strong>``genuine`` reports “applet not found” on a contactless reader.</strong>
+The genuineness applet is <strong>contact-only</strong> — it does not answer over the
+contactless interface (SELECT returns <code class="docutils literal notranslate"><span class="pre">6A82</span></code>). Use a contact reader (e.g. ACS
+ACR39U). <code class="docutils literal notranslate"><span class="pre">info</span></code> shows <code class="docutils literal notranslate"><span class="pre">GenuinenessNeedsContactReader</span></code> when DESFire is
+reachable, i.e. you are on a contactless interface.</p>
+<p><strong>``genuine verify``: proof of possession ``valid`` but chain ``not verified``
+(``NOT proven``).</strong>
+No Cryptnox genuineness root is pinned, so the chain cannot be anchored — the
+tool reports <code class="docutils literal notranslate"><span class="pre">NOT</span> <span class="pre">proven</span></code> rather than silently passing. Pass <code class="docutils literal notranslate"><span class="pre">--anchors</span> <span class="pre">DIR</span></code>
+with the trust anchor, or bundle the pinned root. A <strong>dev</strong> card chains to a
+throwaway dev root: <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span> <span class="pre">--anchors</span> <span class="pre">&lt;dev-ca-dir&gt;</span></code>.</p>
+<p><strong>Genuineness is not the ISD / PIV-SSD check.</strong>
+<code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span></code> proves the attestation applet’s device key and certificate
+chain. It does <strong>not</strong> verify the per-card ISD or PIV-SSD keys (KDF/HSM-derived)
+— this tool has no access to those secrets, and the output says so.</p>
+</section>
+<section id="yubico-piv-tool-interop">
+<h2>yubico-piv-tool interop<a class="headerlink" href="#yubico-piv-tool-interop" title="Link to this heading"></a></h2>
+<p><strong>``yubico-piv-tool`` sees nothing / “failed to connect”.</strong>
+It defaults to Yubico’s own reader-name matching. Pass your reader explicitly
+with <code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">&lt;substring&gt;</span></code>. Note that <code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> gates its connect on the
+applet answering a Yubico firmware-version query — OpenSC and the Windows
+minidriver use standard PIV discovery instead and are unaffected. See the interop
+matrix in <a class="reference internal" href="piv/quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a>.</p>
+</section>
+<section id="getting-a-shareable-diagnostic">
+<h2>Getting a shareable diagnostic<a class="headerlink" href="#getting-a-shareable-diagnostic" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>report<span class="w"> </span>full<span class="w"> </span>--out<span class="w"> </span>report.json
+</pre></div>
+</div>
+<p>Writes a secret-safe JSON snapshot of all three functions to attach to a bug
+report. It never contains PINs or keys.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="exit-codes.html" class="btn btn-neutral float-left" title="Exit codes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="factory/index.html" class="btn btn-neutral float-right" title="Factory &amp; provisioning" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../v0.1/troubleshooting.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="troubleshooting.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

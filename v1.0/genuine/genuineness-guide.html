@@ -1,0 +1,233 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Genuineness guide &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/genuine/genuineness-guide.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Genuineness commands" href="genuineness-commands.html" />
+    <link rel="prev" title="Quick start: prove a card is genuine" href="quick-start-prove-a-card-is-genuine.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-is-checked-and-what-deliberately-is-not">What is checked — and what deliberately is not</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#trust-anchors">Trust anchors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#development-cards">Development cards</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inspection-without-the-proof">Inspection without the proof</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Genuineness guide</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="genuineness-guide">
+<h1>Genuineness guide<a class="headerlink" href="#genuineness-guide" title="Link to this heading"></a></h1>
+<p>The Cryptnox <strong>genuineness / attestation applet</strong> (RID <code class="docutils literal notranslate"><span class="pre">A0000010</span></code>, AID
+<code class="docutils literal notranslate"><span class="pre">A000001000024701</span></code>) carries an on-card EC device key and a device certificate
+that chains to the Cryptnox PKI. It lets a host prove a card is genuine
+Cryptnox hardware without any shared secret. For the condensed version, see
+<a class="reference internal" href="quick-start-prove-a-card-is-genuine.html"><span class="doc">Quick start: prove a card is genuine</span></a>.</p>
+<p>The applet is <strong>contact-only</strong> — it does not answer over a contactless reader
+(SELECT returns <code class="docutils literal notranslate"><span class="pre">6A82</span></code> there) — and all <code class="docutils literal notranslate"><span class="pre">genuine</span></code> commands are
+<strong>read-only</strong>: the applet is inspected, never provisioned, by this tool.</p>
+<section id="what-is-checked-and-what-deliberately-is-not">
+<h2>What is checked — and what deliberately is not<a class="headerlink" href="#what-is-checked-and-what-deliberately-is-not" title="Link to this heading"></a></h2>
+<p>There is more than one way to test a Cryptnox card’s genuineness; the methods
+differ in what secret the verifier needs. This tool performs the two checks
+that need <strong>no secret key material</strong>:</p>
+<ul class="simple">
+<li><p><strong>Proof of possession (live).</strong> The host sends a fresh random nonce and the
+card signs it with its device key (<code class="docutils literal notranslate"><span class="pre">ATTEST</span></code>); the signature is verified
+against the on-card leaf certificate’s public key. Because the nonce is
+random per run, a copied certificate or a replayed signature cannot pass —
+the card must physically hold the device private key <em>now</em>.</p></li>
+<li><p><strong>Certificate chain.</strong> <code class="docutils literal notranslate"><span class="pre">leaf</span> <span class="pre">→</span> <span class="pre">Genuineness</span> <span class="pre">CA</span> <span class="pre">→</span> <span class="pre">…</span> <span class="pre">→</span> <span class="pre">pinned</span> <span class="pre">Cryptnox</span> <span class="pre">root</span></code>,
+validated (name chaining, signatures, validity windows, CA constraints) and
+anchored on the pinned trust store. A root is trusted only because it is
+pinned — never because it appears in a chain read off the card.</p></li>
+</ul>
+<p>The verdict is <strong>GENUINE only when both pass</strong>; proof of possession alone
+yields <strong>NOT proven</strong>.</p>
+<p>It deliberately does <strong>not</strong> attempt the ISD or PIV-SSD key checks: those
+verify per-card, HSM/KDF-derived secret keys that this tool has no access to.
+Their absence is stated in the output, never hidden.</p>
+</section>
+<section id="trust-anchors">
+<h2>Trust anchors<a class="headerlink" href="#trust-anchors" title="Link to this heading"></a></h2>
+<p>The Cryptnox production root ships bundled, together with the genuineness CA
+that sits under it, so production cards anchor without extra setup. Where no
+pinned root covers the chain, the chain step reports “cannot verify” and the
+verdict is <strong>NOT proven</strong> even though proof of possession passes — the tool
+never silently treats an unanchored chain as genuine.</p>
+<p>Add anchors with <code class="docutils literal notranslate"><span class="pre">--anchors</span> <span class="pre">DIR</span></code> (a directory of CA PEMs) or the
+<code class="docutils literal notranslate"><span class="pre">CRYPTNOX_TRUST_DIR</span></code> environment variable; both <strong>extend</strong> the bundled set
+rather than replacing it.</p>
+</section>
+<section id="development-cards">
+<h2>Development cards<a class="headerlink" href="#development-cards" title="Link to this heading"></a></h2>
+<p>A <strong>dev</strong> card chains to a throwaway dev root and can never pass as genuine
+Cryptnox hardware; <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span> <span class="pre">--anchors</span> <span class="pre">&lt;dev-ca-dir&gt;</span></code> verifies it
+against the dev PKI for testing the flow only.</p>
+</section>
+<section id="inspection-without-the-proof">
+<h2>Inspection without the proof<a class="headerlink" href="#inspection-without-the-proof" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">info</span></code>, <code class="docutils literal notranslate"><span class="pre">doctor</span></code> and the <code class="docutils literal notranslate"><span class="pre">report</span></code> commands surface the applet’s state
+(present / personalized / not present) without running the proof;
+<code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">genuine</span></code> emits it as a secret-safe JSON snapshot (see
+<a class="reference internal" href="../json-output.html"><span class="doc">JSON output</span></a>). Only <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span></code> produces a verdict.</p>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-prove-a-card-is-genuine.html"><span class="doc">Quick start: prove a card is genuine</span></a> — the condensed walkthrough</p></li>
+<li><p><a class="reference internal" href="genuineness-commands.html"><span class="doc">Genuineness commands</span></a> — every <code class="docutils literal notranslate"><span class="pre">genuine</span></code> command</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quick-start-prove-a-card-is-genuine.html" class="btn btn-neutral float-left" title="Quick start: prove a card is genuine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="genuineness-commands.html" class="btn btn-neutral float-right" title="Genuineness commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/genuine/genuineness-guide.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../genuine/genuineness-guide.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

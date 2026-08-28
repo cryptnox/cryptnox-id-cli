@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Command syntax &amp; conventions &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/cli-basics.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a12e3537"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/custom.js?v=7a631626"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="JSON output" href="json-output.html" />
+    <link rel="prev" title="Interactive shell" href="interactive-shell.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Command syntax &amp; conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#global-options">Global options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#top-level-commands">Top-level commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Command syntax &amp; conventions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="command-syntax-conventions">
+<h1>Command syntax &amp; conventions<a class="headerlink" href="#command-syntax-conventions" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> (aliases: <code class="docutils literal notranslate"><span class="pre">cnx-id</span></code>, <code class="docutils literal notranslate"><span class="pre">cryptnox-id-card</span></code>) manages the three
+independent functions of the Cryptnox multi-applet smart card. Every command
+supports <code class="docutils literal notranslate"><span class="pre">-h</span></code>/<code class="docutils literal notranslate"><span class="pre">--help</span></code>.</p>
+<section id="global-options">
+<h2>Global options<a class="headerlink" href="#global-options" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--reader</span> <span class="pre">&lt;name|index&gt;</span></code></p></td>
+<td><p>Select the PC/SC reader by substring or index (default: first ACS
+reader). When several candidate readers hold a card, the CLI refuses to
+guess — pass this explicitly.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--json</span></code></p></td>
+<td><p>Machine-readable JSON on stdout; notes and warnings go to stderr. See
+<a class="reference internal" href="json-output.html"><span class="doc">JSON output</span></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--verbose</span></code></p></td>
+<td><p>Human debug output; a redacted APDU trace on stderr.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--apdu-log</span> <span class="pre">&lt;file&gt;</span></code></p></td>
+<td><p>Append a redacted APDU transcript to a file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code></p></td>
+<td><p>Write nothing to the card. Planning-capable commands (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code>,
+<code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">send</span></code>/<code class="docutils literal notranslate"><span class="pre">select</span></code>/<code class="docutils literal notranslate"><span class="pre">transcript</span></code>, <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span>
+<span class="pre">load-config</span></code>/<code class="docutils literal notranslate"><span class="pre">finalize</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-key</span></code>/<code class="docutils literal notranslate"><span class="pre">import-p12</span></code>) show
+the intended actions; read-only commands run normally; every other
+command refuses to run under the flag (fail-closed) instead of silently
+executing.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--yes</span></code></p></td>
+<td><p>Skip confirmation prompts (use deliberately).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--timeout</span> <span class="pre">&lt;seconds&gt;</span></code></p></td>
+<td><p>Reader/card timeout.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--no-color</span></code></p></td>
+<td><p>Disable coloured output.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Reader requirements per function: PIV works over contact (administration is
+contact-only) or contactless (reading). <strong>MIFARE DESFire needs a
+DESFire-capable contactless reader.</strong> <strong>FIDO2 needs an Administrator terminal
+on Windows</strong> (the OS reserves the CTAP AID otherwise).</p>
+</section>
+<section id="top-level-commands">
+<h2>Top-level commands<a class="headerlink" href="#top-level-commands" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 32.0%" />
+<col style="width: 68.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">readers</span></code></p></td>
+<td><p>List PC/SC readers, card presence and ATR; recommends a <code class="docutils literal notranslate"><span class="pre">--reader</span></code>
+value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">info</span></code></p></td>
+<td><p>Detect the card and summarize all three functions on one screen.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">doctor</span></code></p></td>
+<td><p>Diagnostics: PC/SC service, reader, transport, per-function
+reachability, platform notes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">send</span></code></p></td>
+<td><p>Developer raw-APDU access (transcripts are redacted; sensitive command
+data is never logged).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">select</span></code></p></td>
+<td><p>SELECT an application by AID.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">transcript</span></code></p></td>
+<td><p>Show the redacted APDU transcript of the session.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">card</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">piv</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">mifare</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">fido</span></code> /
+<code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">genuine</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">full</span></code></p></td>
+<td><p>Secret-safe JSON reports (<code class="docutils literal notranslate"><span class="pre">--out</span> <span class="pre">FILE</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">shell</span></code></p></td>
+<td><p>Interactive prompt: run subcommands without the <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> prefix
+(type <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">info</span></code>); global options passed when launching carry into every
+command. <code class="docutils literal notranslate"><span class="pre">help</span></code> / <code class="docutils literal notranslate"><span class="pre">clear</span></code> / <code class="docutils literal notranslate"><span class="pre">exit</span></code> — see <a class="reference internal" href="interactive-shell.html"><span class="doc">Interactive shell</span></a>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="interactive-shell.html" class="btn btn-neutral float-left" title="Interactive shell" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="json-output.html" class="btn btn-neutral float-right" title="JSON output" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../v0.1/cli-basics.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="cli-basics.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

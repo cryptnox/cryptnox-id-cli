@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSH user certificates &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/ssh-user-certificates.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="TLS client authentication" href="tls-client-authentication.html" />
+    <link rel="prev" title="SSH public-key authentication" href="ssh-public-key-authentication.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SSH user certificates</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-export-the-card-s-public-key">Step 1 — export the card’s public key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-the-ca-signs-it">Step 2 — the CA signs it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-trust-the-ca-on-the-server">Step 3 — trust the CA on the server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-4-connect-with-the-certificate">Step 4 — connect with the certificate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSH user certificates</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssh-user-certificates">
+<h1>SSH user certificates<a class="headerlink" href="#ssh-user-certificates" title="Link to this heading"></a></h1>
+<p><a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> authorizes the card’s raw public key on each
+server’s <code class="docutils literal notranslate"><span class="pre">authorized_keys</span></code>. <strong>SSH user certificates</strong> replace that with a
+trust relationship: an SSH CA signs the card’s public key once, every server
+trusts the CA (one line in <code class="docutils literal notranslate"><span class="pre">sshd_config</span></code>), and revocation/renewal happens
+at the CA instead of editing <code class="docutils literal notranslate"><span class="pre">authorized_keys</span></code> everywhere the key was
+copied. The card’s role in this is identical to the raw-key guide — it only
+ever signs the connection challenge; certificate issuance is a host-side
+step this guide covers, not a card capability.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>9C cannot be used for SSH on the unmodified ``cryptnox-default``
+profile</strong>, for the same reason as <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> — see
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-why-it-fails-cryptnox-default"><span class="std std-ref">Why it fails on cryptnox-default</span></a>. The certificate layer doesn’t
+change which key actually signs the connection; if the raw-key path
+fails on your card, this one will too. Use 9A instead — see
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-fix-9a-sign-role"><span class="std std-ref">Fixing it: give 9A the SIGN role</span></a>.</p>
+<p>Also, do not use <code class="docutils literal notranslate"><span class="pre">ssh-add</span></code> to load the certificate — it cannot load a
+bare certificate file (<code class="docutils literal notranslate"><span class="pre">invalid</span> <span class="pre">format</span></code>) when the matching private key
+lives on a PKCS#11 token rather than on disk. Step 4 below uses
+<code class="docutils literal notranslate"><span class="pre">CertificateFile</span></code> + <code class="docutils literal notranslate"><span class="pre">PKCS11Provider</span></code> instead, which is the mechanism
+<code class="docutils literal notranslate"><span class="pre">ssh_config(5)</span></code> documents for this case.</p>
+</div>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Complete <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> first — this guide only adds a
+certificate on top of that public key, it doesn’t replace any of it. That
+includes its contact-reader requirement — 9A’s contactless access mode is
+<code class="docutils literal notranslate"><span class="pre">NEVER</span></code>, and the certificate layer doesn’t change what interface the
+underlying signature needs.</p></li>
+<li><p>An SSH CA keypair. For a self-managed CA:
+<code class="docutils literal notranslate"><span class="pre">ssh-keygen</span> <span class="pre">-t</span> <span class="pre">ed25519</span> <span class="pre">-f</span> <span class="pre">ssh_ca</span> <span class="pre">-C</span> <span class="pre">&quot;internal</span> <span class="pre">SSH</span> <span class="pre">CA&quot;</span></code> (keep <code class="docutils literal notranslate"><span class="pre">ssh_ca</span></code>
+offline; <code class="docutils literal notranslate"><span class="pre">ssh_ca.pub</span></code> is what servers trust). Larger deployments
+typically run a CA service (e.g. Vault SSH secrets engine, <code class="docutils literal notranslate"><span class="pre">step-ca</span></code>)
+instead of a bare keypair — the signing command in Step 2 is the same
+either way, only how you invoke the signer differs.</p></li>
+</ul>
+</section>
+<section id="step-1-export-the-card-s-public-key">
+<h2>Step 1 — export the card’s public key<a class="headerlink" href="#step-1-export-the-card-s-public-key" title="Link to this heading"></a></h2>
+<p>Same as <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> Step 1:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh-keygen<span class="w"> </span>-D<span class="w"> </span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span><span class="w"> </span>-e<span class="w"> </span>&gt;<span class="w"> </span>card-key.pub
+</pre></div>
+</div>
+</section>
+<section id="step-2-the-ca-signs-it">
+<h2>Step 2 — the CA signs it<a class="headerlink" href="#step-2-the-ca-signs-it" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh-keygen<span class="w"> </span>-s<span class="w"> </span>ssh_ca<span class="w"> </span>-I<span class="w"> </span><span class="s2">"user-id"</span><span class="w"> </span>-n<span class="w"> </span>username<span class="w"> </span>-V<span class="w"> </span>+52w<span class="w"> </span>card-key.pub
+</pre></div>
+</div>
+<p>This produces <code class="docutils literal notranslate"><span class="pre">card-key-cert.pub</span></code>. <code class="docutils literal notranslate"><span class="pre">-I</span></code> is a certificate identifier (shows
+up in server auth logs), <code class="docutils literal notranslate"><span class="pre">-n</span></code> restricts which login principal(s) the
+certificate is valid for, <code class="docutils literal notranslate"><span class="pre">-V</span></code> sets an expiry — the CA can also constrain
+by IP, force-command, or source address; see <code class="docutils literal notranslate"><span class="pre">man</span> <span class="pre">ssh-keygen</span></code>.
+Host certificates (signing the <em>server’s</em> key so clients stop trusting
+first-connection TOFU) use the same command with <code class="docutils literal notranslate"><span class="pre">-h</span></code>, but that’s a
+server-key operation, unrelated to the card.</p>
+</section>
+<section id="step-3-trust-the-ca-on-the-server">
+<h2>Step 3 — trust the CA on the server<a class="headerlink" href="#step-3-trust-the-ca-on-the-server" title="Link to this heading"></a></h2>
+<p>One line in <code class="docutils literal notranslate"><span class="pre">/etc/ssh/sshd_config</span></code>, instead of touching
+<code class="docutils literal notranslate"><span class="pre">authorized_keys</span></code> per user:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>TrustedUserCAKeys /etc/ssh/ssh_ca.pub
+</pre></div>
+</div>
+<p>Copy <code class="docutils literal notranslate"><span class="pre">ssh_ca.pub</span></code> (never the CA private key) to the server, then
+<code class="docutils literal notranslate"><span class="pre">systemctl</span> <span class="pre">reload</span> <span class="pre">sshd</span></code>.</p>
+</section>
+<section id="step-4-connect-with-the-certificate">
+<h2>Step 4 — connect with the certificate<a class="headerlink" href="#step-4-connect-with-the-certificate" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>ssh<span class="w"> </span>-o<span class="w"> </span><span class="nv">PKCS11Provider</span><span class="o">=</span><span class="s2">"</span><span class="nv">$PKCS11_MODULE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>-o<span class="w"> </span><span class="nv">CertificateFile</span><span class="o">=</span>card-key-cert.pub<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>username@host
+</pre></div>
+</div>
+<p>Do <strong>not</strong> use <code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">card-key-cert.pub</span></code> for this — <code class="docutils literal notranslate"><span class="pre">ssh-add</span></code> only
+loads private keys (checking file permissions as if it might be one first),
+and a bare certificate file has no matching on-disk private key to pair with
+when the key itself lives on a PKCS#11 token. <code class="docutils literal notranslate"><span class="pre">CertificateFile</span></code> is the
+option <code class="docutils literal notranslate"><span class="pre">ssh_config(5)</span></code> documents specifically for pairing a certificate
+with a key provided via <code class="docutils literal notranslate"><span class="pre">PKCS11Provider</span></code> (or <code class="docutils literal notranslate"><span class="pre">IdentityFile</span></code>/<code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code>
+for a disk-resident key). Make this permanent in <code class="docutils literal notranslate"><span class="pre">~/.ssh/config</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Host host
+    PKCS11Provider /usr/lib64/pkcs11/opensc-pkcs11.so
+    CertificateFile ~/card-key-cert.pub
+</pre></div>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Server still asks for a password / falls back</strong> — confirm
+<code class="docutils literal notranslate"><span class="pre">TrustedUserCAKeys</span></code> points at the CA’s <em>public</em> key and <code class="docutils literal notranslate"><span class="pre">sshd</span></code> was
+reloaded; check <code class="docutils literal notranslate"><span class="pre">sshd</span> <span class="pre">-T</span> <span class="pre">|</span> <span class="pre">grep</span> <span class="pre">trustedusercakeys</span></code>.</p></li>
+<li><p><strong>“certificate invalid: not yet valid” / “expired”</strong> — re-sign with <code class="docutils literal notranslate"><span class="pre">-V</span></code>
+covering the current date; certificates don’t auto-renew.</p></li>
+<li><p><strong>Principal mismatch</strong> (“Certificate invalid: name is not a listed
+principal”) — the <code class="docutils literal notranslate"><span class="pre">-n</span></code> value at signing time must match the login
+username (or use <code class="docutils literal notranslate"><span class="pre">-n</span></code> with multiple comma-separated principals).</p></li>
+<li><p><strong>“Error loading key …: invalid format” from ssh-add</strong> — you tried
+<code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">card-key-cert.pub</span></code>, which doesn’t work for a PKCS#11-resident
+key (see the warning at the top): use <code class="docutils literal notranslate"><span class="pre">CertificateFile</span></code> +
+<code class="docutils literal notranslate"><span class="pre">PKCS11Provider</span></code> in Step 4 instead.</p></li>
+<li><p><strong>“Permission denied (publickey)” / “agent refused operation” even with
+correct syntax and correct PIN, and you’re using 9C</strong> — this is the
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>/9C always-reauth issue, identical to
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-why-it-fails-cryptnox-default"><span class="std std-ref">Why it fails on cryptnox-default</span></a>. The certificate doesn’t change
+which key signs the connection — switch to 9A, see
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-fix-9a-sign-role"><span class="std std-ref">Fixing it: give 9A the SIGN role</span></a>.</p></li>
+<li><p>Anything else from the raw-key path (module not found, other PIN/agent
+issues) — see <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> Troubleshooting first; this guide
+only adds the certificate layer on top.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> — the raw-public-key path this builds on, including
+the 9A fix</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssh-public-key-authentication.html" class="btn btn-neutral float-left" title="SSH public-key authentication" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tls-client-authentication.html" class="btn btn-neutral float-right" title="TLS client authentication" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/ssh-user-certificates.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/ssh-user-certificates.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

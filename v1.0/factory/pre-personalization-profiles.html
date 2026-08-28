@@ -1,0 +1,342 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pre-personalization profiles &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/factory/pre-personalization-profiles.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Factory commands" href="factory-commands.html" />
+    <link rel="prev" title="Factory &amp; provisioning" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Factory &amp; provisioning</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Pre-personalization profiles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#built-in-profiles">Built-in profiles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inspecting-profiles">Inspecting profiles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#profile-yaml">Profile YAML</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#applying-a-profile">Applying a profile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="factory-commands.html">Factory commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Factory &amp; provisioning</a></li>
+      <li class="breadcrumb-item active">Pre-personalization profiles</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pre-personalization-profiles">
+<h1>Pre-personalization profiles<a class="headerlink" href="#pre-personalization-profiles" title="Link to this heading"></a></h1>
+<p>A <strong>profile</strong> describes the PIV applet structure to lay down during factory
+pre-personalization: the data containers, the PIN/PUK verifiers and their
+policy, and the asymmetric key slots with their access rules and mechanisms.
+<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">load-config</span></code> turns a profile into a sequence of
+OpenFIPS201 <code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">DATA</span> <span class="pre">ADMIN</span></code> commands over SCP03. See
+<a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a> for where this fits in the full lifecycle.</p>
+<section id="built-in-profiles">
+<h2>Built-in profiles<a class="headerlink" href="#built-in-profiles" title="Link to this heading"></a></h2>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code></dt><dd><p>Byte-exact to the applet’s own reference profile: an AES-256 admin key,
+ten containers (CHUID/CCC/certs/security-object/fingerprints/facial/printed),
+and five ECC-P256 key slots (9A/9C/9D/9E, plus the AES-only admin key 9B).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">developer</span></code> / <code class="docutils literal notranslate"><span class="pre">npivp-lab</span></code></dt><dd><p>The same structure as <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> — only the <code class="docutils literal notranslate"><span class="pre">mode</span></code> label
+differs (<code class="docutils literal notranslate"><span class="pre">developer-not-for-production</span></code> / <code class="docutils literal notranslate"><span class="pre">lab</span></code>), for cards that
+should never be mistaken for production units.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ssh</span></code></dt><dd><p>SSH auth (raw public key or SSH user certificates) via PKCS#11
+(<code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> / OpenSC) — see <a class="reference internal" href="../piv/ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>. Only change
+from <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>: the 9A (PIV Authentication) key gets
+<code class="docutils literal notranslate"><span class="pre">SIGN</span></code> added to its role (<code class="docutils literal notranslate"><span class="pre">SIGN+AUTHENTICATE</span></code>). 9C cannot be used for
+this regardless of role: OpenSC’s PIV driver requires re-authentication
+before every signature on key reference 0x9C specifically (PKCS#11
+<code class="docutils literal notranslate"><span class="pre">CKA_ALWAYS_AUTHENTICATE</span></code>, matching the PIV spec’s non-repudiation
+convention for that slot), which neither <code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> nor <code class="docutils literal notranslate"><span class="pre">ssh</span></code>’s own
+PKCS#11 client can satisfy.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ms-logon</span></code></dt><dd><p>Windows smart-card logon / Remote Desktop. This applet dispatches PKI
+challenge signing on <code class="docutils literal notranslate"><span class="pre">ROLE_SIGN</span></code> only, so the 9A (PIV Authentication)
+key gets <code class="docutils literal notranslate"><span class="pre">SIGN+AUTHENTICATE</span></code> — that’s what makes client authentication
+(PKINIT, SSH, TLS) <em>and</em> on-card CSR generation work on 9A. A second
+RSA-2048 (CRT) key object coexists on 9A — same slot, different mechanism,
+since the applet keys objects by <code class="docutils literal notranslate"><span class="pre">(ref,</span> <span class="pre">mechanism)</span></code>. The role deliberately
+does <strong>not</strong> include <code class="docutils literal notranslate"><span class="pre">KEY_ESTABLISH</span></code>: the applet routes challenge-response
+to key transport before signing, and that role would divert it. Use <code class="docutils literal notranslate"><span class="pre">ssh</span></code>
+above instead if you only need SSH and don’t need the extra RSA object.</p>
+<p><strong>That RSA object is why this profile works on Windows.</strong> The Windows inbox
+PIV minidriver enumerates RSA keys only; given an EC key it builds no key
+container at all, so the card looks empty to Windows (see
+<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>). The object can be filled either way:</p>
+<ul class="simple">
+<li><p><strong>generated on-card</strong> — <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--profile</span> <span class="pre">ms-logon</span> <span class="pre">--slot</span> <span class="pre">9A</span>
+<span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> (the private key never leaves the card);</p></li>
+<li><p><strong>imported</strong>, for an AD-issued credential (CSR → CA → import, or PKCS#12
+import via <a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a>).</p></li>
+</ul>
+<p>The object carries the <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code> attribute so the second path is
+available; that attribute permits import, it does not prevent on-card
+generation.</p>
+</dd>
+</dl>
+</section>
+<section id="inspecting-profiles">
+<h2>Inspecting profiles<a class="headerlink" href="#inspecting-profiles" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>inspect-defaults
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>init-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--out<span class="w"> </span>profile.yaml
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">inspect-defaults</span></code> shows the applet’s supported algorithms, key slots, and
+PIN/PUK limits — no card needed. <code class="docutils literal notranslate"><span class="pre">init-config</span></code> writes a built-in
+profile to an editable YAML file. To capture what a <em>card</em> currently exposes
+(a read-only observed snapshot, not a loadable profile), use
+<code class="docutils literal notranslate"><span class="pre">export-config</span> <span class="pre">--out</span> <span class="pre">snapshot.yaml</span></code>.</p>
+</section>
+<section id="profile-yaml">
+<h2>Profile YAML<a class="headerlink" href="#profile-yaml" title="Link to this heading"></a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cryptnox-default</span>
+<span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">production</span>
+<span class="nt">admin</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">key_ref</span><span class="p">:</span><span class="w"> </span><span class="s">"9B"</span>
+<span class="w">  </span><span class="nt">mechanism</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AES256</span>
+<span class="nt">pin</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">  </span><span class="nt">max</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">  </span><span class="nt">charset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">numeric</span>
+<span class="nt">puk</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">max</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">  </span><span class="nt">charset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">numeric</span>
+<span class="nt">containers</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">oid</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5FC102</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chuid</span>
+<span class="w">    </span><span class="nt">contact</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ALWAYS</span>
+<span class="w">    </span><span class="nt">contactless</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ALWAYS</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">oid</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5FC109</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">printed</span>
+<span class="w">    </span><span class="nt">contact</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PIN</span>
+<span class="w">    </span><span class="nt">contactless</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">VCI_PIN</span>
+<span class="nt">keys</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">ref</span><span class="p">:</span><span class="w"> </span><span class="s">"9C"</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sign</span>
+<span class="w">    </span><span class="nt">mechanism</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ECCP256</span>
+<span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SIGN</span>
+<span class="w">    </span><span class="nt">contact</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PIN</span>
+<span class="w">    </span><span class="nt">contactless</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NEVER</span>
+<span class="w">    </span><span class="nt">attributes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">IMPORTABLE</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p><strong>Mechanisms</strong>: <code class="docutils literal notranslate"><span class="pre">AES128</span></code>, <code class="docutils literal notranslate"><span class="pre">AES192</span></code>, <code class="docutils literal notranslate"><span class="pre">AES256</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA2048</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA3072</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ECCP256</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP384</span></code>, <code class="docutils literal notranslate"><span class="pre">CS2</span></code>, <code class="docutils literal notranslate"><span class="pre">CS7</span></code>.</p>
+<p><strong>Access modes</strong> (used for <code class="docutils literal notranslate"><span class="pre">contact</span></code>/<code class="docutils literal notranslate"><span class="pre">contactless</span></code> on both containers and
+keys): <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code>, <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>, <code class="docutils literal notranslate"><span class="pre">PIN</span></code>, <code class="docutils literal notranslate"><span class="pre">VCI</span></code> (contact-interface-only, no
+PIN), <code class="docutils literal notranslate"><span class="pre">VCI_PIN</span></code> (contact interface <strong>and</strong> PIN), <code class="docutils literal notranslate"><span class="pre">OCC</span></code>, <code class="docutils literal notranslate"><span class="pre">SM</span></code>.</p>
+<p><strong>Key roles</strong> (a bitmask — combine with <code class="docutils literal notranslate"><span class="pre">+</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE+SIGN</span></code>, or
+give a YAML list): <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>, <code class="docutils literal notranslate"><span class="pre">KEY_ESTABLISH</span></code>, <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>.</p>
+<p><strong>Key attributes</strong> (a YAML list): <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code>, <code class="docutils literal notranslate"><span class="pre">PERMIT_EXTERNAL</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PERMIT_MUTUAL</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA_CRT</span></code>.</p>
+<p><strong>PIN/PUK charset</strong> (optional, defaults to <code class="docutils literal notranslate"><span class="pre">numeric</span></code>): <code class="docutils literal notranslate"><span class="pre">numeric</span></code>,
+<code class="docutils literal notranslate"><span class="pre">alpha</span></code>, <code class="docutils literal notranslate"><span class="pre">alpha_invariant</span></code>, <code class="docutils literal notranslate"><span class="pre">raw</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>No built-in profile creates the Discovery Object container (<code class="docutils literal notranslate"><span class="pre">oid:</span> <span class="pre">7E</span></code>).
+The object is optional in PIV, and a card without it works everywhere. To
+add it, put the container in a custom profile (as above) and write the
+object with <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">write-object</span> <span class="pre">--object</span> <span class="pre">discovery</span></code>; it is written
+and returned in the bare <code class="docutils literal notranslate"><span class="pre">7E</span></code> form SP 800-73-4 requires — the one PIV
+object that must not be wrapped in a <code class="docutils literal notranslate"><span class="pre">53</span></code> template. Verified on hardware
+against OpenFIPS201 v2. A malformed (<code class="docutils literal notranslate"><span class="pre">53</span></code>-wrapped) Discovery Object is
+worse than an absent one: the Windows inbox PIV minidriver rejects the
+whole card. This tool never writes that form.</p>
+<p>The container also cannot be removed afterwards, because <code class="docutils literal notranslate"><span class="pre">load-config</span></code>
+stops at the first element that already exists. Recovering a card requires
+reinstalling the PIV applet, which erases its keys and certificates.
+Discovery is optional in PIV, and a card without it works normally.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">from_yaml</span></code> rejects unknown mode/role/mechanism names and validates the
+whole profile before anything is sent to a card:</p>
+<ul class="simple">
+<li><p>the admin key mechanism must be AES-128/192/256 (this applet’s 9B is
+AES-only);</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">min</span></code> must be at least 6 and <code class="docutils literal notranslate"><span class="pre">max</span></code> must be ≥ <code class="docutils literal notranslate"><span class="pre">min</span></code>;</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">retries</span></code> must be 0–10;</p></li>
+<li><p>every key’s mechanism must be one this applet actually supports (see
+<code class="docutils literal notranslate"><span class="pre">inspect-defaults</span></code>);</p></li>
+<li><p>the profile must define at least one container or key.</p></li>
+</ul>
+<p>Generate a starting file with <code class="docutils literal notranslate"><span class="pre">init-config</span></code>, edit it, then apply it with
+<code class="docutils literal notranslate"><span class="pre">load-config</span> <span class="pre">--file</span></code>.</p>
+</section>
+<section id="applying-a-profile">
+<h2>Applying a profile<a class="headerlink" href="#applying-a-profile" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>preview<span class="w"> </span>the<span class="w"> </span>exact<span class="w"> </span>APDUs<span class="w"> </span>without<span class="w"> </span>touching<span class="w"> </span>the<span class="w"> </span>card
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
+
+<span class="gp"># </span>apply<span class="w"> </span><span class="o">(</span>development/evaluation<span class="w"> </span>cards<span class="o">)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
+
+<span class="gp"># </span>or<span class="w"> </span>apply<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>profile<span class="w"> </span>file
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--file<span class="w"> </span>profile.yaml<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+<p>Each builder command is sent as a <strong>single short APDU in its own SCP03
+session</strong> (JCOP 4.5 accepts one application APDU per applet-directed SCP03
+session) — the CLI handles session setup/teardown per command for you.</p>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a> — the full lifecycle this structure feeds into</p></li>
+<li><p><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the condensed, one-command path</p></li>
+<li><p><a class="reference internal" href="factory-commands.html"><span class="doc">Factory commands</span></a> — the full <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span></code> command reference</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Factory &amp; provisioning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="factory-commands.html" class="btn btn-neutral float-right" title="Factory commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/factory/pre-personalization-profiles.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../factory/pre-personalization-profiles.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

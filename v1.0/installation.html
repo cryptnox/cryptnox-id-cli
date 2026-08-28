@@ -1,0 +1,253 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/installation.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a12e3537"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/custom.js?v=7a631626"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="getting-started.html" />
+    <link rel="prev" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pc-sc-per-platform">PC/SC per platform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-single-file-executable">Windows single-file executable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wsl2-windows-subsystem-for-linux">WSL2 (Windows Subsystem for Linux)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next">Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> is a Python CLI (Python 3.10+) over PC/SC.</p>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading"></a></h2>
+<p>Use a virtual environment — the tool has real dependencies (<code class="docutils literal notranslate"><span class="pre">click</span></code>, <code class="docutils literal notranslate"><span class="pre">rich</span></code>,
+<code class="docutils literal notranslate"><span class="pre">cbor2</span></code>, <code class="docutils literal notranslate"><span class="pre">cryptography</span></code>, <code class="docutils literal notranslate"><span class="pre">pyscard</span></code>, …) unlikely to be on a bare
+interpreter.</p>
+<p><strong>Windows (PowerShell):</strong></p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
+<span class="p">.\.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">Activate</span><span class="p">.</span><span class="n">ps1</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">cryptnox-id-cli</span>
+<span class="n">cryptnox-id</span> <span class="p">-</span><span class="n">-version</span>
+</pre></div>
+</div>
+<p><strong>Linux / macOS (bash):</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>cryptnox-id-cli
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>--version
+</pre></div>
+</div>
+<p>Three console entry points are installed and interchangeable: <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>,
+the short <code class="docutils literal notranslate"><span class="pre">cnx-id</span></code>, and <code class="docutils literal notranslate"><span class="pre">cryptnox-id-card</span></code>.</p>
+</section>
+<section id="pc-sc-per-platform">
+<h2>PC/SC per platform<a class="headerlink" href="#pc-sc-per-platform" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Windows</strong> — built in (the <em>Smart Card</em> service, <code class="docutils literal notranslate"><span class="pre">SCardSvr</span></code>); nothing to
+install.</p></li>
+<li><p><strong>Linux</strong> — install <code class="docutils literal notranslate"><span class="pre">pcscd</span></code> and the CCID driver
+(<code class="docutils literal notranslate"><span class="pre">apt</span> <span class="pre">install</span> <span class="pre">pcscd</span> <span class="pre">libccid</span></code>). Building <code class="docutils literal notranslate"><span class="pre">pyscard</span></code> from source also needs
+<code class="docutils literal notranslate"><span class="pre">build-essential</span> <span class="pre">swig</span> <span class="pre">libpcsclite-dev</span></code> (and <code class="docutils literal notranslate"><span class="pre">python3-dev</span></code> on a distro
+Python without headers).</p></li>
+<li><p><strong>macOS</strong> — built in. Note two things: the system Python is 3.9 (below the
+3.10 floor) — install 3.10+ with <a class="reference external" href="https://docs.astral.sh/uv/">uv</a>, Homebrew
+or python.org; and <code class="docutils literal notranslate"><span class="pre">cbor2</span></code> must be <code class="docutils literal notranslate"><span class="pre">&lt;6</span></code> (enforced in packaging), since 6.x
+has no Intel-mac wheel.</p></li>
+</ul>
+<p>Confirm the install sees a reader:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>readers
+</pre></div>
+</div>
+</section>
+<section id="windows-single-file-executable">
+<h2>Windows single-file executable<a class="headerlink" href="#windows-single-file-executable" title="Link to this heading"></a></h2>
+<p>A standalone <code class="docutils literal notranslate"><span class="pre">cryptnox-id.exe</span></code> (no Python install required) is built with
+PyInstaller from <code class="docutils literal notranslate"><span class="pre">packaging/cryptnox-id.spec</span></code>. PyInstaller cannot
+cross-compile, so each platform’s binary is built on that platform; the wheel
+above is the cross-platform path and runs anywhere Python 3.10+ and PC/SC exist.</p>
+</section>
+<section id="wsl2-windows-subsystem-for-linux">
+<h2>WSL2 (Windows Subsystem for Linux)<a class="headerlink" href="#wsl2-windows-subsystem-for-linux" title="Link to this heading"></a></h2>
+<p>WSL2 has no PC/SC by default, but a USB reader can be passed through with
+<a class="reference external" href="https://github.com/dorssel/usbipd-win">usbipd-win</a>. Verified end to end: PIV
+over contact, DESFire EV2 over contactless, and FIDO2 over contactless (no
+elevation) all work from Ubuntu in WSL2 against physical cards.</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="c"># Windows (Administrator), one-time per reader (find &lt;id&gt; with: usbipd list):</span>
+<span class="n">usbipd</span> <span class="n">bind</span>   <span class="p">-</span><span class="n">-busid</span> <span class="p">&lt;</span><span class="n">id</span><span class="p">&gt;</span>
+<span class="c"># per session (WSL must be running):</span>
+<span class="n">usbipd</span> <span class="n">attach</span> <span class="p">-</span><span class="n">-wsl</span> <span class="p">-</span><span class="n">-busid</span> <span class="p">&lt;</span><span class="n">id</span><span class="p">&gt;</span>     <span class="c"># detaches the reader from Windows</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>WSL<span class="w"> </span><span class="o">(</span>Ubuntu<span class="o">)</span>:
+<span class="gp">$ </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>pcscd<span class="w"> </span>libccid<span class="w"> </span>pcsc-tools<span class="w"> </span>usbutils
+<span class="gp">$ </span>sudo<span class="w"> </span>pcscd
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>--reader<span class="w"> </span>PICC<span class="w"> </span>mifare<span class="w"> </span>info<span class="w">    </span><span class="c1"># contactless; --reader ICC/ACR39U for contact</span>
+</pre></div>
+</div>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="n">usbipd</span> <span class="n">detach</span> <span class="p">-</span><span class="n">-busid</span> <span class="p">&lt;</span><span class="n">id</span><span class="p">&gt;</span>           <span class="c"># return the reader to Windows</span>
+</pre></div>
+</div>
+<p>Reader <strong>names and indices differ on Linux</strong>, so select by name substring
+(<code class="docutils literal notranslate"><span class="pre">PICC</span></code> = contactless, <code class="docutils literal notranslate"><span class="pre">ICC</span></code> / <code class="docutils literal notranslate"><span class="pre">ACR39U</span></code> = contact), not index. While a
+reader is attached to WSL, Windows cannot see it.</p>
+</section>
+<section id="next">
+<h2>Next<a class="headerlink" href="#next" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="getting-started.html"><span class="doc">Getting started</span></a> — first commands and reader selection</p></li>
+<li><p><a class="reference internal" href="overview.html"><span class="doc">Overview</span></a> — what the card and CLI do</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="getting-started.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../v0.1/installation.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="installation.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

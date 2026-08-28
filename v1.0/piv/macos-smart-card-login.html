@@ -1,0 +1,344 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>macOS smart-card login &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/macos-smart-card-login.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="PIV personalization" href="piv-personalization.html" />
+    <link rel="prev" title="TLS client authentication" href="tls-client-authentication.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">macOS smart-card login</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-0-fix-macos-s-ccid-driver">Step 0 — fix macOS’s CCID driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-pair-the-certificate-to-the-account">Step 1 — pair the certificate to the account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-use-it">Step 2 — use it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#requiring-the-card-optional-higher-risk">Requiring the card (optional, higher risk)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">macOS smart-card login</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="macos-smart-card-login">
+<h1>macOS smart-card login<a class="headerlink" href="#macos-smart-card-login" title="Link to this heading"></a></h1>
+<p>macOS recognizes a PIV card for login through Apple’s own <strong>CryptoTokenKit</strong>
+<code class="docutils literal notranslate"><span class="pre">pivtoken</span></code> driver, not OpenSC/PKCS#11, there is no bypass. Pairing a card
+to a local account is additive by default: the card becomes an alternative
+to your password at the lock screen, <code class="docutils literal notranslate"><span class="pre">sudo</span></code>, and full login, not a
+replacement. Requiring the card and removing password login entirely is a
+separate, optional, higher-risk step covered at the end.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>macOS’s bundled CCID driver (still v1.5.1 as of macOS Tahoe) fails to
+negotiate this card’s ATR outright: connect attempts return
+“unresponsive,” even though the ATR itself reads fine. This isn’t a
+reader problem (two different reader models fail identically) or a dead
+card (a T=0 connect attempt gets <code class="docutils literal notranslate"><span class="pre">E_PROTO_MISMATCH</span></code> rather than
+“unresponsive,” proving the reader is talking to the card, just failing
+to open the T=1 session the card requires). The fix is Step 0 below;
+without it, nothing else in this guide will work.</p>
+</div>
+<section id="how-it-has-to-look">
+<h2>How it has to look<a class="headerlink" href="#how-it-has-to-look" title="Link to this heading"></a></h2>
+<p>Same role rule as the rest of this card: the login/authentication signature
+needs a <strong>SIGN-capable</strong> slot. This guide is written and tested against
+<strong>9A</strong>, provisioned with the <strong>ssh</strong> profile (see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>)
+— the same key used in <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>/<a class="reference internal" href="tls-client-authentication.html"><span class="doc">TLS client authentication</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>’s 9C is <strong>not recommended here</strong>, and hasn’t been
+tested for macOS login at all. 9C carries the PIV spec’s
+<code class="docutils literal notranslate"><span class="pre">nonRepudiation</span></code>/always-reauth convention (confirmed elsewhere on this
+card: a fresh re-login is required before every single signature, which
+breaks SSH/TLS via OpenSC — see <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>’s
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-why-it-fails-cryptnox-default"><span class="std std-ref">Why it fails on cryptnox-default</span></a>). That’s a PIV-spec-level
+behavior, not an OpenSC quirk, so Apple’s <code class="docutils literal notranslate"><span class="pre">pivtoken</span></code> driver may hit the
+same problem — genuinely unknown, not assumed safe. Use 9A.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is one named profile among several, not necessarily
+what any given card has — check with <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code>
+or whoever personalized the card. Unlike Windows AD, macOS local pairing
+doesn’t require a specific EKU or UPN in the certificate — a plain client
+certificate from <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> is enough.</p>
+</section>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A card already through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> (key + certificate in a SIGN-capable
+slot), with the standard PIV objects written (<code class="docutils literal notranslate"><span class="pre">write-standard-objects</span></code>
+— CryptoTokenKit identifies the card as PIV through the CCC/CHUID).</p></li>
+<li><p>Admin access on the Mac.</p></li>
+<li><p>OpenSC, for the diagnostic check in Step 0 (<code class="docutils literal notranslate"><span class="pre">brew</span> <span class="pre">install</span> <span class="pre">opensc</span></code>). The
+actual login path doesn’t use it, or need <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> installed on the Mac at
+all — GUI login goes through Apple’s own <code class="docutils literal notranslate"><span class="pre">pivtoken</span></code> driver exclusively.</p></li>
+<li><p>A <strong>contact</strong> reader. Only contact readers have been tried for this guide
+— by analogy with SSH/TLS (same signing key, same access-mode
+restriction) contactless is expected not to work, but that hasn’t been
+separately confirmed on macOS.</p></li>
+</ul>
+</section>
+<section id="step-0-fix-macos-s-ccid-driver">
+<h2>Step 0 — fix macOS’s CCID driver<a class="headerlink" href="#step-0-fix-macos-s-ccid-driver" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sudo<span class="w"> </span>defaults<span class="w"> </span>write<span class="w"> </span>/Library/Preferences/com.apple.security.smartcard<span class="w"> </span>useIFDCCID<span class="w"> </span>-bool<span class="w"> </span>yes
+</pre></div>
+</div>
+<p>Then physically <strong>unplug and replug the reader</strong>, with the card inserted,
+so the smartcard service reloads the driver. This switches macOS to the
+alternative CCID driver (the actively maintained upstream one) instead of
+Apple’s outdated bundled one — not Cryptnox-specific; the CCID driver’s own
+author recommends this as the first troubleshooting step for any macOS
+smartcard problem. The setting persists across reboots; if a later macOS
+update breaks smart-card login, check this first.</p>
+<p>Confirm the card now responds:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>opensc-tool<span class="w"> </span>-n
+</pre></div>
+</div>
+<p>Should report the card as a “Personal Identity Verification Card.” If it
+still says “unresponsive,” the driver switch didn’t take, confirm the
+<code class="docutils literal notranslate"><span class="pre">defaults</span> <span class="pre">write</span></code> succeeded and that you actually unplugged and replugged
+the reader afterward (a service restart alone isn’t enough).</p>
+</section>
+<section id="step-1-pair-the-certificate-to-the-account">
+<h2>Step 1 — pair the certificate to the account<a class="headerlink" href="#step-1-pair-the-certificate-to-the-account" title="Link to this heading"></a></h2>
+<p>Find the card’s identity hash:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sc_auth<span class="w"> </span>identities
+</pre></div>
+</div>
+<p>Shows an “Unpaired identities” line with a hash and the certificate’s CN.
+Pair it:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sc_auth<span class="w"> </span>pair<span class="w"> </span>-u<span class="w"> </span><span class="k">$(</span>whoami<span class="k">)</span><span class="w"> </span>-h<span class="w"> </span>&lt;hash-from-above&gt;
+</pre></div>
+</div>
+<p>Prompts for your Mac account password once (to authorize the pairing), then
+the card’s PIV PIN. <code class="docutils literal notranslate"><span class="pre">sc_auth</span> <span class="pre">list</span> <span class="pre">-u</span> <span class="pre">$(whoami)</span></code> confirms the pairing
+afterward. This is additive — your password still works everywhere; the
+card is now an alternative, not a replacement.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">security</span> <span class="pre">find-identity</span> <span class="pre">-p</span> <span class="pre">smartcard</span></code> does not work on current macOS
+— the <code class="docutils literal notranslate"><span class="pre">smartcard</span></code> policy value isn’t supported by <code class="docutils literal notranslate"><span class="pre">find-identity</span></code>.
+Use <code class="docutils literal notranslate"><span class="pre">sc_auth</span> <span class="pre">identities</span></code> instead.</p>
+</div>
+</section>
+<section id="step-2-use-it">
+<h2>Step 2 — use it<a class="headerlink" href="#step-2-use-it" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Lock screen</strong>: lock the screen with the card inserted, enter the PIV
+PIN instead of your password to unlock.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sudo</span></code>: <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">-v</span></code> in Terminal accepts the card PIN too — macOS wires
+the card into <code class="docutils literal notranslate"><span class="pre">sudo</span></code>’s PAM stack automatically, no separate setup.</p></li>
+<li><p><strong>Full login</strong>: log out, sign in with the card inserted using the PIN.</p></li>
+</ul>
+</section>
+<section id="requiring-the-card-optional-higher-risk">
+<h2>Requiring the card (optional, higher risk)<a class="headerlink" href="#requiring-the-card-optional-higher-risk" title="Link to this heading"></a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Unlike pairing, this removes the password fallback entirely. Test
+pairing thoroughly first (Step 2 above) with a card and reader you
+trust, before disabling password login. Keep an active admin session or
+physical access available until you’ve confirmed the card works at the
+login window with enforcement on.</p>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>sudo<span class="w"> </span>sysadminctl<span class="w"> </span>-smartcardstatus<span class="w"> </span><span class="nb">enable</span>
+</pre></div>
+</div>
+<p>Requires a smart card for <strong>all</strong> local accounts, not just the paired one.
+For managed fleets, Apple’s current guidance is a Smart Card configuration
+profile pushed via MDM instead of this local command.</p>
+<p>For pre-boot (FileVault) card requirement specifically, <code class="docutils literal notranslate"><span class="pre">sc_auth</span>
+<span class="pre">filevault</span> <span class="pre">-o</span> <span class="pre">enable</span></code> exists but carries the same class of risk at the
+very first screen of a cold boot, before any recovery options are
+available — leave it off unless you specifically need it.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>PIN entry stops working, card seems locked</strong> — too many wrong PIN
+attempts blocks the card’s PIN (6 tries on the default profile, see
+<a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a>); unblock with the PUK (<code class="docutils literal notranslate"><span class="pre">sc_auth</span> <span class="pre">changepin</span></code>, or from the
+Linux/CLI side). This is a card PIN lockout, not a login lockout — your
+password still works unless you’ve also enabled “require card” above.</p></li>
+<li><p><strong>``sc_auth: command not found`` / no ``-smartcardstatus`` flag</strong> — Apple
+has changed and relocated these commands across macOS releases; check
+<code class="docutils literal notranslate"><span class="pre">man</span> <span class="pre">sc_auth</span></code> and <code class="docutils literal notranslate"><span class="pre">man</span> <span class="pre">sysadminctl</span></code> on the target OS, or use an MDM
+Smart Card profile instead.</p></li>
+<li><p><strong>Card not offered at login, or “unresponsive card” from any tool</strong> —
+confirm Step 0’s driver fix is applied and the reader was replugged
+afterward; this is the most common cause. Then confirm <code class="docutils literal notranslate"><span class="pre">opensc-tool</span> <span class="pre">-n</span></code>
+sees the card outside the login window.</p></li>
+<li><p><strong>Locked out after enabling “require card”</strong> — boot into Recovery / Safe
+Mode, or use another admin account, to run <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">sysadminctl</span>
+<span class="pre">-smartcardstatus</span> <span class="pre">disable</span></code>.</p></li>
+<li><p><strong>Cert expired</strong> — login (and pairing) stops working once the PIV
+certificate expires; issue a new one and re-pair.</p></li>
+<li><p><strong>Card only responds over a contactless/NFC-capable reader, or a combo
+reader’s contactless pad</strong> — this card’s signing slot has its contactless
+access mode set to <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>; the card itself refuses the private-key
+operation login needs over that interface, by design, not a driver or
+macOS bug. Use the reader’s contact slot instead. The exact macOS-side
+error text for this case hasn’t been captured yet (not independently
+tested over NFC on a Mac); on Linux/OpenSC the same underlying refusal
+surfaces as <code class="docutils literal notranslate"><span class="pre">CKR_USER_NOT_LOGGED_IN</span></code> at login, over a contact reader it
+works normally.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
+<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile options for the signing slot</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tls-client-authentication.html" class="btn btn-neutral float-left" title="TLS client authentication" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="piv-personalization.html" class="btn btn-neutral float-right" title="PIV personalization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/macos-smart-card-login.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/macos-smart-card-login.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

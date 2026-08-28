@@ -1,0 +1,411 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cryptnox ID CLI &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/index.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a12e3537"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/custom.js?v=7a631626"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Cryptnox ID CLI</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="product">
+<h1>Cryptnox ID CLI<a class="headerlink" href="#product" title="Link to this heading"></a></h1>
+<p>Command-line management for the Cryptnox multi-applet smart card: PIV
+(SP 800-73 identity credentials), FIDO2/CTAP 2.1 (passkeys), and MIFARE
+DESFire contactless — three independent functions on one physical card,
+driven by one tool: <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#reachability-at-a-glance">Reachability at a glance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#readers">Readers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#platforms">Platforms</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#pc-sc-per-platform">PC/SC per platform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#windows-single-file-executable">Windows single-file executable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#wsl2-windows-subsystem-for-linux">WSL2 (Windows Subsystem for Linux)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#next">Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#choosing-a-reader">Choosing a reader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#global-options">Global options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#one-card-operation-at-a-time">One card operation at a time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#development-keys">Development keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#next">Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="interactive-shell.html#built-ins-and-keys">Built-ins and keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactive-shell.html#global-options-carry-in">Global options carry in</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactive-shell.html#desktop-shortcut-windows">Desktop shortcut (Windows)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactive-shell.html#piped-input">Piped input</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli-basics.html">Command syntax &amp; conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cli-basics.html#global-options">Global options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli-basics.html#top-level-commands">Top-level commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="json-output.html#the-contract">The contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json-output.html#result-envelope">Result envelope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json-output.html#error-object">Error object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="json-output.html#snapshot-reports">Snapshot reports</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#reader-and-transport">Reader and transport</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#status-words-and-errors">Status words and errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#fido2">FIDO2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#genuineness">Genuineness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#yubico-piv-tool-interop">yubico-piv-tool interop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#getting-a-shareable-diagnostic">Getting a shareable diagnostic</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="factory/pre-personalization-profiles.html">Pre-personalization profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="factory/factory-commands.html">Factory commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#the-one-command-path">The one-command path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#the-steps-by-hand">The steps, by hand</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#verify-with-yubico-piv-tool">Verify with yubico-piv-tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#interoperability-matrix">Interoperability matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#if-something-fails">If something fails</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#step-0-pre-personalize-with-the-ms-logon-profile-once-per-card">Step 0 — pre-personalize with the ms-logon profile (once per card)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#step-1-get-the-certificate-issued">Step 1 — get the certificate issued</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#step-2-verify-windows-sees-the-card">Step 2 — verify Windows sees the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#step-3-log-on">Step 3 — log on</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#scope-and-limits">Scope and limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#why-it-fails-on-cryptnox-default">Why it fails on cryptnox-default</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#step-0-find-the-pkcs-11-module-path">Step 0 — find the PKCS#11 module path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#step-1-get-the-ssh-public-key-off-the-card">Step 1 — get the SSH public key off the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#step-2-authorize-it">Step 2 — authorize it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#step-3-load-it-into-ssh-agent">Step 3 — load it into ssh-agent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#step-4-connect">Step 4 — connect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-public-key-authentication.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#step-1-export-the-card-s-public-key">Step 1 — export the card’s public key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#step-2-the-ca-signs-it">Step 2 — the CA signs it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#step-3-trust-the-ca-on-the-server">Step 3 — trust the CA on the server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#step-4-connect-with-the-certificate">Step 4 — connect with the certificate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/ssh-user-certificates.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#firefox-nss-cross-platform">Firefox (NSS, cross-platform)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#windows-iis-native-store">Windows / IIS (native store)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#curl-openssl-scripted-clients">curl / OpenSSL (scripted clients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/tls-client-authentication.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#step-0-fix-macos-s-ccid-driver">Step 0 — fix macOS’s CCID driver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#step-1-pair-the-certificate-to-the-account">Step 1 — pair the certificate to the account</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#step-2-use-it">Step 2 — use it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#requiring-the-card-optional-higher-risk">Requiring the card (optional, higher risk)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/macos-smart-card-login.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#quickstart-one-shot">Quickstart (one shot)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-0-factory-pre-personalize-the-applet-structure">Step 0 — factory: pre-personalize the applet structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-1-set-the-pin-and-puk">Step 1 — set the PIN and PUK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-2-generate-keys-on-the-card">Step 2 — generate keys on the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-2b-import-an-external-private-key">Step 2b — import an external private key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-3-csr-and-certificates-on-card-signing">Step 3 — CSR and certificates (on-card signing)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-4-data-objects">Step 4 — data objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-5-validate-and-smoke-test">Step 5 — validate and smoke-test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-6-finalize-irreversible-factory">Step 6 — finalize (irreversible, factory)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#inspection">Inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#pin">PIN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#puk">PUK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#admin-channel">Admin channel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#certificates-and-objects">Certificates and objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#attestation">Attestation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#personalization-piv-perso">Personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html#credential-management">Credential management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html#authenticatorconfig-policy">authenticatorConfig policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html#reset">Reset</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#windows-run-elevated">Windows: run elevated</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#read-only-commands">Read-only commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#write-operations">Write operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#credential-management">Credential management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#authenticatorconfig-policy">authenticatorConfig policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#scope">Scope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-guide.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-commands.html#inspection">Inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-commands.html#pin">PIN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-commands.html#credentials">Credentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-commands.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="fido2/fido2-commands.html#destructive">Destructive</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#step-1-create-an-application">Step 1 — create an application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#step-2-set-up-the-sdm-file">Step 2 — set up the SDM file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#step-3-read-and-verify">Step 3 — read and verify</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#scope-and-production-notes">Scope and production notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#inspect-read-only">Inspect (read-only)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#applications-and-files">Applications and files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#authenticate-write-read">Authenticate, write, read</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#delete-authenticated">Delete (authenticated)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#value-files">Value files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#record-files">Record files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#keys">Keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#secure-dynamic-messaging-sdm-sun">Secure Dynamic Messaging (SDM / SUN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#format-the-picc-destructive">Format the PICC (destructive)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-guide.html#scope">Scope</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#inspection">Inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#applications">Applications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#keys">Keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#files-and-data">Files and data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#value-and-record-files">Value and record files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#secure-dynamic-messaging-ev3">Secure Dynamic Messaging (EV3)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mifare/mifare-desfire-commands.html#destructive">Destructive</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-guide.html#what-is-checked-and-what-deliberately-is-not">What is checked — and what deliberately is not</a></li>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-guide.html#trust-anchors">Trust anchors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-guide.html#development-cards">Development cards</a></li>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-guide.html#inspection-without-the-proof">Inspection without the proof</a></li>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-guide.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-commands.html#inspection">Inspection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="genuine/genuineness-commands.html#verification">Verification</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../v0.1/index.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="index.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

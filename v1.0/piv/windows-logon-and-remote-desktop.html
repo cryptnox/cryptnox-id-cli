@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windows logon &amp; Remote Desktop &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/windows-logon-and-remote-desktop.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SSH public-key authentication" href="ssh-public-key-authentication.html" />
+    <link rel="prev" title="Quick start: a working PIV card" href="quick-start-a-working-piv-card.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Windows logon &amp; Remote Desktop</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-0-pre-personalize-with-the-ms-logon-profile-once-per-card">Step 0 — pre-personalize with the ms-logon profile (once per card)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-get-the-certificate-issued">Step 1 — get the certificate issued</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-verify-windows-sees-the-card">Step 2 — verify Windows sees the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-log-on">Step 3 — log on</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scope-and-limits">Scope and limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Windows logon &amp; Remote Desktop</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="windows-logon-remote-desktop">
+<h1>Windows logon &amp; Remote Desktop<a class="headerlink" href="#windows-logon-remote-desktop" title="Link to this heading"></a></h1>
+<p>Remote Desktop with a smart card is <strong>Windows smart-card logon</strong>: <code class="docutils literal notranslate"><span class="pre">mstsc</span></code>
+redirects the card into the session and the remote host performs Kerberos
+PKINIT against a certificate on the card. This guide personalizes the card for
+that — and for interactive Windows logon generally.</p>
+<section id="how-it-has-to-look">
+<h2>How it has to look<a class="headerlink" href="#how-it-has-to-look" title="Link to this heading"></a></h2>
+<p>Windows reads the logon certificate from slot <strong>9A</strong> (PIV Authentication) via
+the inbox PIV minidriver. The applet only performs client-authentication
+signing for keys created with a SIGN-capable role, so the card must be
+pre-personalized with the <strong>ms-logon profile</strong> (its 9A keys are
+<code class="docutils literal notranslate"><span class="pre">AUTHENTICATE+SIGN</span></code>, and it adds an importable RSA-2048 object on 9A).</p>
+<p>The certificate itself is dictated by Active Directory, not by the card:</p>
+<ul class="simple">
+<li><p>issued by the <strong>enterprise CA</strong> (present in the domain’s NTAuth store) — a
+self-signed certificate can never log on;</p></li>
+<li><p>from a smart-card-logon template: <em>Client Authentication</em> and <em>Smart Card
+Logon</em> EKUs and the user’s <strong>UPN in the Subject Alternative Name</strong>;</p></li>
+<li><p>since the KB5014754 strong-mapping enforcement, carrying the <strong>SID security
+extension</strong> — Active Directory Certificate Services adds it automatically
+when issuing against a user from a current template;</p></li>
+<li><p>the key in 9A must be <strong>RSA</strong> — see below.</p></li>
+</ul>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>Use an RSA key on Windows. The inbox PIV minidriver does not enumerate EC
+keys.</strong></p>
+<p>With an EC key in 9A, Windows does not merely reject the certificate, it
+never builds a key container at all: <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code> reports
+<code class="docutils literal notranslate"><span class="pre">NTE_BAD_KEYSET</span></code>, nothing appears in the Windows certificate store, and no
+application can offer the credential. The card looks empty rather than
+broken, which makes this easy to misdiagnose.</p>
+<p>This is a property of the Windows driver, not of this card. The same test
+reproduces on a YubiKey 5, and P-384 fails the same way as P-256.</p>
+<p>Because of this, pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> to <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> for any
+card intended for Windows (quickstart’s default is ECC, and it warns when
+that default lands on <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>’s 9A). The RSA key is still generated
+<strong>on-card</strong> and never leaves it, so choosing RSA costs nothing in key
+protection.</p>
+<p>If a deployment genuinely requires ECC on Windows, that needs a third-party
+minidriver (Yubico’s supports P-256/P-384), which is outside the
+no-extra-software path this guide describes.</p>
+</div>
+</section>
+<section id="step-0-pre-personalize-with-the-ms-logon-profile-once-per-card">
+<h2>Step 0 — pre-personalize with the ms-logon profile (once per card)<a class="headerlink" href="#step-0-pre-personalize-with-the-ms-logon-profile-once-per-card" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--include-preperso<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9a.csr.pem<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+<p>The second form does everything in one shot — PIN, PUK, an on-card <strong>RSA-2048</strong>
+key in 9A (the private key never leaves the card), a CSR for your CA, and the
+CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.</p>
+</section>
+<section id="step-1-get-the-certificate-issued">
+<h2>Step 1 — get the certificate issued<a class="headerlink" href="#step-1-get-the-certificate-issued" title="Link to this heading"></a></h2>
+<p>Two equivalent paths; pick the one your PKI supports.</p>
+<p><strong>Path A — CSR to the CA (key stays on-card).</strong> Submit <code class="docutils literal notranslate"><span class="pre">9a.csr.pem</span></code> against
+a smart-card-logon template and import the issued certificate:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>certreq<span class="w"> </span>-submit<span class="w"> </span>-attrib<span class="w"> </span><span class="s2">"CertificateTemplate:SmartcardLogon"</span><span class="w"> </span>9a.csr.pem<span class="w"> </span>9a-issued.cer
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a-issued.cer
+</pre></div>
+</div>
+<p><strong>Path B — PKI-issued PKCS#12 (centralized key generation).</strong> If your PKI
+delivers a <code class="docutils literal notranslate"><span class="pre">.pfx</span></code>/<code class="docutils literal notranslate"><span class="pre">.p12</span></code>, one command imports both the key and the
+certificate:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-p12<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--p12<span class="w"> </span>user.pfx
+</pre></div>
+</div>
+<p>(The container password comes from a masked prompt or
+<code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_P12_PASSWORD</span></code>; chain certificates inside the container are
+ignored — PIV stores the entity certificate.)</p>
+</section>
+<section id="step-2-verify-windows-sees-the-card">
+<h2>Step 2 — verify Windows sees the card<a class="headerlink" href="#step-2-verify-windows-sees-the-card" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>certutil<span class="w"> </span>-scinfo
+</pre></div>
+</div>
+<p>You should see the card bind to the PIV minidriver (“Identity Device (NIST SP
+800-73 [PIV])”) and the 9A certificate listed.</p>
+<p>Windows logon, like OpenSC, uses <strong>standard PIV discovery and standard PIV
+commands only</strong> — an <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> card lists its certificate and produces a
+PIN-verified signature with the 9A key under OpenSC (tested with the ECC key
+on 9A; on-card signing with the RSA-2048 key is separately verified via the
+CLI’s smoke test). The Yubico-specific connect requirement of
+<code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> (see the <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> interop note) plays no role in logon.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>If another vendor’s smart-card middleware is installed</strong> (SafeNet/Thales,
+etc.), its ATR mask may claim this card before Windows runs PIV discovery,
+handing it to the wrong driver. The fix is an administrator-level smart
+card registry association (Calais database) mapping this card’s exact ATR
+to the PIV class minidriver — reversible, per machine. On machines without
+competing middleware, no configuration is needed.</p>
+</div>
+</section>
+<section id="step-3-log-on">
+<h2>Step 3 — log on<a class="headerlink" href="#step-3-log-on" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Local/interactive</strong>: select the smart-card credential tile and enter the
+PIV PIN.</p></li>
+<li><p><strong>Remote Desktop</strong>: in <code class="docutils literal notranslate"><span class="pre">mstsc</span></code> the card is redirected by default (Local
+Resources → Smart cards). Connect to the domain host and authenticate with
+the PIN at the remote credential prompt.</p></li>
+</ul>
+</section>
+<section id="scope-and-limits">
+<h2>Scope and limits<a class="headerlink" href="#scope-and-limits" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Smart-card logon requires a <strong>domain</strong> (Active Directory or hybrid-joined
+Entra ID). Standalone Windows machines do not support smart-card logon
+natively.</p></li>
+<li><p>Enrollment runs through <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> (CSR or PKCS#12) — Windows-side enrollment
+tools that write directly to the card (certreq onto the card, MMC
+enrollment) use the Yubico-style management model and do not apply; this
+card administers over SCP03.</p></li>
+<li><p>The end-to-end logon path (PKINIT against a domain controller) can only be
+proven in a domain lab; the card-side personalization and minidriver
+recognition are verifiable standalone with <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code>.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the general PIV quick start and tooling interop</p></li>
+<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — what the ms-logon profile defines</p></li>
+<li><p><a class="reference internal" href="piv-commands.html"><span class="doc">PIV commands</span></a> — <code class="docutils literal notranslate"><span class="pre">import-key</span></code>, <code class="docutils literal notranslate"><span class="pre">import-p12</span></code>, <code class="docutils literal notranslate"><span class="pre">quickstart</span></code></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quick-start-a-working-piv-card.html" class="btn btn-neutral float-left" title="Quick start: a working PIV card" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssh-public-key-authentication.html" class="btn btn-neutral float-right" title="SSH public-key authentication" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/windows-logon-and-remote-desktop.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/windows-logon-and-remote-desktop.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

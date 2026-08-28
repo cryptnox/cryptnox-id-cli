@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIFARE DESFire guide &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/mifare/mifare-desfire-guide.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="MIFARE DESFire commands" href="mifare-desfire-commands.html" />
+    <link rel="prev" title="Quick start: a tamper-evident NFC tag (SDM/SUN)" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#inspect-read-only">Inspect (read-only)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#applications-and-files">Applications and files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#authenticate-write-read">Authenticate, write, read</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#delete-authenticated">Delete (authenticated)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#value-files">Value files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#record-files">Record files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#keys">Keys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#secure-dynamic-messaging-sdm-sun">Secure Dynamic Messaging (SDM / SUN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#format-the-picc-destructive">Format the PICC (destructive)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scope">Scope</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MIFARE DESFire guide</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="mifare-desfire-guide">
+<h1>MIFARE DESFire guide<a class="headerlink" href="#mifare-desfire-guide" title="Link to this heading"></a></h1>
+<p>The DESFire function is the card’s <strong>default applet</strong> — it answers a fresh
+contactless connection before any JavaCard applet is selected. All <code class="docutils literal notranslate"><span class="pre">mifare</span></code>
+commands need a <strong>DESFire-capable contactless reader</strong> (the ACS ACR1252 is
+verified; some contactless readers do not pass native DESFire commands
+through).</p>
+<p>The CLI speaks authenticated DESFire (EV2 secure messaging: AES session keys,
+command/response MACs, optional full encryption) and the DESFire EV3
+Secure Dynamic Messaging feature, implemented against public NXP documentation
+(application note <a class="reference external" href="https://www.nxp.com/docs/en/application-note/AN12196.pdf">AN12196</a> and the DESFire
+EV3 short data sheet).</p>
+<section id="inspect-read-only">
+<h2>Inspect (read-only)<a class="headerlink" href="#inspect-read-only" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>info<span class="w">          </span><span class="c1"># version + free memory + applications</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>version<span class="w">       </span><span class="c1"># hardware/software version, storage, UID</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>free-memory
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>apps<span class="w"> </span>list
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>files<span class="w"> </span>list<span class="w"> </span>--aid<span class="w"> </span>CC0102
+</pre></div>
+</div>
+</section>
+<section id="applications-and-files">
+<h2>Applications and files<a class="headerlink" href="#applications-and-files" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span><span class="m">3</span><span class="w"> </span>AES<span class="w"> </span>keys<span class="w"> </span><span class="o">(</span>key<span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>application<span class="w"> </span>master<span class="o">)</span><span class="p">;</span><span class="w"> </span>new<span class="w"> </span>keys<span class="w"> </span>default<span class="w"> </span>to<span class="w"> </span>all-zero
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>app<span class="w"> </span>create<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--keys<span class="w"> </span><span class="m">3</span>
+
+<span class="gp"># </span>standard<span class="w"> </span>data<span class="w"> </span>file<span class="w"> </span>0x01,<span class="w"> </span><span class="m">32</span><span class="w"> </span>bytes,<span class="w"> </span>free<span class="w"> </span><span class="nb">read</span><span class="w"> </span>/<span class="w"> </span>keyed<span class="w"> </span>write
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>files<span class="w"> </span>create-standard<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">01</span><span class="w"> </span>--size<span class="w"> </span><span class="m">32</span>
+</pre></div>
+</div>
+</section>
+<section id="authenticate-write-read">
+<h2>Authenticate, write, read<a class="headerlink" href="#authenticate-write-read" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">AuthenticateEV2First</span></code> establishes AES session keys and a transaction
+identifier. Writes are sent MAC-protected (command and response MACs verified
+by the CLI); free-read files read without authentication.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>authenticate<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">0</span><span class="w"> </span>--zero-key
+
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>write<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">01</span><span class="w"> </span>--data<span class="w"> </span>CAFEBABE<span class="w"> </span>--zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>write<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">01</span><span class="w"> </span>--in<span class="w"> </span>payload.bin<span class="w"> </span>--zero-key
+
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">01</span><span class="w"> </span>--length<span class="w"> </span><span class="m">4</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">01</span><span class="w"> </span>--out<span class="w"> </span>dump.bin
+</pre></div>
+</div>
+<p>Writes larger than one native frame are split into command-chaining frames
+automatically — the only ceiling is the file size.</p>
+<p>Standard data files also support <strong>fully encrypted</strong> transfer: create the file
+with <code class="docutils literal notranslate"><span class="pre">--full</span></code>, then <code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">--full</span></code> / <code class="docutils literal notranslate"><span class="pre">read</span> <span class="pre">--full</span> <span class="pre">--length</span> <span class="pre">N</span> <span class="pre">--zero-key</span></code>
+(encrypted reads need the key too).</p>
+</section>
+<section id="delete-authenticated">
+<h2>Delete (authenticated)<a class="headerlink" href="#delete-authenticated" title="Link to this heading"></a></h2>
+<p>Deleting an application requires authentication with the application master
+key; the CLI authenticates and sends a MAC-protected <code class="docutils literal notranslate"><span class="pre">DeleteApplication</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>app<span class="w"> </span>delete<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--zero-key
+</pre></div>
+</div>
+</section>
+<section id="value-files">
+<h2>Value files<a class="headerlink" href="#value-files" title="Link to this heading"></a></h2>
+<p>A value file holds a signed integer changed by credit/debit, persisted with a
+transaction commit (issued by the CLI in the same authenticated session):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>value<span class="w"> </span>create<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--initial<span class="w"> </span><span class="m">100</span><span class="w"> </span>--lower<span class="w"> </span><span class="m">0</span><span class="w"> </span>--upper<span class="w"> </span><span class="m">1000000</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>value<span class="w"> </span>get<span class="w">    </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>value<span class="w"> </span>credit<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--amount<span class="w"> </span><span class="m">50</span><span class="w"> </span>--zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>value<span class="w"> </span>debit<span class="w">  </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--amount<span class="w"> </span><span class="m">30</span><span class="w"> </span>--zero-key
+</pre></div>
+</div>
+</section>
+<section id="record-files">
+<h2>Record files<a class="headerlink" href="#record-files" title="Link to this heading"></a></h2>
+<p>Linear or cyclic record files; write and clear commit a transaction:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>record<span class="w"> </span>create<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">03</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--record-size<span class="w"> </span><span class="m">8</span><span class="w"> </span>--max-records<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">[</span>--cyclic<span class="o">]</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>record<span class="w"> </span>write<span class="w">  </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">03</span><span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--data<span class="w"> </span>AABBCCDDEEFF0011<span class="w"> </span>--zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>record<span class="w"> </span><span class="nb">read</span><span class="w">   </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">03</span><span class="w"> </span>--zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>record<span class="w"> </span>clear<span class="w">  </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">03</span><span class="w"> </span>--zero-key
+</pre></div>
+</div>
+<p>Reading an empty record file returns <code class="docutils literal notranslate"><span class="pre">BOUNDARY_ERROR</span> <span class="pre">(0xBE)</span></code> — expected, it
+simply has no records yet.</p>
+</section>
+<section id="keys">
+<h2>Keys<a class="headerlink" href="#keys" title="Link to this heading"></a></h2>
+<p>DESFire AES keys come from <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (the all-zero factory default of a
+new application) or <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> (hex in an environment variable) —
+never on the command line. Keys are AES-128; legacy DES/3DES is intentionally
+not supported.</p>
+<p>Rotate a key (same-key change — authenticate with the key being changed):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>change<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">0</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--new-key-env<span class="w"> </span>NEWKEY
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>authenticate<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">0</span><span class="w"> </span>--key-env<span class="w"> </span>NEWKEY
+</pre></div>
+</div>
+<p><strong>Cross-key change</strong> — authenticate with a <em>different</em> key (typically the
+application master, key 0) to change another key. The card requires the target
+key’s <strong>current value</strong> to authorize the change — supply it via
+<code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> / <code class="docutils literal notranslate"><span class="pre">--key-env</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>change<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">1</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--new-key-env<span class="w"> </span>NEWKEY1<span class="w"> </span>--auth-key-no<span class="w"> </span><span class="m">0</span><span class="w"> </span>--auth-zero-key
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>authenticate<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">1</span><span class="w"> </span>--key-env<span class="w"> </span>NEWKEY1
+</pre></div>
+</div>
+<p>A wrong current value is cleanly rejected (<code class="docutils literal notranslate"><span class="pre">INTEGRITY_ERROR</span> <span class="pre">(0x1E)</span></code>) and the
+key is left unchanged. A lost application key is recoverable only via the PICC
+master key.</p>
+</section>
+<section id="secure-dynamic-messaging-sdm-sun">
+<h2>Secure Dynamic Messaging (SDM / SUN)<a class="headerlink" href="#secure-dynamic-messaging-sdm-sun" title="Link to this heading"></a></h2>
+<p>DESFire EV3 cards can mirror an encrypted UID + read counter and a MAC into a
+free-read file on every read — a self-authenticating NFC tag. The
+<a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html"><span class="doc">Quick start: a tamper-evident NFC tag (SDM/SUN)</span></a> walks through it end to end; the short form:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>sdm<span class="w"> </span>setup<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--url<span class="w"> </span><span class="s2">"https://example.com/t"</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>sdm<span class="w"> </span><span class="nb">read</span><span class="w">  </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">sdm</span> <span class="pre">setup</span></code> creates the file with the SDM option enabled (an EV3 file-creation
+property), writes the URL template, and configures UID + read-counter mirroring
+with the application’s key 2 encrypting the mirrored data and key 1 keyed into
+the MAC. <code class="docutils literal notranslate"><span class="pre">sdm</span> <span class="pre">read</span></code> plays verification backend: it decrypts the mirror,
+checks the MAC, and reports the UID and read counter. Configuration and
+verification follow the public NXP application note AN12196.</p>
+<p>For production, rotate keys 1 and 2 away from the factory zero key first and
+keep them server-side; verify reads by checking the MAC <strong>and</strong> a strictly
+increasing counter per UID.</p>
+</section>
+<section id="format-the-picc-destructive">
+<h2>Format the PICC (destructive)<a class="headerlink" href="#format-the-picc-destructive" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">format</span></code> erases <strong>every</strong> application and file on the card via
+<code class="docutils literal notranslate"><span class="pre">FormatPICC</span></code>; the PICC master key and its settings survive. It is gated by
+<code class="docutils literal notranslate"><span class="pre">--i-understand-this-erases-all-applications</span></code> (or a typed confirmation) and
+authenticates with the PICC master key:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>format<span class="w"> </span>--zero-key<span class="w"> </span>--i-understand-this-erases-all-applications
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">FormatPICC</span></code> authenticates with the <strong>PICC master key</strong>. On factory cards
+that key is 2K3DES, and this CLI is AES-only by design — <code class="docutils literal notranslate"><span class="pre">format</span></code> checks
+the key type first and refuses with a clear message until the PICC master
+key has been provisioned to AES.</p>
+</div>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading"></a></h2>
+<p>Covered: read-only inspection; standard data files (plain, MAC-protected and
+fully encrypted transfer, chunked writes); value files; record files
+(linear/cyclic) — all with transaction commit; same-key and cross-key
+<code class="docutils literal notranslate"><span class="pre">ChangeKey</span></code>; SDM/SUN configuration and host-side verification; <code class="docutils literal notranslate"><span class="pre">FormatPICC</span></code>
+(AES PICC master key required). Legacy DES/3DES authentication is intentionally
+not supported.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html" class="btn btn-neutral float-left" title="Quick start: a tamper-evident NFC tag (SDM/SUN)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mifare-desfire-commands.html" class="btn btn-neutral float-right" title="MIFARE DESFire commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/mifare/mifare-desfire-guide.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../mifare/mifare-desfire-guide.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,402 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TLS client authentication &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/tls-client-authentication.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="macOS smart-card login" href="macos-smart-card-login.html" />
+    <link rel="prev" title="SSH user certificates" href="ssh-user-certificates.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TLS client authentication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#firefox-nss-cross-platform">Firefox (NSS, cross-platform)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-iis-native-store">Windows / IIS (native store)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#curl-openssl-scripted-clients">curl / OpenSSL (scripted clients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">TLS client authentication</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="tls-client-authentication">
+<h1>TLS client authentication<a class="headerlink" href="#tls-client-authentication" title="Link to this heading"></a></h1>
+<p>TLS client (mutual) authentication proves identity to a server with a
+certificate instead of a password: the server requests a client certificate
+during the TLS handshake, and the private key signs the handshake on-card
+after a PIN prompt — the key never leaves the card, same as
+<a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>.</p>
+<section id="how-it-has-to-look">
+<h2>How it has to look<a class="headerlink" href="#how-it-has-to-look" title="Link to this heading"></a></h2>
+<p>Same role rule as the rest of this card: only a <strong>SIGN-capable</strong> slot can
+perform the handshake signature. On the <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> built-in
+profile that’s slot <strong>9C</strong>; 9A is <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>-only there and cannot be
+used. If the card was provisioned with the <strong>ssh</strong> or <strong>ms-logon</strong> profile
+instead, 9A is <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>-capable and works too — see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is one named profile among several, not necessarily
+what any given card has — check with
+<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code> or whoever personalized the card.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Whichever slot you use, <strong>it must be reached over the contact
+interface</strong>. 9A’s contactless access mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code> on both
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> and <code class="docutils literal notranslate"><span class="pre">ssh</span></code> — a login attempt over a contactless
+reader fails at <code class="docutils literal notranslate"><span class="pre">C_Login</span></code> with <code class="docutils literal notranslate"><span class="pre">CKR_USER_NOT_LOGGED_IN</span></code>, the card
+correctly refusing the interface, not a bug. Use a contact reader (or a
+combo reader’s contact slot, not its contactless pad).</p>
+</div>
+<p>The certificate’s <strong>Extended Key Usage</strong> matters more here than for SSH: it
+must include <em>Client Authentication</em> (OID <code class="docutils literal notranslate"><span class="pre">1.3.6.1.5.5.7.3.2</span></code>). The
+self-signed certificate from <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> already carries it (no EKU
+restriction). A certificate issued from <a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>’s
+smart-card-logon template also carries it (that template includes <em>Client
+Authentication</em> alongside <em>Smart Card Logon</em>), so it’s reusable here — but for
+a server that isn’t Active Directory, prefer a plain client-auth certificate
+without the UPN/logon-specific fields, since some relying parties reject a
+certificate with a Smart Card Logon EKU it doesn’t expect.</p>
+</section>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A card already through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> (or <a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>)
+— a key and certificate in a SIGN-capable slot.</p></li>
+<li><p>A target that performs mutual TLS and is configured to trust the
+certificate’s issuer (its own CA, or the self-signed cert imported directly
+into the server’s trust store for testing).</p></li>
+<li><p>OpenSC, for the browser and command-line paths below — see
+<a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> Step 0 for locating <code class="docutils literal notranslate"><span class="pre">opensc-pkcs11.so</span></code>.</p></li>
+<li><p><strong>A contact reader</strong> — see the warning above; the key’s contactless access
+mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>.</p></li>
+</ul>
+</section>
+<section id="firefox-nss-cross-platform">
+<h2>Firefox (NSS, cross-platform)<a class="headerlink" href="#firefox-nss-cross-platform" title="Link to this heading"></a></h2>
+<p>Firefox uses its own certificate store (NSS), independent of the OS, on every
+platform. Try the target site directly first:</p>
+<ol class="arabic simple">
+<li><p>Visit the target site. Some Firefox versions detect a PC/SC smart card
+natively and offer the card’s certificate without any setup.</p></li>
+<li><p>If no certificate is offered, register the module manually:
+<code class="docutils literal notranslate"><span class="pre">about:preferences#privacy</span></code> → <strong>Security Devices</strong> → <strong>Load</strong>. Module
+name: anything recognizable (e.g. <code class="docutils literal notranslate"><span class="pre">Cryptnox</span> <span class="pre">PIV</span></code>). Module filename: the
+<code class="docutils literal notranslate"><span class="pre">opensc-pkcs11.so</span></code> path from <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>.</p></li>
+<li><p>Reload the site. On a certificate request, Firefox shows a picker listing
+the card’s certificate; selecting it prompts for the PIV PIN once per
+browser session.</p></li>
+</ol>
+</section>
+<section id="windows-iis-native-store">
+<h2>Windows / IIS (native store)<a class="headerlink" href="#windows-iis-native-store" title="Link to this heading"></a></h2>
+<p>On Windows the inbox PIV minidriver exposes the card to CryptoAPI/CNG, so any
+application using the Windows certificate store (IIS, Edge, curl built against
+Schannel) sees the card certificate without a PKCS#11 module, the same
+mechanism <a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a> relies on for logon. Configure IIS to <em>request</em> or
+<em>require</em> client certificates on the site binding, which is a server-side
+setting rather than a card-side one, and the handshake triggers the PIN prompt.</p>
+<p>Three card-side requirements apply here specifically:</p>
+<ul class="simple">
+<li><p><strong>9A must be SIGN-capable</strong>, so the card needs the <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> (or <code class="docutils literal notranslate"><span class="pre">ssh</span></code>)
+profile. Windows performs client authentication with the 9A key, and
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>’s 9A is <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>-only, which cannot produce the
+handshake signature.</p></li>
+<li><p><strong>The 9A key must be RSA.</strong> The inbox minidriver does not enumerate EC keys:
+with an EC key the card produces no key container at all, so no certificate
+reaches the Windows store and nothing can be offered in the picker. This is a
+Windows driver property rather than a card one — it reproduces on a YubiKey,
+and P-384 behaves like P-256. Pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> to
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--profile</span> <span class="pre">ms-logon</span> <span class="pre">--slot</span> <span class="pre">9A</span></code> for this reason (the ECC
+default warns on that combination). See <a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a> for the detail.</p></li>
+<li><p><strong>The card must not carry a Discovery Object container.</strong> No built-in profile
+creates one, so this only affects cards where <code class="docutils literal notranslate"><span class="pre">oid:</span> <span class="pre">7E</span></code> was added by hand.
+Such a card is rejected outright by the minidriver: nothing enumerates and
+<code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code> reports <code class="docutils literal notranslate"><span class="pre">NTE_BAD_KEYSET</span></code>. See
+<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Three server-side settings are easy to get wrong, and each produces a
+failure that looks like a card fault:</p>
+<ul>
+<li><p><strong>``appcmd`` needs ``/commit:apphost``.</strong>
+<code class="docutils literal notranslate"><span class="pre">system.webServer/security/access</span></code> is locked at the global level, so
+without it the write lands in the site’s <code class="docutils literal notranslate"><span class="pre">web.config</span></code> and is refused.
+<code class="docutils literal notranslate"><span class="pre">appcmd</span></code> is a native executable, so this does not raise in PowerShell.
+<code class="docutils literal notranslate"><span class="pre">sslFlags</span></code> silently stays <code class="docutils literal notranslate"><span class="pre">None</span></code>, IIS never asks for a client
+certificate, and the browser test yields a false negative. Always read the
+value back with <code class="docutils literal notranslate"><span class="pre">Get-WebConfigurationProperty</span></code>.</p></li>
+<li><p><strong>TLS 1.3 breaks browser client-certificate auth on Windows 11 before
+24H2.</strong> TLS 1.3 replaced renegotiation with post-handshake authentication,
+which Chrome and Edge do not implement and Firefox does not enable by
+default, so http.sys resets the connection (<code class="docutils literal notranslate"><span class="pre">ERR_CONNECTION_RESET</span></code> /
+<code class="docutils literal notranslate"><span class="pre">PR_CONNECT_RESET_ERROR</span></code>). Enable negotiation on the binding instead of
+disabling TLS 1.3 machine-wide:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">netsh</span> <span class="n">http</span> <span class="n">add</span> <span class="n">sslcert</span> <span class="n">ipport</span><span class="o">=</span><span class="mf">0.0.0.0</span><span class="p">:</span><span class="mi">443</span> <span class="n">certhash</span><span class="o">=&lt;</span><span class="n">thumbprint</span><span class="o">&gt;</span> \
+    <span class="n">appid</span><span class="o">=&lt;</span><span class="n">appid</span><span class="o">&gt;</span> <span class="n">certstorename</span><span class="o">=</span><span class="n">MY</span> <span class="n">clientcertnegotiation</span><span class="o">=</span><span class="n">enable</span>
+</pre></div>
+</div>
+<p>Confirm with <code class="docutils literal notranslate"><span class="pre">netsh</span> <span class="pre">http</span> <span class="pre">show</span> <span class="pre">sslcert</span></code>; the line that matters is
+<code class="docutils literal notranslate"><span class="pre">Negotiate</span> <span class="pre">Client</span> <span class="pre">Certificate</span> <span class="pre">:</span> <span class="pre">Enabled</span></code>.</p>
+</li>
+<li><p><strong>A successful ``curl`` does not prove the browser path works.</strong> Windows
+<code class="docutils literal notranslate"><span class="pre">curl</span></code> uses Schannel, which does support post-handshake authentication,
+and ships without HTTP/2, so it returns <code class="docutils literal notranslate"><span class="pre">200</span> <span class="pre">OK</span></code> in exactly the
+configuration where every browser fails.</p></li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In <em>request</em> mode (<code class="docutils literal notranslate"><span class="pre">SslNegotiateCert</span></code>) the page still loads if you cancel
+the certificate picker, so a page load alone does not prove the card signed
+anything. To prove it, use <em>require</em> mode (<code class="docutils literal notranslate"><span class="pre">SslRequireCert</span></code>): a client
+with no certificate is then refused with <code class="docutils literal notranslate"><span class="pre">403.7</span></code> on the same binding.
+Close every browser window between runs, since both the certificate choice
+and the TLS session are cached.</p>
+<p>Also type <code class="docutils literal notranslate"><span class="pre">https://</span></code> in full. Edge resolves a bare <code class="docutils literal notranslate"><span class="pre">localhost</span></code> to
+<code class="docutils literal notranslate"><span class="pre">http://</span></code>, which returns <code class="docutils literal notranslate"><span class="pre">403.4</span> <span class="pre">...</span> <span class="pre">secured</span> <span class="pre">with</span> <span class="pre">SSL</span></code> from port 80
+without ever touching the HTTPS binding.</p>
+</div>
+</section>
+<section id="curl-openssl-scripted-clients">
+<h2>curl / OpenSSL (scripted clients)<a class="headerlink" href="#curl-openssl-scripted-clients" title="Link to this heading"></a></h2>
+<p>The exact mechanism depends on your curl/OpenSSL build. Check <code class="docutils literal notranslate"><span class="pre">curl</span> <span class="pre">-V</span></code> for
+the SSL backend, then <code class="docutils literal notranslate"><span class="pre">curl</span> <span class="pre">--engine</span> <span class="pre">list</span></code> — most current builds (OpenSSL
+3.x with <code class="docutils literal notranslate"><span class="pre">ENGINE</span></code> support removed) have no PKCS#11 engine compiled in, in
+which case use the provider-based path below instead of the older
+<code class="docutils literal notranslate"><span class="pre">pkcs11:</span></code> URI + legacy engine approach some older guides show.</p>
+<p><strong>OpenSSL 3 provider path</strong> (needs the <code class="docutils literal notranslate"><span class="pre">pkcs11-provider</span></code> package —
+<code class="docutils literal notranslate"><span class="pre">dnf</span> <span class="pre">install</span> <span class="pre">pkcs11-provider</span></code> on Fedora, or your distro’s equivalent):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># openssl.cnf (a dedicated file via OPENSSL_CONF, not necessarily the
+# system config — activates both the default and pkcs11 providers)
+openssl_conf = openssl_init
+[openssl_init]
+providers = provider_sect
+[provider_sect]
+default = default_sect
+pkcs11 = pkcs11_sect
+[default_sect]
+activate = 1
+[pkcs11_sect]
+activate = 1
+pkcs11-module-path = /usr/lib64/pkcs11/opensc-pkcs11.so
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">OPENSSL_CONF</span><span class="o">=</span>/path/to/that/openssl.cnf
+<span class="gp">$ </span>curl<span class="w"> </span>--cacert<span class="w"> </span>server-ca.pem<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>--cert<span class="w"> </span>9c.crt.pem<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>--key<span class="w"> </span><span class="s1">'pkcs11:serial=&lt;card serial&gt;;type=private'</span><span class="w"> </span>--key-type<span class="w"> </span>PROV<span class="w"> </span><span class="se">\</span>
+<span class="w">       </span>https://target.example.com
+</pre></div>
+</div>
+<p>Two details that aren’t obvious from the <code class="docutils literal notranslate"><span class="pre">pkcs11:</span></code> URI syntax alone:</p>
+<ul class="simple">
+<li><p><strong>The certificate must come from a plain file, not a ``pkcs11:`` URI.</strong>
+<code class="docutils literal notranslate"><span class="pre">pkcs11-provider</span></code> implements PKCS#11 key objects only, no
+<code class="docutils literal notranslate"><span class="pre">CKO_CERTIFICATE</span></code> support (its docs and man page never mention
+certificates). A <code class="docutils literal notranslate"><span class="pre">type=cert</span></code> URI silently matches nothing; it isn’t an
+error, it just won’t work. Export the certificate once
+(<a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> already does, as <code class="docutils literal notranslate"><span class="pre">9c.crt.pem</span></code>/<code class="docutils literal notranslate"><span class="pre">9a.crt.pem</span></code>) and
+point <code class="docutils literal notranslate"><span class="pre">--cert</span></code> at that file.</p></li>
+<li><p><strong>Plain ``pkcs11:`` URIs need ``–cert-type PROV``/``–key-type PROV``.</strong>
+Without it, curl tries the legacy OpenSSL <code class="docutils literal notranslate"><span class="pre">ENGINE</span></code> API and fails with
+<code class="docutils literal notranslate"><span class="pre">crypto</span> <span class="pre">engine</span> <span class="pre">not</span> <span class="pre">set,</span> <span class="pre">cannot</span> <span class="pre">load</span> <span class="pre">certificate</span></code> on any build without a
+pkcs11 engine compiled in (<code class="docutils literal notranslate"><span class="pre">curl</span> <span class="pre">--engine</span> <span class="pre">list</span></code> shows what’s available —
+most current builds have none).</p></li>
+<li><p><strong>``serial=`` is the reliable URI identifier</strong> if more than one PKCS#11
+token could be present (e.g. a second reader, or a token-less empty slot).
+A bare <code class="docutils literal notranslate"><span class="pre">token=&lt;label&gt;</span></code> or unqualified <code class="docutils literal notranslate"><span class="pre">pkcs11:</span></code> URI may resolve to the
+wrong slot, or hang waiting for a PIN on a reader you didn’t mean to use.</p></li>
+</ul>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Handshake fails / card returns 6985</strong> — the slot’s role doesn’t include
+<code class="docutils literal notranslate"><span class="pre">SIGN</span></code>; see <a class="reference internal" href="#how-it-has-to-look">How it has to look</a> above.</p></li>
+<li><p><strong>Server rejects the certificate</strong> — check the EKU includes <em>Client
+Authentication</em>, and that the server trusts the issuing CA (or the
+self-signed cert is imported into its trust store directly).</p></li>
+<li><p><strong>No certificate offered in the picker</strong> — the store (NSS/CryptoAPI) isn’t
+seeing the card; confirm the PKCS#11 module loaded (Firefox) or that the
+minidriver recognizes the card (Windows: <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code>).</p></li>
+<li><p><strong>Windows: ``NTE_BAD_KEYSET`` from ``certutil -scinfo``, nothing enumerates</strong>
+— the minidriver found no containers on the card. Check the two card-side
+requirements in <a class="reference internal" href="#windows-iis-native-store">Windows / IIS (native store)</a> above: a SIGN-capable 9A, and
+no Discovery Object container. Note this error is not specific; an entirely
+blank PIV applet produces it too.</p></li>
+<li><p><strong>Windows: certificates appear in the picker that don’t belong to this card</strong>
+— certificates propagate into <code class="docutils literal notranslate"><span class="pre">Cert:\CurrentUser\My</span></code> and <em>stay there after
+the card is removed</em>. A stale entry makes the picker look correct while the
+inserted card contributes nothing. Match on the certificate subject before
+concluding the card was read.</p></li>
+<li><p><strong>curl: “No cert found in the openssl store” with no other error</strong> — you
+used a <code class="docutils literal notranslate"><span class="pre">pkcs11:</span></code> URI for <code class="docutils literal notranslate"><span class="pre">--cert</span></code>; switch to a plain certificate file
+(see the notes above — the provider doesn’t support certificate objects).</p></li>
+<li><p><strong>curl hangs, or prompts for a PIN on a reader/token you didn’t expect</strong> —
+more than one PKCS#11 token is visible (e.g. a second reader plugged in);
+add <code class="docutils literal notranslate"><span class="pre">serial=&lt;card</span> <span class="pre">serial&gt;</span></code> to the URI to disambiguate instead of a bare
+<code class="docutils literal notranslate"><span class="pre">token=</span></code> label.</p></li>
+<li><p><strong>Login fails (``CKR_USER_NOT_LOGGED_IN`` or similar) with the correct PIN
+over a contactless reader</strong> — 9A/9C’s contactless access mode is <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>;
+this is the card refusing the interface by design, not a bug. Switch to a
+contact reader.</p></li>
+</ul>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
+<li><p><a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> — the same PKCS#11 path, for SSH instead of TLS</p></li>
+<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — the <code class="docutils literal notranslate"><span class="pre">ssh</span></code>/<code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profiles’ 9A <code class="docutils literal notranslate"><span class="pre">SIGN</span></code> role</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssh-user-certificates.html" class="btn btn-neutral float-left" title="SSH user certificates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="macos-smart-card-login.html" class="btn btn-neutral float-right" title="macOS smart-card login" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/tls-client-authentication.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/tls-client-authentication.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

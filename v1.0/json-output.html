@@ -1,0 +1,300 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON output &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/json-output.html" />
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=a12e3537"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/custom.js?v=7a631626"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Exit codes" href="exit-codes.html" />
+    <link rel="prev" title="Command syntax &amp; conventions" href="cli-basics.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">JSON output</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-contract">The contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#result-envelope">Result envelope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#error-object">Error object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#snapshot-reports">Snapshot reports</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">JSON output</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="json-output">
+<h1>JSON output<a class="headerlink" href="#json-output" title="Link to this heading"></a></h1>
+<p>Every command accepts the global <code class="docutils literal notranslate"><span class="pre">--json</span></code> flag for machine consumption.</p>
+<section id="the-contract">
+<h2>The contract<a class="headerlink" href="#the-contract" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>The <strong>result payload</strong> is printed to <strong>stdout</strong> as a single JSON document.</p></li>
+<li><p>Notes, warnings and progress go to <strong>stderr</strong> — never merge the two streams
+into one parser (no <code class="docutils literal notranslate"><span class="pre">2&gt;&amp;1</span></code>).</p></li>
+<li><p>Errors produce a JSON <strong>error object</strong> and a non-zero exit code (see
+<a class="reference internal" href="exit-codes.html"><span class="doc">Exit codes</span></a>).</p></li>
+<li><p>Secrets never appear in any output stream — every transcript and log line
+passes a redaction layer that masks PINs, keys and other registered secrets.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">--json</span></code> is a <strong>global</strong> option: it goes before the command
+(<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span> <span class="pre">--json</span> <span class="pre">fido</span> <span class="pre">info</span></code>), not after it.</p>
+</section>
+<section id="result-envelope">
+<h2>Result envelope<a class="headerlink" href="#result-envelope" title="Link to this heading"></a></h2>
+<p>On success, each command writes one JSON object whose fields are specific to
+that command. For example, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span> <span class="pre">--json</span> <span class="pre">doctor</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"checks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">"check"</span><span class="p">:</span><span class="w"> </span><span class="s2">"PC/SC service"</span><span class="p">,</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ok"</span><span class="p">,</span><span class="w"> </span><span class="nt">"detail"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1 reader(s) detected"</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">"check"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Card present"</span><span class="p">,</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ok"</span><span class="p">,</span><span class="w"> </span><span class="nt">"detail"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ATR 3BFA1300..."</span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"ok"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Read-only inspection commands (<code class="docutils literal notranslate"><span class="pre">info</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">info</span></code>/<code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">info</span></code>,
+<code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">info</span></code> …) each return the same fields their human output shows,
+serialized as an object. Write commands return a small confirmation object
+(what was done, and any public identifier produced — never a secret).</p>
+</section>
+<section id="error-object">
+<h2>Error object<a class="headerlink" href="#error-object" title="Link to this heading"></a></h2>
+<p>On failure the payload is an error object and the process exits non-zero:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="s2">"card_access_denied"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FIDO2 access was blocked by Windows. ..."</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">error</span></code> is a stable token (see <a class="reference internal" href="exit-codes.html"><span class="doc">Exit codes</span></a> for the token/exit-code
+taxonomy); <code class="docutils literal notranslate"><span class="pre">message</span></code> is human-readable. Errors that carry an ISO status word
+add three fields:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="s2">"status_word_error"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"sw"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6A82"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"sw_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FILE_NOT_FOUND"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"context"</span><span class="p">:</span><span class="w"> </span><span class="s2">"SELECT PIV"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="snapshot-reports">
+<h2>Snapshot reports<a class="headerlink" href="#snapshot-reports" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">card</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">piv</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">mifare</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">fido</span></code> /
+<code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">genuine</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">full</span></code> emit <strong>secret-safe</strong> JSON snapshots of the
+detected state, suitable for fleet inventory or support tickets (<code class="docutils literal notranslate"><span class="pre">--out</span> <span class="pre">FILE</span></code>
+writes to a file). These are the primary machine-consumption shapes and are kept
+stable.</p>
+<p>Every report is wrapped in a common envelope:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"generated_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cryptnox-id 0.1.0"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-08-18T12:00:00+00:00"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"safe_to_share"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"&lt;section&gt;"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">full</span></code> carries all sections at once; the single-function reports carry
+just theirs. The section shapes:</p>
+<p><strong>card</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"reader"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;reader name&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="nt">"cplc"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;hex or null&gt;"</span><span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>piv</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"PivPersonalized"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"apt"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"aid"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span><span class="w"> </span><span class="nt">"label"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OpenFIPS201"</span><span class="p">,</span><span class="w"> </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pin"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"configured"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"retries"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"puk"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"configured"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">"retries"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"objects_present"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"chuid"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ccc"</span><span class="p">,</span><span class="w"> </span><span class="s2">"auth-cert"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"notes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">apt</span></code> / <code class="docutils literal notranslate"><span class="pre">pin</span></code> / <code class="docutils literal notranslate"><span class="pre">puk</span></code> are <code class="docutils literal notranslate"><span class="pre">null</span></code> when not available.</p>
+<p><strong>mifare</strong> — one of:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DesfireReachable"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w"> </span><span class="nt">"free_memory"</span><span class="p">:</span><span class="w"> </span><span class="mi">1234</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"applications"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"CC0102"</span><span class="p">]}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DesfireNeedsContactlessReader"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DESFire ... use a DESFire-capable contactless PC/SC reader."</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DesfireNoAnswerContactless"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DESFire did not answer on this contactless interface. Re-present the card ..."</span><span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">DesfireNeedsContactlessReader</span></code> means the session is on a contact interface, which
+cannot reach DESFire at all; <code class="docutils literal notranslate"><span class="pre">DesfireNoAnswerContactless</span></code> means the interface is
+already contactless (reader name / ATR evidence) and the card simply did not answer —
+re-present the card, and check the reader passes native DESFire APDUs.</p>
+<p><strong>fido</strong> — one of:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FidoPersonalized"</span><span class="p">,</span><span class="w"> </span><span class="nt">"select_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"U2F_V2"</span><span class="p">,</span><span class="w"> </span><span class="nt">"get_info"</span><span class="p">:</span><span class="w"> </span><span class="p">{}}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FidoBlockedByOS"</span><span class="p">,</span><span class="w"> </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;Windows elevation guidance&gt;"</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FidoNotPresent"</span><span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>genuine</strong> — one of:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GenuinenessPersonalized"</span><span class="p">,</span><span class="w"> </span><span class="nt">"leaf_subject"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"info"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;hex&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"state only; run `genuine verify` to prove ..."</span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GenuinenessNotPresent"</span><span class="p">,</span>
+<span class="w"> </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"genuineness applet not found (contact-only; absent over contactless)."</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>A section may also report <code class="docutils literal notranslate"><span class="pre">{&quot;state&quot;:</span> <span class="pre">&quot;Unknown&quot;,</span> <span class="pre">&quot;error&quot;:</span> <span class="pre">&quot;&lt;message&gt;&quot;}</span></code> when a
+probe fails. Nothing in any report contains a PIN, key, or private material —
+<code class="docutils literal notranslate"><span class="pre">safe_to_share</span></code> is always <code class="docutils literal notranslate"><span class="pre">true</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli-basics.html" class="btn btn-neutral float-left" title="Command syntax &amp; conventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="exit-codes.html" class="btn btn-neutral float-right" title="Exit codes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../v0.1/json-output.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="json-output.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

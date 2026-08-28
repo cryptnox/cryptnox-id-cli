@@ -1,0 +1,371 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIV personalization &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/piv/piv-personalization.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="PIV commands" href="piv-commands.html" />
+    <link rel="prev" title="macOS smart-card login" href="macos-smart-card-login.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PIV personalization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quickstart-one-shot">Quickstart (one shot)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-0-factory-pre-personalize-the-applet-structure">Step 0 — factory: pre-personalize the applet structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-1-set-the-pin-and-puk">Step 1 — set the PIN and PUK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2-generate-keys-on-the-card">Step 2 — generate keys on the card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-2b-import-an-external-private-key">Step 2b — import an external private key</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-3-csr-and-certificates-on-card-signing">Step 3 — CSR and certificates (on-card signing)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-4-data-objects">Step 4 — data objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-5-validate-and-smoke-test">Step 5 — validate and smoke-test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#step-6-finalize-irreversible-factory">Step 6 — finalize (irreversible, factory)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">PIV personalization</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="piv-personalization">
+<h1>PIV personalization<a class="headerlink" href="#piv-personalization" title="Link to this heading"></a></h1>
+<p>The full PIV lifecycle: pre-personalization (structure), PIN/PUK values,
+on-card key generation, external key import, CSRs and certificates, standard
+data objects, validation, and the irreversible finalize step.</p>
+<p>For the condensed version, see the <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This card provisions the PIV <strong>Application PIN</strong> (key ref <code class="docutils literal notranslate"><span class="pre">0x80</span></code>) only —
+there is no Global PIN option, and PIV’s PIN is independent from FIDO2’s
+(DESFire has no PIN at all; its access is symmetric-key based). Each
+application’s PIN has its own retry counter and is managed separately.</p>
+</div>
+<p>Operator commands live under <code class="docutils literal notranslate"><span class="pre">piv</span></code>; factory pre-personalization lives under
+<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span></code>. The SCP03 admin channel uses the card’s GlobalPlatform
+keys — development/evaluation cards use the GlobalPlatform test keys
+(<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>); provisioned cards take theirs from the
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment variables.</p>
+<section id="quickstart-one-shot">
+<h2>Quickstart (one shot)<a class="headerlink" href="#quickstart-one-shot" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> chains the steps below over one card connection, skipping
+whatever is already done (re-runs converge), and ends with the
+<code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> commands that verify the result. It detects the card state
+first; <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> shows the step plan without writing.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--dry-run
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w">                        </span><span class="c1"># 9C, ECCP256, self-signed cert</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9c.csr.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--include-preperso<span class="w">     </span><span class="c1"># blank card: lay down the structure too</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Secrets are resolved up front (<code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>
+or masked prompts; <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> when the PIN already exists). Quickstart
+defaults to ECC P-256. For a Windows card pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> with
+<code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on slot 9A (Windows does not enumerate EC keys; left on
+the ECC default, that combination warns). For RSA on any other card shape, use
+<code class="docutils literal notranslate"><span class="pre">generate-key</span></code> directly on a slot with an RSA key object, or <a class="reference internal" href="#piv-personalization-import-key"><span class="std std-ref">import a
+key</span></a>. A slot that already has a certificate is left
+untouched (never silently replaces a certified key); with <code class="docutils literal notranslate"><span class="pre">--cert-mode</span> <span class="pre">csr</span></code> a
+re-run regenerates the key and invalidates a previously exported CSR.
+<code class="docutils literal notranslate"><span class="pre">finalize</span></code> is never invoked by quickstart. The first failure stops the run
+with partial results and exit code 6; completed steps are kept.</p>
+</div>
+<p>The same sequence, below, as individual commands — useful to understand what
+quickstart does, or to vary it.</p>
+</section>
+<section id="step-0-factory-pre-personalize-the-applet-structure">
+<h2>Step 0 — factory: pre-personalize the applet structure<a class="headerlink" href="#step-0-factory-pre-personalize-the-applet-structure" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Factory / provisioning step — not part of normal end-user setup.</strong>
+Pre-personalization is done once at manufacturing; a card you receive is
+already structured, so start at Step 1. Full detail lives under
+<a class="reference internal" href="../factory/factory-commands.html"><span class="doc">Factory commands</span></a>.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">load-config</span></code> applies a profile (containers, PIN/PUK verifiers, key slots) to
+a blank OpenFIPS201 applet over SCP03 — one short <code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">DATA</span> <span class="pre">ADMIN</span></code> per
+command. See <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> for the profile format itself.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>status
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>inspect-defaults
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+</section>
+<section id="step-1-set-the-pin-and-puk">
+<h2>Step 1 — set the PIN and PUK<a class="headerlink" href="#step-1-set-the-pin-and-puk" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-puk<span class="w"> </span>--default-keys<span class="w">     </span><span class="c1"># prompts (masked) for the new PUK</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-pin<span class="w"> </span>--default-keys<span class="w">     </span><span class="c1"># prompts (masked) for the new PIN</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>pin<span class="w"> </span>status<span class="w">                       </span><span class="c1"># configured? retries?</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-generate-keys-on-the-card">
+<h2>Step 2 — generate keys on the card<a class="headerlink" href="#step-2-generate-keys-on-the-card" title="Link to this heading"></a></h2>
+<p>Keys are generated <strong>on-card</strong>; only the public key leaves. Use a SIGN-role
+slot (9C) for anything you will sign with.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--algorithm<span class="w"> </span>ECCP256<span class="w"> </span>--out<span class="w"> </span>9c.pub.pem<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>ECCP256<span class="w"> </span>--out<span class="w"> </span>9a.pub.pem<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+<p>A slot generates on-card for any mechanism it has a <strong>key object</strong> for, and the
+pre-personalization profile decides which those are (see
+<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>). Every key object in <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is ECC
+(<code class="docutils literal notranslate"><span class="pre">ECCP256</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP384</span></code>), so on such a card RSA has to be imported with
+<code class="docutils literal notranslate"><span class="pre">import-key</span></code> (next). A profile that provides an RSA object generates RSA
+on-card just as well — <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> creates an <code class="docutils literal notranslate"><span class="pre">RSA2048</span></code> object on 9A, and:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cryptnox-id piv perso generate-key --slot 9A --algorithm RSA2048 --out 9a.pub.pem --default-keys
+</pre></div>
+</div>
+<p>succeeds there, with the private key never leaving the card. Requesting a
+mechanism the slot has no object for returns <code class="docutils literal notranslate"><span class="pre">6A80</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> follows the same rule with training wheels: it defaults to
+ECC P-256 everywhere, accepts explicit RSA only for <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on
+9A (the one built-in shape with an RSA object, and the one Windows needs —
+the ECC default warns there), and elsewhere refuses RSA early rather than
+failing on the card. RSA-1024 and
+RSA-4096 are removed from the build; the CLI never offers them.</p>
+</section>
+<section id="step-2b-import-an-external-private-key">
+<span id="piv-personalization-import-key"></span><h2>Step 2b — import an external private key<a class="headerlink" href="#step-2b-import-an-external-private-key" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">import-key</span></code> injects a host-generated key over SCP03 — for keys that must be
+generated off-card (CA/HSM-issued, escrow or migration scenarios); for on-card
+RSA see Step 2, which works on any slot with an RSA key object. The key
+travels as CHANGE REFERENCE DATA ADMIN elements, <strong>one element per SCP03
+session</strong> (JCOP 4.5), with large elements ISO-chained; the sequence starts
+with a CLEAR, so re-running an import is safe. Accepts
+PEM/DER, PKCS#8 or traditional, encrypted or not
+(<code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_KEY_PASSWORD</span></code> env var, or a masked prompt).</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>openssl<span class="w"> </span>genrsa<span class="w"> </span>-out<span class="w"> </span>rsa2048.key.pem<span class="w"> </span><span class="m">2048</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-key<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--key<span class="w"> </span>rsa2048.key.pem<span class="w"> </span>--default-keys<span class="w"> </span>--dry-run
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-key<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--key<span class="w"> </span>rsa2048.key.pem<span class="w"> </span>--default-keys<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--create-key-object<span class="w"> </span>--public-out<span class="w"> </span>9c-rsa.pub.pem
+</pre></div>
+</div>
+<p>The target key <strong>object</strong> must exist with the same (slot, mechanism) pair and
+the IMPORTABLE attribute. The <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> profile creates ECC-P256
+objects only, so an RSA (or P-384) import needs either a profile that defines
+it (the <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile pre-creates an importable RSA-2048 object on 9A —
+see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>) or <code class="docutils literal notranslate"><span class="pre">--create-key-object</span></code> (a structural
+<code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">DATA</span> <span class="pre">ADMIN</span></code>: development/evaluation cards only — a finalized applet
+refuses it). RSA objects fix CRT vs. plain form at creation; <code class="docutils literal notranslate"><span class="pre">--rsa-form</span></code>
+must match, or the card rejects the import (<code class="docutils literal notranslate"><span class="pre">6A80</span></code>). A post-import smoke
+test signs on-card and verifies against the imported key (skip with
+<code class="docutils literal notranslate"><span class="pre">--no-smoke-test</span></code>; a non-SIGN slot reports “cannot sign” — that is the slot
+role, not a failure).</p>
+<p>For a PKI-issued credential delivered as PKCS#12, <code class="docutils literal notranslate"><span class="pre">import-p12</span></code> runs the key
+import <strong>and</strong> the certificate import in one command (the Windows smart-card
+logon / Remote Desktop enrollment path — see <a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-p12<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--p12<span class="w"> </span>user.pfx<span class="w"> </span>--default-keys
+</pre></div>
+</div>
+</section>
+<section id="step-3-csr-and-certificates-on-card-signing">
+<h2>Step 3 — CSR and certificates (on-card signing)<a class="headerlink" href="#step-3-csr-and-certificates-on-card-signing" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-csr<span class="w">   </span>--slot<span class="w"> </span>9C<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Test User"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--public-key<span class="w"> </span>9c.pub.pem<span class="w"> </span>--out<span class="w"> </span>9c.csr.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>self-sign-cert<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Test User"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--public-key<span class="w"> </span>9c.pub.pem<span class="w"> </span>--out<span class="w"> </span>9c.crt.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w">    </span>--slot<span class="w"> </span>9C<span class="w"> </span>--cert<span class="w"> </span>9c.crt.pem<span class="w">      </span><span class="c1"># ISO command chaining</span>
+</pre></div>
+</div>
+<p>Signing requires a SIGN-role slot; an AUTHENTICATE-only slot (e.g. 9A) returns
+<code class="docutils literal notranslate"><span class="pre">6985</span></code>. Large certificates are written with ISO command chaining
+automatically.</p>
+</section>
+<section id="step-4-data-objects">
+<h2>Step 4 — data objects<a class="headerlink" href="#step-4-data-objects" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-chuid
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-ccc
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-discovery
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>write-standard-objects<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>objects<span class="w"> </span>list
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">generate-chuid</span></code>/<code class="docutils literal notranslate"><span class="pre">generate-ccc</span></code>/<code class="docutils literal notranslate"><span class="pre">generate-discovery</span></code> build the object
+bytes locally (no card, no keys needed) — pipe them into <code class="docutils literal notranslate"><span class="pre">write-object</span></code>, or
+use <code class="docutils literal notranslate"><span class="pre">write-standard-objects</span></code> to generate and write CHUID + CCC in one step.</p>
+</section>
+<section id="step-5-validate-and-smoke-test">
+<h2>Step 5 — validate and smoke-test<a class="headerlink" href="#step-5-validate-and-smoke-test" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>smoke-test<span class="w">       </span><span class="c1"># verify PIN, sign with 9C, read objects/certs</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>validate<span class="w">               </span><span class="c1"># consistency check (NOT a FIPS/NIST validation)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>report<span class="w"> </span>piv<span class="w"> </span>--out<span class="w"> </span>piv.json
+</pre></div>
+</div>
+</section>
+<section id="step-6-finalize-irreversible-factory">
+<h2>Step 6 — finalize (irreversible, factory)<a class="headerlink" href="#step-6-finalize-irreversible-factory" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Factory / provisioning step — not part of normal end-user setup.</strong>
+Finalizing is a manufacturing operation and is irreversible. See
+<a class="reference internal" href="../factory/factory-commands.html"><span class="doc">Factory commands</span></a>.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">finalize</span></code> transitions the applet to its <code class="docutils literal notranslate"><span class="pre">SECURED</span></code> operational state. It
+is irreversible — recovery is a full applet reinstall. Interactively it asks
+you to type the token <code class="docutils literal notranslate"><span class="pre">FINALIZE-PIV</span></code>; non-interactively it requires the
+<code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code> flag instead — either satisfies the
+gate.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>finalize<span class="w"> </span>--default-keys
+<span class="gp"># </span>at<span class="w"> </span>the<span class="w"> </span>prompt:<span class="w"> </span>Type<span class="w"> </span>FINALIZE-PIV<span class="w"> </span>to<span class="w"> </span><span class="k">continue</span>
+<span class="gp"># </span><span class="o">(</span>scripted/non-interactive:<span class="w"> </span>add<span class="w"> </span>--i-understand-this-is-irreversible<span class="o">)</span>
+</pre></div>
+</div>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — customizing the pre-personalization profile</p></li>
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the condensed, one-command path with a
+<code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> interoperability matrix</p></li>
+<li><p><a class="reference internal" href="piv-commands.html"><span class="doc">PIV commands</span></a> — every <code class="docutils literal notranslate"><span class="pre">piv</span></code> command</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="macos-smart-card-login.html" class="btn btn-neutral float-left" title="macOS smart-card login" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="piv-commands.html" class="btn btn-neutral float-right" title="PIV commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/piv/piv-personalization.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/piv-personalization.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>

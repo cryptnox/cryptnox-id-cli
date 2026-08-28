@@ -1,0 +1,298 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FIDO2 guide &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.0/fido2/fido2-guide.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a12e3537"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FIDO2 commands" href="fido2-commands.html" />
+    <link rel="prev" title="Quick start: a passkey on the card" href="quick-start-a-passkey-on-the-card.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#windows-run-elevated">Windows: run elevated</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#read-only-commands">Read-only commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#write-operations">Write operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#credential-management">Credential management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#authenticatorconfig-policy">authenticatorConfig policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scope">Scope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">FIDO2 guide</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fido2-guide">
+<h1>FIDO2 guide<a class="headerlink" href="#fido2-guide" title="Link to this heading"></a></h1>
+<p>The FIDO2 applet (AID <code class="docutils literal notranslate"><span class="pre">A0000006472F0001</span></code>) is reached with CTAP messages
+tunnelled over ISO 7816 APDUs (<code class="docutils literal notranslate"><span class="pre">80</span> <span class="pre">10</span> <span class="pre">00</span> <span class="pre">00</span> <span class="pre">[CTAP</span> <span class="pre">cmd][CBOR]</span></code>). For the
+condensed version, see <a class="reference internal" href="quick-start-a-passkey-on-the-card.html"><span class="doc">Quick start: a passkey on the card</span></a>.</p>
+<section id="windows-run-elevated">
+<h2>Windows: run elevated<a class="headerlink" href="#windows-run-elevated" title="Link to this heading"></a></h2>
+<p>On Windows the OS <strong>blocks non-elevated processes</strong> from talking to the
+FIDO CTAP AID over PC/SC — you get <code class="docutils literal notranslate"><span class="pre">SCARD_E_NO_ACCESS</span> <span class="pre">(0x80100027)</span></code>. This
+is enforced by Windows itself (to reserve FIDO for the WebAuthn platform
+API), not by the card, and it applies on <strong>every</strong> reader, contact or
+contactless.</p>
+<p>Run <code class="docutils literal notranslate"><span class="pre">fido</span></code> commands from an <strong>Administrator terminal</strong>. Every <code class="docutils literal notranslate"><span class="pre">fido</span></code>
+command surfaces this requirement up front — a warning if the process
+isn’t elevated (the call then fails with the error above), or a
+confirmation that it is. In <code class="docutils literal notranslate"><span class="pre">--json</span></code> mode the note goes to stderr so
+stdout stays pure JSON. <code class="docutils literal notranslate"><span class="pre">doctor</span></code> also reports the elevation state.</p>
+</section>
+<section id="read-only-commands">
+<h2>Read-only commands<a class="headerlink" href="#read-only-commands" title="Link to this heading"></a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>ping<span class="w">            </span><span class="c1"># SELECT the applet, show its version string</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>info<span class="w">            </span><span class="c1"># authenticatorGetInfo (capabilities)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>get-info<span class="w">        </span><span class="c1"># alias of `info`</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>pin<span class="w"> </span>status<span class="w">      </span><span class="c1"># is a clientPIN set? retries remaining?</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">info</span></code> decodes the CTAP <code class="docutils literal notranslate"><span class="pre">authenticatorGetInfo</span></code> map: supported
+versions (<code class="docutils literal notranslate"><span class="pre">FIDO_2_0</span></code>, <code class="docutils literal notranslate"><span class="pre">FIDO_2_1</span></code>, …), extensions, the 16-byte
+<strong>AAGUID</strong> (matched against the known Cryptnox AAGUIDs), options (<code class="docutils literal notranslate"><span class="pre">rk</span></code>,
+<code class="docutils literal notranslate"><span class="pre">clientPin</span></code>, <code class="docutils literal notranslate"><span class="pre">credMgmt</span></code>, …), max message size, PIN/UV protocols,
+transports, algorithms, and firmware version.</p>
+<p><code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">pin</span> <span class="pre">status</span></code> reads the <code class="docutils literal notranslate"><span class="pre">clientPin</span></code> option and, when a PIN is
+configured, queries <code class="docutils literal notranslate"><span class="pre">clientPIN.getPinRetries</span></code> — non-destructive, it
+doesn’t consume a retry.</p>
+</section>
+<section id="write-operations">
+<h2>Write operations<a class="headerlink" href="#write-operations" title="Link to this heading"></a></h2>
+<p>These use the CTAP2 <strong>PIN/UV Auth Protocol</strong> (ECDH key agreement →
+AES/HMAC under protocol 1 or 2). PINs are entered by masked prompt or a
+<code class="docutils literal notranslate"><span class="pre">--*-env</span></code> variable, never on the command line, and are registered with
+the redactor.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>PIN<span class="w"> </span>management
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>pin<span class="w"> </span><span class="nb">set</span><span class="w">                      </span><span class="c1"># set the INITIAL PIN (masked, confirmed)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>pin<span class="w"> </span>change<span class="w">                    </span><span class="c1"># change an existing PIN</span>
+
+<span class="gp"># </span>Credentials<span class="w"> </span><span class="o">(</span>require<span class="w"> </span>user<span class="w"> </span>presence<span class="w"> </span>-<span class="w"> </span>a<span class="w"> </span>tap<span class="o">)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>credential<span class="w"> </span>create<span class="w">  </span>--rp-id<span class="w"> </span>example.com<span class="w"> </span><span class="o">[</span>--rk<span class="o">]</span><span class="w"> </span><span class="o">[</span>--pin-env<span class="w"> </span>P<span class="o">]</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>credential<span class="w"> </span>assert<span class="w">  </span>--rp-id<span class="w"> </span>example.com<span class="w"> </span><span class="o">[</span>--credential-id<span class="w"> </span>HEX<span class="o">]</span><span class="w"> </span><span class="o">[</span>--pin-env<span class="w"> </span>P<span class="o">]</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>credential<span class="w"> </span>self-test<span class="w"> </span>--rp-id<span class="w"> </span>example.com<span class="w"> </span><span class="o">[</span>--pin-env<span class="w"> </span>P<span class="o">]</span><span class="w">   </span><span class="c1"># register-&gt;assert-&gt;verify</span>
+
+<span class="gp"># </span>Credential<span class="w"> </span>management<span class="w"> </span><span class="o">(</span>resident<span class="w"> </span>credentials<span class="p">;</span><span class="w"> </span>PIN<span class="w"> </span>required<span class="o">)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>credential<span class="w"> </span>list<span class="w">   </span>--pin-env<span class="w"> </span>P<span class="w">            </span><span class="c1"># enumerate resident credentials</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>credential<span class="w"> </span>delete<span class="w"> </span>--credential-id<span class="w"> </span>HEX<span class="w"> </span>--pin-env<span class="w"> </span>P
+
+<span class="gp"># </span>Destructive
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>reset<span class="w"> </span>--i-understand-this-wipes-all-credentials<span class="w">   </span><span class="c1"># + typed RESET-FIDO</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">credential</span> <span class="pre">self-test</span></code> is the quickest end-to-end check: it registers a
+credential, gets an assertion, and verifies the ES256 signature against the
+registered key, reporting PASS/FAIL.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A FIDO PIN cannot be removed except by <code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">reset</span></code>, which erases
+<strong>all</strong> credentials and the PIN along with it. <code class="docutils literal notranslate"><span class="pre">reset</span></code> is gated by a
+flag and a typed <code class="docutils literal notranslate"><span class="pre">RESET-FIDO</span></code> confirmation, and — like most
+authenticators — only works shortly after the card is presented, with a
+tap; if it’s refused, remove and reinsert the card and try again
+immediately. <code class="docutils literal notranslate"><span class="pre">--protocol</span> <span class="pre">1|2</span></code> selects the PIN/UV auth protocol (1 is
+the universal default).</p>
+</div>
+</section>
+<section id="credential-management">
+<h2>Credential management<a class="headerlink" href="#credential-management" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">credential</span> <span class="pre">list</span></code> enumerates resident (discoverable) credentials —
+relying party, user, and credential ID for each. <code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">credential</span> <span class="pre">delete</span>
+<span class="pre">--credential-id</span> <span class="pre">HEX</span></code> removes one; the count reported by a follow-up
+<code class="docutils literal notranslate"><span class="pre">list</span></code> drops immediately. <code class="docutils literal notranslate"><span class="pre">delete</span></code> asks for interactive confirmation;
+script it with the global <code class="docutils literal notranslate"><span class="pre">--yes</span></code> flag.</p>
+<p><code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">pin</span> <span class="pre">change</span></code> requires the current PIN as well as the new one — a
+wrong current PIN decrements the retry counter, same as any other failed
+PIN attempt, while a successful change doesn’t cost a retry.</p>
+</section>
+<section id="authenticatorconfig-policy">
+<h2>authenticatorConfig policy<a class="headerlink" href="#authenticatorconfig-policy" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">authenticatorConfig</span></code> (CTAP <code class="docutils literal notranslate"><span class="pre">0x0D</span></code>) changes device-wide policy. This
+applet exposes two subcommands; each is authorized by a pinUvAuthToken
+carrying the <strong>authenticatorConfiguration</strong> permission, so pass
+<code class="docutils literal notranslate"><span class="pre">--pin-env</span> <span class="pre">NAME</span></code> when a clientPIN is set. (The pinUvAuthParam is MACed
+over a mandatory <code class="docutils literal notranslate"><span class="pre">32×0xFF</span></code> prefix — per the CTAP 2.1 spec, not a card
+quirk.)</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>config<span class="w"> </span>show<span class="w">                                   </span><span class="c1"># read-only policy view</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>config<span class="w"> </span>toggle-always-uv<span class="w"> </span>--pin-env<span class="w"> </span>P<span class="w">           </span><span class="c1"># flip alwaysUv (reversible)</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>config<span class="w"> </span>min-pin-length<span class="w"> </span>--length<span class="w"> </span><span class="m">6</span><span class="w"> </span>--pin-env<span class="w"> </span>P<span class="w">  </span><span class="c1"># raise the minimum (one-way)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>``config show``</strong> reports <code class="docutils literal notranslate"><span class="pre">alwaysUv</span></code>, the minimum PIN length, and
+which config operations the applet exposes (<code class="docutils literal notranslate"><span class="pre">authnrCfg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">setMinPINLength</span></code>); it also flags that bio enrollment, large-blob, and
+enterprise attestation are <strong>not</strong> implemented by this applet.</p></li>
+<li><p><strong>``toggle-always-uv``</strong> flips <code class="docutils literal notranslate"><span class="pre">alwaysUv</span></code>; when on, every
+<code class="docutils literal notranslate"><span class="pre">makeCredential</span></code>/<code class="docutils literal notranslate"><span class="pre">getAssertion</span></code> requires user verification. Running
+it twice restores the original state.</p></li>
+<li><p><strong>``min-pin-length``</strong> raises the minimum PIN length. It is <strong>one-way</strong>:
+the value can only increase; lowering it again requires <code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">reset</span></code>,
+which also erases every credential.</p></li>
+</ul>
+</section>
+<section id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Link to this heading"></a></h2>
+<p>Implemented: read-only inspection, PIN set/change, <code class="docutils literal notranslate"><span class="pre">makeCredential</span></code>,
+<code class="docutils literal notranslate"><span class="pre">getAssertion</span></code>, <code class="docutils literal notranslate"><span class="pre">reset</span></code>, credential management (metadata, enumerate,
+delete), and <code class="docutils literal notranslate"><span class="pre">authenticatorConfig</span></code> (<code class="docutils literal notranslate"><span class="pre">alwaysUv</span></code> toggle +
+<code class="docutils literal notranslate"><span class="pre">setMinPINLength</span></code>).</p>
+<p>Not implemented by this applet: <strong>bio enrollment</strong> and <strong>large-blob</strong>
+(confirmed via <code class="docutils literal notranslate"><span class="pre">getInfo</span></code>: no <code class="docutils literal notranslate"><span class="pre">bioEnroll</span></code>/<code class="docutils literal notranslate"><span class="pre">largeBlobs</span></code> option, and the
+card has no fingerprint sensor); <strong>enterprise attestation</strong> is likewise not
+advertised (<code class="docutils literal notranslate"><span class="pre">ep</span></code> absent).</p>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick-start-a-passkey-on-the-card.html"><span class="doc">Quick start: a passkey on the card</span></a> — the condensed walkthrough this guide expands on</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quick-start-a-passkey-on-the-card.html" class="btn btn-neutral float-left" title="Quick start: a passkey on the card" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="fido2-commands.html" class="btn btn-neutral float-right" title="FIDO2 commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.0</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v0.1/fido2/fido2-guide.html">CLI version v0.1</li>
+      <li role="option" class="version-option selected" data-url="../fido2/fido2-guide.html">CLI version v1.0</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>
