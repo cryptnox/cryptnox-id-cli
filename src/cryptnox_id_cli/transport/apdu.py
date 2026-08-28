@@ -23,11 +23,10 @@ class APDU:
         le = self.le
         extended = len(data) > 0xFF or (le is not None and le > 256)
 
-        if not data and le is None:  # case 1
-            return header
-        if not data:  # case 2 (Le only; le is not None - case 1 returned above)
-            if le is None:
-                raise ValueError("case 2 APDU requires Le")
+        if not data:
+            if le is None:  # case 1
+                return header
+            # case 2 (Le only)
             if not extended:
                 return header + bytes((le & 0xFF if le != 256 else 0x00,))
             return header + b"\x00" + (le & 0xFFFF if le != 65536 else 0).to_bytes(2, "big")

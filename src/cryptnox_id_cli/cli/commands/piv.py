@@ -70,7 +70,8 @@ def info(app: AppContext) -> None:
     with app.open_session() as session:
         piv = _select(session)
         apt = piv.apt
-    assert apt is not None
+    if apt is None:  # unreachable: _select() always parses the APT
+        raise RuntimeError("card returned no PIV Application Property Template")
     supported = [pivc.ALGORITHMS[a] for a in sorted(pivc.SUPPORTED_ALGORITHMS)]
     note = "Values are read from the card; no FIPS/NIST/SP800-73 validation is claimed."
     payload = {
@@ -896,7 +897,8 @@ def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: st
 
 def _import_cert_der(adm: PivAdmin, keys, ref: int, cert_der: bytes, *, label: str):
     obj = object_by_name(SLOT_CERT_OBJECT[ref])
-    assert obj is not None
+    if obj is None:  # unreachable: SLOT_CERT_OBJECT values are built-in object names
+        raise RuntimeError(f"unknown PIV object for slot {ref:02X}")
     adm.select()
     adm.open(keys)
     return adm.send_chained(
@@ -916,7 +918,8 @@ def _write_standard(adm: PivAdmin, keys, names: tuple[str, ...]) -> list[dict[st
     results: list[dict[str, object]] = []
     for name in names:
         obj = object_by_name(name)
-        assert obj is not None
+        if obj is None:  # unreachable: callers pass built-in object names
+            raise RuntimeError(f"unknown PIV object {name!r}")
         adm.select()
         adm.open(keys)
         resp = adm.send(
@@ -2377,7 +2380,8 @@ def quickstart(
                         raise StatusWordError(resp.sw1, resp.sw2, context="SET PIN")
                     record(planned_step.step, "ok", sw=resp.sw_hex())
                 elif planned_step.step == "set-puk":
-                    assert puk_secret is not None
+                    if puk_secret is None:  # unreachable: planner gates set-puk on a resolved PUK
+                        raise RuntimeError("set-puk planned without a PUK value")
                     padded = perso_mod.pad_pin(puk_secret)
                     app.redactor.register(padded)
                     resp = _set_verifier(adm, keys, pivc.REF_PUK, padded, label="PUK")
@@ -2399,7 +2403,8 @@ def quickstart(
                         detail={"algorithm": alg, "public_key_sha256": fingerprint},
                     )
                 elif planned_step.step == "certificate":
-                    assert spki is not None  # generate-key runs whenever certificate runs
+                    if spki is None:  # unreachable: generate-key runs whenever certificate runs
+                        raise RuntimeError("certificate step planned without a generated key")
                     spki_bytes = spki
                     if cert_mode == "csr":
                         pem = _sign_with_session(
@@ -2409,7 +2414,8 @@ def quickstart(
                             pin_secret,
                             lambda s, _spki=spki_bytes: csr_mod.build_csr(subject, _spki, mech, s),
                         )
-                        assert csr_out is not None
+                        if csr_out is None:  # unreachable: csr mode validates --csr-out at parse
+                            raise RuntimeError("csr mode without --csr-out")
                         Path(csr_out).write_bytes(pem)
                         outputs["csr"] = csr_out
                         record(
