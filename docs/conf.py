@@ -24,7 +24,7 @@ reader_contactless_url = "https://shop.cryptnox.com/product/cryptnox-contactless
 project = product_name
 author = "Cryptnox"
 copyright = "2026, Cryptnox"  # noqa: A001 — footer format matches docs.cryptnox.com/cryptnox-cli
-release = "1.0.1"  # keep in sync with the CLI release (see internal release checklist)
+release = "1.0.2"  # keep in sync with the CLI release (see internal release checklist)
 version = release
 
 # -- Versioned docs, same scheme as docs.cryptnox.com/cryptnox-hardware-wallet:
