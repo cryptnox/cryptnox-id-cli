@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,15 +8,15 @@ version = "1.0.2"
 description = "Polished CLI for the Cryptnox multi-applet smartcard (PIV / FIDO2 / MIFARE DESFire EV2)"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "LGPL-3.0-or-later" }
+license = "LGPL-3.0-or-later OR LicenseRef-Commercial"
+license-files = ["LICENSE", "COMMERCIAL.md"]
 authors = [{ name = "Cryptnox" }]
 keywords = ["smartcard", "pcsc", "piv", "fido2", "ctap", "desfire", "openfips201"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
