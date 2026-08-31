@@ -1,48 +1,5 @@
 name: Publish to PyPI
 
-# Publishes to PyPI via trusted publishing (OIDC) - no API token or secret is
-# stored anywhere. Each run, GitHub mints a short-lived OIDC token proving
-# "this is <owner>/<repo>, workflow publish.yml, environment pypi"; PyPI
-# verifies those claims against its registered publisher and issues a
-# one-time upload token. The id-token: write permission below is what allows
-# the OIDC token to be minted. Trust is bound to the repository, not to any
-# person's account, so publishing keeps working regardless of who pushes the
-# tag or who leaves the project.
-#
-# One-time setup, in order:
-#
-#   1. PyPI account. Log in (or create an account) on https://pypi.org.
-#      Whoever performs step 2 becomes the project owner on first publish,
-#      so use the account that should own the package. Ownership can be
-#      transferred to a PyPI organization later (step 5).
-#
-#   2. Register the pending publisher. PyPI -> Your account -> Publishing ->
-#      "Add a new pending publisher" (GitHub tab), with exactly:
-#        - PyPI project name:  cryptnox-id-cli
-#        - Owner:              <GitHub owner of this repository>
-#        - Repository name:    <name of this repository>
-#        - Workflow filename:  publish.yml
-#        - Environment name:   pypi
-#      "Pending" because the project does not exist on PyPI yet; the first
-#      successful publish claims the name and converts this into a regular
-#      trusted publisher on the project. For an already-existing project the
-#      same form lives under the project's own Publishing settings instead.
-#
-#   3. Create the GitHub environment. Repo -> Settings -> Environments ->
-#      New environment -> name it exactly "pypi". Recommended: add a
-#      required reviewer so every release waits for manual approval, and
-#      restrict deployment branches/tags to v* tags.
-#
-#   4. Release. Bump version in pyproject.toml, merge to main, then tag that
-#      commit v<version> (e.g. v1.0.2) and push the tag. The workflow checks
-#      the tag points to a commit on main and matches the pyproject.toml
-#      version; if both hold, it builds sdist + wheel and uploads to PyPI.
-#
-#   5. Optional, after first publish: transfer the project to a PyPI
-#      organization (PyPI -> project -> Settings) so ownership is not tied
-#      to one personal account. The trusted-publisher configuration lives on
-#      the project and survives the transfer unchanged.
-
 on:
   push:
     tags: ["v*"]
@@ -53,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
-          fetch-depth: 0  # full history, needed to check the tag sits on main
+          fetch-depth: 0
       - name: Check tag is on main
         run: |
           if ! git merge-base --is-ancestor HEAD origin/main; then
@@ -84,7 +41,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/cryptnox-id-cli
     permissions:
-      id-token: write  # required for PyPI trusted publishing (OIDC)
+      id-token: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
