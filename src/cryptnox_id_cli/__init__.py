@@ -14,7 +14,7 @@ including EV3 Secure Dynamic Messaging, and read-only genuineness/attestation
 verification.
 """
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 #: Primary console command name. Single source of truth for every user-facing
 #: render of the CLI's name (usage/version, prompt, banner, messages). The
