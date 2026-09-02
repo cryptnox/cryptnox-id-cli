@@ -24,6 +24,7 @@ MECHANISMS = {
     "AES256": 0x0C,
     "RSA2048": 0x07,
     "RSA3072": 0x05,
+    "RSA4096": 0x16,
     "ECCP256": 0x11,
     "ECCP384": 0x14,
     "CS2": 0x27,

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `RSA4096` alongside the existing algorithms: `perso generate-key`,
+  `perso import-key`, CSR/self-signed-cert signing, and profile key
+  mechanisms.
+- `perso generate-key --create-key-object` - the same dev/eval fallback
+  `import-key` already had.
+
 ## [1.0.3] - 2026-08-31
 
 ### Changed

@@ -22,6 +22,7 @@ _ALG = {
     0x14: (hashlib.sha384, "sha384_ecdsa", 48),
     0x07: (hashlib.sha256, "sha256_rsa", None),
     0x05: (hashlib.sha256, "sha256_rsa", None),
+    0x16: (hashlib.sha256, "sha256_rsa", None),
 }
 
 _RDN = {

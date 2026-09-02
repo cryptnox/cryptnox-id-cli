@@ -805,7 +805,10 @@ def perso() -> None:
 @perso.command("generate-key")
 @click.option("--slot", required=True, help="Key slot hex, e.g. 9A.")
 @click.option(
-    "--algorithm", default="ECCP256", show_default=True, help="ECCP256/ECCP384/RSA2048/RSA3072."
+    "--algorithm",
+    default="ECCP256",
+    show_default=True,
+    help="ECCP256/ECCP384/RSA2048/RSA3072/RSA4096.",
 )
 @click.option(
     "--default-keys",
@@ -816,9 +819,21 @@ def perso() -> None:
 @click.option(
     "--out", "out_", type=click.Path(dir_okay=False), help="Write public-key PEM to FILE."
 )
+@click.option(
+    "--create-key-object",
+    is_flag=True,
+    help="If the slot has no key object for this (slot, algorithm) pair, create one "
+    "first (PUT DATA ADMIN, non-finalized cards only) - same dev/eval fallback as "
+    "`import-key --create-key-object`.",
+)
 @click.pass_obj
 def perso_generate_key(
-    app: AppContext, slot: str, algorithm: str, default_keys: bool, out_: str | None
+    app: AppContext,
+    slot: str,
+    algorithm: str,
+    default_keys: bool,
+    out_: str | None,
+    create_key_object: bool,
 ) -> None:
     """Generate a key pair ON-CARD; the private key never leaves the card.
 
@@ -850,7 +865,13 @@ def perso_generate_key(
                 f"Replace the certified key in slot {slot}?", default=False
             ):
                 raise click.Abort()
-        public_key = _generate_key_on_card(PivAdmin(session), keys, ref, mech, label=slot)
+        adm = PivAdmin(session)
+        if create_key_object:
+            _select(session)
+            probe = session.transmit(keyimport.probe_apdu(ref, mech), context=f"probe {slot}")
+            if probe.sw == 0x6A86:
+                _create_key_object(app, adm, keys, ref, mech, False, slot)
+        public_key = _generate_key_on_card(adm, keys, ref, mech, label=slot)
     pem = perso_mod.public_key_pem(public_key)
     der = public_key.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
@@ -890,6 +911,8 @@ def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: st
     adm.select()
     adm.open(keys)
     resp = adm.send(perso_mod.generate_keypair_apdu(ref, mech), context=f"GENERATE {label}")
+    if resp.sw == 0x6F00 and keyimport.rsa_modulus_len(mech):
+        raise CryptnoxError(f"GENERATE key {label} failed (SW=6F00): {_IMPORT_SW_HINTS[0x6F00]}.")
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"GENERATE key {label}")
     return perso_mod.parse_public_key(mech, resp.data)
@@ -994,6 +1017,10 @@ _IMPORT_SW_HINTS = {
         "CRT attribute does not match; try the other --rsa-form"
     ),
     0x6700: "element too long for the transport (chaining should have engaged - report this)",
+    0x6F00: (
+        "the chip refuses this key size - its pre-issuance maximum-RSA configuration "
+        "(DF2B) caps RSA below it, and that is factory-set before the card is secured"
+    ),
 }
 
 
@@ -2130,7 +2157,7 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     "--algorithm",
     default="ECCP256",
     show_default=True,
-    help="ECCP256, ECCP384, RSA2048 or RSA3072; the slot must have a key object for it "
+    help="ECCP256, ECCP384, RSA2048, RSA3072 or RSA4096; the slot must have a key object for it "
     "(RSA: only ms-logon's 9A among the built-in profiles — pass RSA2048 explicitly "
     "for Windows, which does not enumerate EC keys).",
 )
