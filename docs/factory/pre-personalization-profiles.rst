@@ -110,7 +110,7 @@ Profile YAML
        attributes: [IMPORTABLE]
 
 **Mechanisms**: ``AES128``, ``AES192``, ``AES256``, ``RSA2048``, ``RSA3072``,
-``ECCP256``, ``ECCP384``, ``CS2``, ``CS7``.
+``RSA4096``, ``ECCP256``, ``ECCP384``, ``CS2``, ``CS7``.
 
 **Access modes** (used for ``contact``/``contactless`` on both containers and
 keys): ``ALWAYS``, ``NEVER``, ``PIN``, ``VCI`` (contact-interface-only, no

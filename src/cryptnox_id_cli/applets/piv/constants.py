@@ -52,12 +52,9 @@ ALGORITHMS: dict[int, str] = {
     0x2E: "PIV-SM-CS7 (AES-256/SHA-384)",
 }
 
-# Algorithms this OpenFIPS201 FIPS build actually implements. RSA-4096 (0x16) is
-# included: on-card createKey + GENERATE for RSA-4096 is confirmed on the D600/SCP03
-# hardware (returns a real 512-byte modulus), gated only by the chip's DF2B max-RSA
-# = 0x1000 on a non-fused card. NOTE: this covers on-card key GENERATION and key
-# objects; the host-side key-IMPORT/sign helpers (keyimport.py) still cover only
-# RSA-2048/3072, so external RSA-4096 import is a separate, not-yet-implemented path.
+# Algorithms this OpenFIPS201 FIPS build actually implements. A chip whose DF2B
+# configuration caps RSA below a requested size answers 6F00; the CLI maps that to
+# a size-cap message on GENERATE/import.
 SUPPORTED_ALGORITHMS: frozenset[int] = frozenset(
     {0x07, 0x05, 0x16, 0x08, 0x0A, 0x0C, 0x11, 0x14, 0x27, 0x2E}
 )

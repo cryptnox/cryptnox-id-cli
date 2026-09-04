@@ -109,8 +109,8 @@ mechanism the slot has no object for returns ``6A80``.
 ECC P-256 everywhere, accepts explicit RSA only for ``--profile ms-logon`` on
 9A (the one built-in shape with an RSA object, and the one Windows needs —
 the ECC default warns there), and elsewhere refuses RSA early rather than
-failing on the card. RSA-1024 and
-RSA-4096 are removed from the build; the CLI never offers them.
+failing on the card. RSA-1024 is removed from the build; the CLI never offers
+it.
 
 .. _piv-personalization-import-key:
 

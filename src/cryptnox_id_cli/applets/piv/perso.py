@@ -36,7 +36,7 @@ TAG_DISCOVERY = 0x7E  # the one PIV object written (and read) bare, never 53-wra
 _EC_CURVES = {0x11: ec.SECP256R1, 0x14: ec.SECP384R1}
 
 # Asymmetric algorithm name -> mechanism id (those this applet supports).
-ALGORITHMS = {"ECCP256": 0x11, "ECCP384": 0x14, "RSA2048": 0x07, "RSA3072": 0x05}
+ALGORITHMS = {"ECCP256": 0x11, "ECCP384": 0x14, "RSA2048": 0x07, "RSA3072": 0x05, "RSA4096": 0x16}
 
 
 def pad_pin(value: bytes, length: int = 8) -> bytes:

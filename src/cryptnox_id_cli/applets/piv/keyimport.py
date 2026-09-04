@@ -51,7 +51,7 @@ SINGLE_APDU_MAX = 200
 # Mechanism -> (curve, scalar/point sizes) for ECC, modulus size for RSA.
 _EC_BY_MECH: dict[int, type[ec.EllipticCurve]] = {0x11: ec.SECP256R1, 0x14: ec.SECP384R1}
 _EC_SCALAR_LEN = {0x11: 32, 0x14: 48}
-_RSA_MODULUS_LEN = {0x07: 256, 0x05: 384}
+_RSA_MODULUS_LEN = {0x07: 256, 0x05: 384, 0x16: 512}
 
 # Host-side slot policy (SP 800-78 per-key-reference algorithm table): PKI slots
 # and the retired key history accept the four asymmetric mechanisms; 9B is
@@ -133,11 +133,11 @@ def mechanism_for_key(key) -> int:
             if key.key_size == k * 8:
                 return mech
         raise KeyImportError(
-            f"RSA-{key.key_size} not supported; this applet takes RSA-2048 or RSA-3072."
+            f"RSA-{key.key_size} not supported; this applet takes RSA-2048, RSA-3072 or RSA-4096."
         )
     raise KeyImportError(
         f"unsupported key type {type(key).__name__}; this applet takes "
-        "ECC P-256/P-384 and RSA-2048/3072."
+        "ECC P-256/P-384 and RSA-2048/3072/4096."
     )
 
 
