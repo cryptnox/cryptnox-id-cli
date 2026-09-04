@@ -85,7 +85,7 @@ Fixing it: give 9A the SIGN role
 ------------------------------------
 
 You don't need the full ``ms-logon`` profile for this — the built-in ``ssh``
-profile changes only 9A's ``role`` (``AUTHENTICATE`` → ``AUTHENTICATE,
+profile changes only 9A's ``role`` (``AUTHENTICATE`` -> ``AUTHENTICATE,
 SIGN``); everything else is identical to ``cryptnox-default``. See
 :doc:`/factory/pre-personalization-profiles` for the full built-in profile list.
 

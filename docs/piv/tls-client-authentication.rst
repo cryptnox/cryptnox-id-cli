@@ -60,7 +60,7 @@ platform. Try the target site directly first:
 1. Visit the target site. Some Firefox versions detect a PC/SC smart card
    natively and offer the card's certificate without any setup.
 2. If no certificate is offered, register the module manually:
-   ``about:preferences#privacy`` → **Security Devices** → **Load**. Module
+   ``about:preferences#privacy`` -> **Security Devices** -> **Load**. Module
    name: anything recognizable (e.g. ``Cryptnox PIV``). Module filename: the
    ``opensc-pkcs11.so`` path from :doc:`/piv/ssh-public-key-authentication`.
 3. Reload the site. On a certificate request, Firefox shows a picker listing

@@ -35,8 +35,8 @@ The one-command path
    $ cryptnox-id piv quickstart --default-keys
 
 ``piv quickstart`` detects the card state, then runs whatever is still needed
-of: PIN → PUK → key in slot 9C (ECC P-256, generated **on-card** — the private
-key never exists outside the card) → self-signed certificate → CHUID/CCC →
+of: PIN -> PUK -> key in slot 9C (ECC P-256, generated **on-card** — the private
+key never exists outside the card) -> self-signed certificate -> CHUID/CCC ->
 smoke-test. Steps already done are skipped, so re-runs converge. New PIN/PUK
 values come from masked prompts or ``CRYPTNOX_PIV_NEW_PIN`` /
 ``CRYPTNOX_PIV_NEW_PUK``.
@@ -118,7 +118,7 @@ returns ``6985`` for sign operations).
         --public-key 9c.pub.pem --out 9c.crt.pem
    $ cryptnox-id piv perso import-cert --slot 9C --cert 9c.crt.pem
 
-Or CA-issued: ``generate-csr`` → have your CA sign it → ``import-cert``.
+Or CA-issued: ``generate-csr`` -> have your CA sign it -> ``import-cert``.
 Large certificates are written with ISO command chaining automatically.
 
 **Step 4 — standard data objects.** Most PIV clients (including

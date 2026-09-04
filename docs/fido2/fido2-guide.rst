@@ -43,7 +43,7 @@ doesn't consume a retry.
 Write operations
 --------------------
 
-These use the CTAP2 **PIN/UV Auth Protocol** (ECDH key agreement →
+These use the CTAP2 **PIN/UV Auth Protocol** (ECDH key agreement ->
 AES/HMAC under protocol 1 or 2). PINs are entered by masked prompt or a
 ``--*-env`` variable, never on the command line, and are registered with
 the redactor.
@@ -100,7 +100,7 @@ authenticatorConfig policy
 applet exposes two subcommands; each is authorized by a pinUvAuthToken
 carrying the **authenticatorConfiguration** permission, so pass
 ``--pin-env NAME`` when a clientPIN is set. (The pinUvAuthParam is MACed
-over a mandatory ``32×0xFF`` prefix — per the CTAP 2.1 spec, not a card
+over a mandatory prefix of 32 ``0xFF`` bytes — per the CTAP 2.1 spec, not a card
 quirk.)
 
 .. code-block:: console

@@ -62,8 +62,10 @@ html_show_sphinx = False  # drop the "Built with Sphinx" footer line, matching d
 html_show_sourcelink = False  # no "View page source" link
 html_copy_source = False  # and no _sources/*.rst.txt on the published site
 
-# PDF output name for a local `make latexpdf` run. CI builds HTML only - pdflatex
-# cannot render several characters these docs legitimately use.
+# PDF built by CI (docs.yml) with pdflatex and shipped inside the versioned HTML
+# dir as <repo_slug>.pdf. pdflatex cannot render every Unicode character, so the
+# sources stay within its set: no emoji outside `.. only:: html`, no arrows or
+# math symbols (use ->, at least, ...). The em/en dashes and ellipses it handles.
 latex_documents = [("index", f"{repo_slug}.tex", product_name, author, "manual")]
 
 todo_include_todos = False  # .. todo:: blocks must never reach the published site
