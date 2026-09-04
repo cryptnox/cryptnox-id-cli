@@ -50,7 +50,7 @@ Built-in profiles
 
    * **generated on-card** — ``piv quickstart --profile ms-logon --slot 9A
      --algorithm RSA2048`` (the private key never leaves the card);
-   * **imported**, for an AD-issued credential (CSR → CA → import, or PKCS#12
+   * **imported**, for an AD-issued credential (CSR -> CA -> import, or PKCS#12
      import via :doc:`/piv/piv-personalization`).
 
    The object carries the ``IMPORTABLE`` attribute so the second path is
@@ -147,7 +147,7 @@ whole profile before anything is sent to a card:
 
 - the admin key mechanism must be AES-128/192/256 (this applet's 9B is
   AES-only);
-- PIN and PUK ``min`` must be at least 6 and ``max`` must be ≥ ``min``;
+- PIN and PUK ``min`` must be at least 6 and ``max`` must be at least ``min``;
 - PIN and PUK ``retries`` must be 0–10;
 - every key's mechanism must be one this applet actually supports (see
   ``inspect-defaults``);

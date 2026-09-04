@@ -23,7 +23,7 @@ that need **no secret key material**:
   against the on-card leaf certificate's public key. Because the nonce is
   random per run, a copied certificate or a replayed signature cannot pass —
   the card must physically hold the device private key *now*.
-* **Certificate chain.** ``leaf → Genuineness CA → … → pinned Cryptnox root``,
+* **Certificate chain.** ``leaf -> Genuineness CA -> … -> pinned Cryptnox root``,
   validated (name chaining, signatures, validity windows, CA constraints) and
   anchored on the pinned trust store. A root is trusted only because it is
   pinned — never because it appears in a chain read off the card.

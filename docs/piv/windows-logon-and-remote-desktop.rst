@@ -120,7 +120,7 @@ Step 3 — log on
 * **Local/interactive**: select the smart-card credential tile and enter the
   PIV PIN.
 * **Remote Desktop**: in ``mstsc`` the card is redirected by default (Local
-  Resources → Smart cards). Connect to the domain host and authenticate with
+  Resources -> Smart cards). Connect to the domain host and authenticate with
   the PIN at the remote credential prompt.
 
 Scope and limits

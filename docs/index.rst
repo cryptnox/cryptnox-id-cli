@@ -6,6 +6,10 @@ Command-line management for the Cryptnox multi-applet smart card: PIV
 DESFire contactless — three independent functions on one physical card,
 driven by one tool: |cli|.
 
+.. only:: html
+
+   📄 `Download this documentation as PDF <cryptnox-id-cli.pdf>`__
+
 .. toctree::
    :maxdepth: 2
    :caption: General

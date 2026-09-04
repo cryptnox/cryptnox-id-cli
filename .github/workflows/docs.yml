@@ -33,6 +33,21 @@ jobs:
       - name: Generate Sphinx docs
         run: sphinx-build -W --keep-going -b html docs docs/_build/html
 
+      # 4b. Build the PDF and ship it inside the HTML tree, so it lands in the
+      #     versioned directory (/vX.Y/cryptnox-id-cli.pdf) on deploy — the
+      #     index page's "Download as PDF" link and the docs hub point there.
+      - name: Install LaTeX for PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra tex-gyre
+
+      - name: Build PDF (pdflatex)
+        run: |
+          sphinx-build -M latexpdf docs docs/_build
+          cp docs/_build/latex/cryptnox-id-cli.pdf docs/_build/html/cryptnox-id-cli.pdf
+
       # 5. Fetch what is currently published, to carry earlier versions over
       #    (continue-on-error: the branch does not exist on the very first deploy)
       - name: Fetch previously published versions
