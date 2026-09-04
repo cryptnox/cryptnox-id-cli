@@ -192,7 +192,7 @@ container at all, so the card looks empty to Windows (see
 <ul class="simple">
 <li><p><strong>generated on-card</strong> — <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--profile</span> <span class="pre">ms-logon</span> <span class="pre">--slot</span> <span class="pre">9A</span>
 <span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> (the private key never leaves the card);</p></li>
-<li><p><strong>imported</strong>, for an AD-issued credential (CSR → CA → import, or PKCS#12
+<li><p><strong>imported</strong>, for an AD-issued credential (CSR -&gt; CA -&gt; import, or PKCS#12
 import via <a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a>).</p></li>
 </ul>
 <p>The object carries the <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code> attribute so the second path is
@@ -281,7 +281,7 @@ whole profile before anything is sent to a card:</p>
 <ul class="simple">
 <li><p>the admin key mechanism must be AES-128/192/256 (this applet’s 9B is
 AES-only);</p></li>
-<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">min</span></code> must be at least 6 and <code class="docutils literal notranslate"><span class="pre">max</span></code> must be ≥ <code class="docutils literal notranslate"><span class="pre">min</span></code>;</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">min</span></code> must be at least 6 and <code class="docutils literal notranslate"><span class="pre">max</span></code> must be at least <code class="docutils literal notranslate"><span class="pre">min</span></code>;</p></li>
 <li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">retries</span></code> must be 0–10;</p></li>
 <li><p>every key’s mechanism must be one this applet actually supports (see
 <code class="docutils literal notranslate"><span class="pre">inspect-defaults</span></code>);</p></li>

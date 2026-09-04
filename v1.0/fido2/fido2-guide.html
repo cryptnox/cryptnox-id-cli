@@ -181,7 +181,7 @@ doesn’t consume a retry.</p>
 </section>
 <section id="write-operations">
 <h2>Write operations<a class="headerlink" href="#write-operations" title="Link to this heading"></a></h2>
-<p>These use the CTAP2 <strong>PIN/UV Auth Protocol</strong> (ECDH key agreement →
+<p>These use the CTAP2 <strong>PIN/UV Auth Protocol</strong> (ECDH key agreement -&gt;
 AES/HMAC under protocol 1 or 2). PINs are entered by masked prompt or a
 <code class="docutils literal notranslate"><span class="pre">--*-env</span></code> variable, never on the command line, and are registered with
 the redactor.</p>
@@ -233,7 +233,7 @@ PIN attempt, while a successful change doesn’t cost a retry.</p>
 applet exposes two subcommands; each is authorized by a pinUvAuthToken
 carrying the <strong>authenticatorConfiguration</strong> permission, so pass
 <code class="docutils literal notranslate"><span class="pre">--pin-env</span> <span class="pre">NAME</span></code> when a clientPIN is set. (The pinUvAuthParam is MACed
-over a mandatory <code class="docutils literal notranslate"><span class="pre">32×0xFF</span></code> prefix — per the CTAP 2.1 spec, not a card
+over a mandatory prefix of 32 <code class="docutils literal notranslate"><span class="pre">0xFF</span></code> bytes — per the CTAP 2.1 spec, not a card
 quirk.)</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>config<span class="w"> </span>show<span class="w">                                   </span><span class="c1"># read-only policy view</span>
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>fido<span class="w"> </span>config<span class="w"> </span>toggle-always-uv<span class="w"> </span>--pin-env<span class="w"> </span>P<span class="w">           </span><span class="c1"># flip alwaysUv (reversible)</span>

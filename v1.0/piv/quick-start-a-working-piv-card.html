@@ -176,8 +176,8 @@ default keys are for development cards only — see the warning in
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> detects the card state, then runs whatever is still needed
-of: PIN → PUK → key in slot 9C (ECC P-256, generated <strong>on-card</strong> — the private
-key never exists outside the card) → self-signed certificate → CHUID/CCC →
+of: PIN -&gt; PUK -&gt; key in slot 9C (ECC P-256, generated <strong>on-card</strong> — the private
+key never exists outside the card) -&gt; self-signed certificate -&gt; CHUID/CCC -&gt;
 smoke-test. Steps already done are skipped, so re-runs converge. New PIN/PUK
 values come from masked prompts or <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> /
 <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>.</p>
@@ -242,7 +242,7 @@ generate RSA on-card instead, with the private key never leaving the chip:</p>
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--cert<span class="w"> </span>9c.crt.pem
 </pre></div>
 </div>
-<p>Or CA-issued: <code class="docutils literal notranslate"><span class="pre">generate-csr</span></code> → have your CA sign it → <code class="docutils literal notranslate"><span class="pre">import-cert</span></code>.
+<p>Or CA-issued: <code class="docutils literal notranslate"><span class="pre">generate-csr</span></code> -&gt; have your CA sign it -&gt; <code class="docutils literal notranslate"><span class="pre">import-cert</span></code>.
 Large certificates are written with ISO command chaining automatically.</p>
 <p><strong>Step 4 — standard data objects.</strong> Most PIV clients (including
 <code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span> <span class="pre">-a</span> <span class="pre">status</span></code> and the Windows minidriver) treat a card without a

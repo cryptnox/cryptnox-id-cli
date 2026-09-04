@@ -226,7 +226,7 @@ contactless-only reader (see Prerequisites below).</p>
 <section id="fixing-it-give-9a-the-sign-role">
 <span id="ssh-fix-9a-sign-role"></span><h2>Fixing it: give 9A the SIGN role<a class="headerlink" href="#fixing-it-give-9a-the-sign-role" title="Link to this heading"></a></h2>
 <p>You don’t need the full <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile for this — the built-in <code class="docutils literal notranslate"><span class="pre">ssh</span></code>
-profile changes only 9A’s <code class="docutils literal notranslate"><span class="pre">role</span></code> (<code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code> → <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE,</span>
+profile changes only 9A’s <code class="docutils literal notranslate"><span class="pre">role</span></code> (<code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE,</span>
 <span class="pre">SIGN</span></code>); everything else is identical to <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>. See
 <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> for the full built-in profile list.</p>
 <p>This only applies at <strong>pre-personalization</strong> — it defines the key’s role at

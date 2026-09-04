@@ -163,7 +163,7 @@ card signs it with its device key (<code class="docutils literal notranslate"><s
 against the on-card leaf certificate’s public key. Because the nonce is
 random per run, a copied certificate or a replayed signature cannot pass —
 the card must physically hold the device private key <em>now</em>.</p></li>
-<li><p><strong>Certificate chain.</strong> <code class="docutils literal notranslate"><span class="pre">leaf</span> <span class="pre">→</span> <span class="pre">Genuineness</span> <span class="pre">CA</span> <span class="pre">→</span> <span class="pre">…</span> <span class="pre">→</span> <span class="pre">pinned</span> <span class="pre">Cryptnox</span> <span class="pre">root</span></code>,
+<li><p><strong>Certificate chain.</strong> <code class="docutils literal notranslate"><span class="pre">leaf</span> <span class="pre">-&gt;</span> <span class="pre">Genuineness</span> <span class="pre">CA</span> <span class="pre">-&gt;</span> <span class="pre">…</span> <span class="pre">-&gt;</span> <span class="pre">pinned</span> <span class="pre">Cryptnox</span> <span class="pre">root</span></code>,
 validated (name chaining, signatures, validity windows, CA constraints) and
 anchored on the pinned trust store. A root is trusted only because it is
 pinned — never because it appears in a chain read off the card.</p></li>
