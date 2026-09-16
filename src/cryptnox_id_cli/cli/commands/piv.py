@@ -127,13 +127,19 @@ def status(app: AppContext) -> None:
             blocked = " [red](blocked)[/red]" if st.piv_puk.blocked else ""
             c.print(f"  PUK (81): {'set' if st.piv_puk.configured else 'not set'}{extra}{blocked}")
         if mgmt_key:
-            mech_name = pivc.ALGORITHMS.get(mgmt_key.mechanism, "unknown mechanism")
+            mech_name = (
+                pivc.ALGORITHMS.get(mgmt_key.mechanism, "unknown mechanism")
+                if mgmt_key.mechanism is not None
+                else "unknown mechanism"
+            )
             if mgmt_key.configured is True:
                 c.print(f"  Management key (9B): [green]set[/green] ({mech_name})")
             elif mgmt_key.configured is False:
                 c.print(f"  Management key (9B): [yellow]not set[/yellow] ({mech_name})")
             else:
-                c.print("  Management key (9B): [dim]unknown[/dim] (could not tell from this probe)")
+                c.print(
+                    "  Management key (9B): [dim]unknown[/dim] (could not tell from this probe)"
+                )
         elif st.piv_apt is not None:
             c.print("  Management key (9B): [dim]no admin key object found on this card[/dim]")
         if st.piv_objects:
@@ -1701,7 +1707,9 @@ def perso_set_mgmt_key(
     """Set the PIV management key (9B). Set it for standards-compliance/
     interoperability with tools that authenticate using 9B management key.
     """
-    app.out.warn("replaces the current management key without needing its value (admin channel write).")
+    app.out.warn(
+        "replaces the current management key without needing its value (admin channel write)."
+    )
     mech = prof_mod.MECHANISMS[algorithm.upper()]
     expected_len = keyimport.aes_key_len(mech)
     secret = resolve_secret(
