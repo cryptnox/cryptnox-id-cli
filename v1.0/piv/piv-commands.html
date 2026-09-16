@@ -153,6 +153,9 @@ admin keys come from <code class="docutils literal notranslate"><span class="pre
 <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment
 variables. PIN values come from masked prompts or <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> /
 <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code> — never the command line.</p>
+<p>On-card generation of a large public key can also use the card’s <strong>PIV
+management key</strong> (key reference <code class="docutils literal notranslate"><span class="pre">9B</span></code>), whose value comes from
+<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> or <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> — never the command line.</p>
 <section id="inspection">
 <h2>Inspection<a class="headerlink" href="#inspection" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv info            applet AID/label, supported algorithms, key slots
@@ -265,6 +268,17 @@ On <code class="docutils literal notranslate"><span class="pre">cryptnox-default
 imported there. <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> also creates an RSA-2048 object on 9A, and
 <code class="docutils literal notranslate"><span class="pre">generate-key</span> <span class="pre">--slot</span> <span class="pre">9A</span> <span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> generates on-card on such a
 card. Asking for a mechanism the slot has no object for returns <code class="docutils literal notranslate"><span class="pre">6A80</span></code>.</p></li>
+<li><p>Some cards cannot return an RSA public-key template larger than 256 bytes over
+the admin channel. <code class="docutils literal notranslate"><span class="pre">generate-key</span></code> detects that from the card’s own response
+and finishes the generation over plain APDUs, authenticating the PIV management
+key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) first. The management key is contact-only and its value comes from
+<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> (development cards) or <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code>; a card whose <code class="docutils literal notranslate"><span class="pre">9B</span></code>
+object holds no value is reported with the command that loads one
+(<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">set-mgmt-key</span></code>). ECC is unaffected, and cards that
+return the full template take the admin channel as before.</p></li>
+<li><p>When that path is taken, the key pair from the first attempt is replaced by the
+one generated over the plain path, whose public half is the one reported; RSA
+generation therefore runs twice on such a card.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to ECC P-256. It accepts <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code>
 only for <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on slot 9A — the one built-in shape with an
 RSA key object — and rejects it elsewhere; pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code>
