@@ -153,20 +153,12 @@ factory piv preperso inspect-defaults  show the built-in profiles
 factory piv preperso init-config       write a built-in profile to editable YAML
 factory piv preperso export-config     read-only snapshot of the card's structure
 factory piv preperso load-config       apply a profile to the card (supports --dry-run)
-factory piv preperso set-mgmt-key      load the PIV management key (9B) value
 factory piv preperso finalize          IRREVERSIBLY lock the applet structure
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">load-config</span></code> sends one structural operation per SCP03 session (a platform
 requirement of this card), so a profile load is a sequence of short commands;
 it stops at the first rejection and reports exactly what was applied.</p>
-<p>The PIV <strong>management key</strong> (key reference <code class="docutils literal notranslate"><span class="pre">9B</span></code>) is the applet’s own
-administration key. Profiles create its key object but never carry a value,
-because profiles are shareable files; <code class="docutils literal notranslate"><span class="pre">set-mgmt-key</span></code> writes the value over the
-admin channel from <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> or <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code>
-(<code class="docutils literal notranslate"><span class="pre">CARD_PIV_MGMT_KEY</span></code> is accepted as an alias). It refuses to create a missing
-<code class="docutils literal notranslate"><span class="pre">9B</span></code> object and refuses to overwrite a value that is already set unless
-<code class="docutils literal notranslate"><span class="pre">--replace</span></code> is given; <code class="docutils literal notranslate"><span class="pre">status</span></code> shows whether <code class="docutils literal notranslate"><span class="pre">9B</span></code> holds a value.</p>
 <p>Built-in profiles: <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> (the applet’s own reference structure),
 <code class="docutils literal notranslate"><span class="pre">developer</span></code> / <code class="docutils literal notranslate"><span class="pre">npivp-lab</span></code> (the same structure, labelled for non-production
 use), <code class="docutils literal notranslate"><span class="pre">ssh</span></code> (9A gets SIGN added, nothing else changes — see

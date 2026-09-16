@@ -251,8 +251,6 @@ examples in this documentation use them too:</p>
 <ul class="simple">
 <li><p><strong>SCP03 / GlobalPlatform ISD</strong> — the published GlobalPlatform test key
 <code class="docutils literal notranslate"><span class="pre">40</span> <span class="pre">41</span> <span class="pre">42</span> <span class="pre">…</span> <span class="pre">4F</span></code> (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>);</p></li>
-<li><p><strong>PIV management key (9B)</strong> — the same published GlobalPlatform test
-value, doubled for an AES-256 key object (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>);</p></li>
 <li><p><strong>DESFire</strong> application keys after <code class="docutils literal notranslate"><span class="pre">app</span> <span class="pre">create</span></code> — all-zero AES
 (<code class="docutils literal notranslate"><span class="pre">--zero-key</span></code>);</p></li>
 <li><p><strong>PIV PIN / PUK</strong> in the examples — <code class="docutils literal notranslate"><span class="pre">123456</span></code> / <code class="docutils literal notranslate"><span class="pre">12345678</span></code>.</p></li>
@@ -261,7 +259,6 @@ value, doubled for an AES-256 key object (<code class="docutils literal notransl
 deployment must rotate all of them, which is exactly what the
 environment-variable key input is for: <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> /
 <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> for the admin channel,
-<code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> for the PIV management key,
 <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>
 for PINs and PUKs, and the DESFire <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> form.</p>
 </div>
