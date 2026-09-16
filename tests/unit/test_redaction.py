@@ -105,3 +105,36 @@ def test_chained_change_reference_data_masked():
         out = Redactor().redact_command(apdu)
         assert component not in out
         assert "REDACTED" in out
+
+
+def test_management_key_value_never_reaches_a_transcript():
+    # Two independent defences on the 9B value: registration masks it wherever it
+    # appears, and CHANGE REFERENCE DATA (INS 24) masks its data field regardless.
+    from cryptnox_id_cli.applets.piv.mgmt_auth import set_value_apdu
+
+    value = bytes(range(32))
+    registered = Redactor()
+    registered.register(value)
+    assert value.hex().upper() not in registered.mask(value.hex().upper())
+
+    unregistered = Redactor()
+    out = unregistered.redact_command(set_value_apdu(0x0C, value).to_bytes())
+    assert value.hex().upper() not in out
+    assert out == "00240C9B22<REDACTED:34B>"
+
+
+def test_management_key_witness_exchange_is_masked_by_ins():
+    # The witness and the challenge travel under GENERAL AUTHENTICATE, so neither
+    # direction of the handshake can be read out of a log.
+    from cryptnox_id_cli.applets.piv.mgmt_auth import mutual_response_apdu, witness_request_apdu
+
+    r = Redactor()
+    witness = bytes.fromhex("A7E57B882467107902739D50387B3651")
+    response = bytes.fromhex("7C1280" + "10" + witness.hex())
+    assert r.redact_response(response, 0x90, 0x00, ins=0x87) == "<REDACTED:20B>9000"
+    assert witness.hex().upper() not in r.redact_command(
+        mutual_response_apdu(0x0C, witness, bytes(16)).to_bytes()
+    )
+    # Even the witness request, which carries nothing secret, is masked by INS: the
+    # handshake cannot be followed in a transcript, so diagnosis goes in the messages.
+    assert r.redact_command(witness_request_apdu(0x0C).to_bytes()) == "00870C9B04<REDACTED:4B>00"

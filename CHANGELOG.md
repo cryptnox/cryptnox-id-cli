@@ -14,6 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mechanisms.
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
+- `factory piv preperso set-mgmt-key` - load the PIV management key (9B)
+  value over the admin channel; `--replace` replaces a value that is set.
+  `factory piv preperso status` reports whether 9B holds a value.
+- `PIV_MGMT_KEY` (hex) for the PIV management key, alongside the existing
+  `PIV_SCP03_*` admin-channel variables.
+
+### Fixed
+
+- `perso generate-key` and `quickstart` complete on cards that return at most
+  256 bytes of an RSA public-key template over the admin channel: the
+  truncated response is detected and the generation is repeated over plain
+  APDUs after authenticating the PIV management key (9B). ECC and cards that
+  return the full template are unaffected.
+- A public-key template the CLI cannot parse now ends in a CLI error naming
+  the response length, instead of an unhandled exception.
 
 ## [1.0.3] - 2026-08-31
 
