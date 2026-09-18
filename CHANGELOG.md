@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mechanisms.
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
+- `remote authenticate` and `remote inspect`: identify and probe the card
+  through the Cryptnox remote PIV service, with the card in the local reader.
+  The tool relays the commands the service sends under a fail-closed policy
+  that keeps every other card function out of reach, and reports what the
+  service asserted apart from what it verified locally. Adds the `websockets`
+  dependency and exit codes 12 to 16.
 
 ## [1.0.3] - 2026-08-31
 

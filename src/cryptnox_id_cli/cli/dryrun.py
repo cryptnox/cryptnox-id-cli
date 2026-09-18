@@ -144,6 +144,10 @@ NO_DRY_RUN = frozenset(
         "piv pin unblock",
         "piv pin verify",
         "piv puk change",
+        # Relayed operations: the service chooses the commands, so nothing can be
+        # planned locally, and every run opens a network connection.
+        "remote authenticate",
+        "remote inspect",
     }
 )
 
