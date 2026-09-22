@@ -163,6 +163,17 @@ pytest -q -m "not real_card"
 Unit tests use a mock transport — no reader or card required. Real-card tests
 are opt-in (`-m real_card`) and never run in CI.
 
+To measure coverage locally, the same way CI does:
+
+```bash
+pytest -q -m "not real_card" --cov --cov-report=term-missing
+```
+
+CI enforces two floors: a project-wide one from `fail_under` in `pyproject.toml`,
+and a tighter one over `src/cryptnox_id_cli/cli/commands/`. Because branch
+coverage is enabled, both compare the **combined** statement-and-branch
+percentage that `coverage report` prints, which sits below line coverage alone.
+
 ---
 
 ## License

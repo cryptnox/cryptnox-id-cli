@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mechanisms.
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
+- Coverage measurement in CI: `pytest-cov` in the `dev` extra, a project-wide
+  floor from `fail_under`, and a tighter floor over the command modules. With
+  branch coverage enabled both floors compare the combined statement-and-branch
+  percentage, which sits below line coverage alone.
 
 ## [1.0.3] - 2026-08-31
 
