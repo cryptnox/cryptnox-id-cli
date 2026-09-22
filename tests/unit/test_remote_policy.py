@@ -157,6 +157,35 @@ def test_card_holder_verifier_commands_are_never_relayed(op, ins):
         policy.check(apdu(0x00, ins, 0x00, 0x80, b"\xff" * 8, le=False))
 
 
+@pytest.mark.parametrize("op", ["reset", "dev-reset", "attest"])
+@pytest.mark.parametrize("ref", sorted(pol.CARDHOLDER_REFS))
+def test_card_holder_references_are_denied_even_where_9b_is_allowed(op, ref):
+    policy = pol.RelayPolicy(op, slot=0x9C) if op == "attest" else pol.RelayPolicy(op)
+    for ins in (0x20, 0x24, 0x2C):
+        with pytest.raises(RemotePolicyError, match="never relayed"):
+            policy.check(apdu(0x04, ins, 0x00, ref, b"\xff" * 8, le=False))
+
+
+@pytest.mark.parametrize("op", ["reset", "dev-reset"])
+def test_setting_the_management_key_is_allowed_where_the_rules_say_so(op):
+    policy = pol.RelayPolicy(op)
+    allow(policy, select(pol.PIV_AID))
+    policy.check(apdu(0x04, 0x24, 0x08, pol.MANAGEMENT_KEY_REF, b"\x00" * 24, le=False))
+
+
+def test_setting_the_management_key_is_allowed_during_attest():
+    policy = pol.RelayPolicy("attest", slot=0x9C)
+    allow(policy, select(pol.PIV_AID))
+    policy.check(apdu(0x04, 0x24, 0x08, pol.MANAGEMENT_KEY_REF, b"\x00" * 24, le=False))
+
+
+@pytest.mark.parametrize("op", pol.READ_ONLY_OPS)
+def test_read_only_operations_may_not_touch_the_management_key(op):
+    policy = pol.RelayPolicy(op)
+    with pytest.raises(RemotePolicyError, match="never relayed"):
+        policy.check(apdu(0x04, 0x24, 0x08, pol.MANAGEMENT_KEY_REF, b"\x00" * 24, le=False))
+
+
 @pytest.mark.parametrize("op", pol.READ_ONLY_OPS)
 def test_iso_secure_messaging_class_is_refused(op):
     policy = pol.RelayPolicy(op)

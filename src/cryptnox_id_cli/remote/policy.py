@@ -49,8 +49,13 @@ DESTRUCTIVE_OPS = ("reset", "dev-reset")
 KEY_OPS = ("attest",)
 
 #: The PIV management key reference: the only key GENERAL AUTHENTICATE may
-#: address during a remote operation.
+#: address during a remote operation, and the only reference whose value
+#: CHANGE REFERENCE DATA may set.
 MANAGEMENT_KEY_REF = 0x9B
+
+#: Card-holder references. Their retry counters are the card holder's to spend,
+#: so no remote operation may address them, ever.
+CARDHOLDER_REFS: frozenset[int] = frozenset({0x80, 0x81})
 
 # Instructions, by name, so the tables read as prose.
 INS_SELECT = 0xA4
@@ -103,6 +108,10 @@ class OpRules:
     #: Whether GENERATE and GENERAL AUTHENTICATE are bound to a slot and the
     #: management key. Only meaningful for key operations.
     slot_bound: bool = False
+    #: Whether the operation may set the PIV management key's value. The
+    #: service does this over the secure channel before generating a key.
+    #: Card-holder references stay denied regardless.
+    allow_management_key_change: bool = False
 
 
 _GP_READS: frozenset[int] = frozenset(
@@ -126,16 +135,24 @@ _RESET_RULES = OpRules(
         # loads or deletes anything itself.
         PIV_SSD: _GP_READS | _GP_AUTH | _GP_KEYS,
         # The fresh applet is checked and may receive its baseline structure
-        # through its own admin channel; no key use, no key generation.
-        PIV: _PIV_READS | _GP_AUTH | {INS_PUT_DATA},
+        # and its management key through its own admin channel; no key use, no
+        # key generation.
+        PIV: _PIV_READS | _GP_AUTH | {INS_PUT_DATA, INS_CHANGE_REFERENCE_DATA},
     },
     # A CAP of ~190 KB loads in ~800 blocks; the rest is bookkeeping.
     max_apdus=1500,
     max_seconds=1800.0,
-    max_initialize_updates=8,
-    max_external_authenticates=3,
+    # The service re-opens the card manager's channel for each step of the
+    # operation (delete, load, install, create the security domain, key it,
+    # extradite, verify), so the count is per step, not per operation. Observed:
+    # four before the security domain was keyed. The real protection against a
+    # spent retry is not this ceiling but the abort on the first FAILED
+    # authentication in observe(); this only bounds a runaway.
+    max_initialize_updates=16,
+    max_external_authenticates=16,
     delete_targets=_PIV_DELETE_TARGETS,
     max_load_blocks=1500,
+    allow_management_key_change=True,
 )
 
 RULES: dict[str, OpRules] = {
@@ -177,13 +194,19 @@ RULES: dict[str, OpRules] = {
             # management-key handshake, key generation and the certificate write.
             PIV: _PIV_READS
             | _GP_AUTH
-            | {INS_GENERAL_AUTHENTICATE, INS_GENERATE_ASYMMETRIC, INS_PUT_DATA},
+            | {
+                INS_GENERAL_AUTHENTICATE,
+                INS_GENERATE_ASYMMETRIC,
+                INS_PUT_DATA,
+                INS_CHANGE_REFERENCE_DATA,
+            },
         },
         max_apdus=200,
         max_seconds=600.0,
         max_initialize_updates=6,
-        max_external_authenticates=2,
+        max_external_authenticates=4,
         slot_bound=True,
+        allow_management_key_change=True,
     ),
 }
 
@@ -320,9 +343,20 @@ class RelayPolicy:
         if (header.cla & 0xF0) == 0x80 and header.ins == INS_CTAP_MSG:
             raise RemotePolicyError("FIDO2 CTAP command refused", header=header.hex)
         if header.ins in _ALWAYS_DENIED_INS:
-            raise RemotePolicyError(
-                f"INS {header.ins:02X} is never relayed (card-holder verifier)", header=header.hex
+            # Setting the management key's value is administration, not a
+            # card-holder verifier: 9B has no card-holder retry counter, and the
+            # service loads it before generating a key. Every other reference,
+            # and every other instruction in this set, stays denied.
+            managing_9b = (
+                header.ins == INS_CHANGE_REFERENCE_DATA
+                and header.p2 == MANAGEMENT_KEY_REF
+                and rules.allow_management_key_change
             )
+            if not managing_9b:
+                raise RemotePolicyError(
+                    f"INS {header.ins:02X} is never relayed (card-holder verifier)",
+                    header=header.hex,
+                )
         if header.ins == INS_EXTERNAL_AUTHENTICATE and rules.max_external_authenticates == 0:
             raise RemotePolicyError(
                 f"EXTERNAL AUTHENTICATE is not allowed during {self.op}; a failed attempt "
