@@ -159,3 +159,17 @@ re-present the card, and check the reader passes native DESFire APDUs.
 A section may also report ``{"state": "Unknown", "error": "<message>"}`` when a
 probe fails. Nothing in any report contains a PIN, key, or private material —
 ``safe_to_share`` is always ``true``.
+
+Remote service operations
+-------------------------
+
+``remote`` commands return one object with a fixed top level: ``op``,
+``endpoint``, ``card`` (reader, ATR, CPLC UID and serial, all read locally),
+``result`` (the service's own result object, passed through unchanged),
+``verified_locally`` (each cross-check as ``true``, ``false`` or ``null`` when
+the service reported nothing to compare) and ``relay`` (commands relayed,
+seconds, proof-of-work bits, the service's log lines). ``reset`` and
+``dev-reset`` add ``before`` and ``after`` inventories; ``attest`` adds
+``verification`` with every binding checked on the returned certificate.
+Fields under ``result`` are the service's assertions; only ``verified_locally``,
+``before``, ``after`` and ``verification`` are the tool's own findings.

@@ -146,8 +146,11 @@ NO_DRY_RUN = frozenset(
         "piv puk change",
         # Relayed operations: the service chooses the commands, so nothing can be
         # planned locally, and every run opens a network connection.
+        "remote attest",
         "remote authenticate",
+        "remote dev-reset",
         "remote inspect",
+        "remote reset",
     }
 )
 

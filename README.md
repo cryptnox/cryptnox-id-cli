@@ -139,6 +139,18 @@ cryptnox-id doctor      # PC/SC service, reader, per-function reachability
 cryptnox-id shell       # run subcommands without re-typing the prefix
 ```
 
+### 6. Use the Cryptnox remote PIV service
+
+```bash
+cryptnox-id remote inspect            # what the service sees: applet, security domain, key versions
+cryptnox-id remote attest --slot 9C   # a key generated through the service, with its attestation
+cryptnox-id remote reset              # wipe and reinstall the PIV function (irreversible, gated)
+```
+
+The card stays in your reader; the tool relays the service's commands under a
+policy that keeps the other card functions out of reach, and shows what the
+service asserted apart from what it verified locally.
+
 ---
 
 ## Documentation

@@ -117,6 +117,34 @@ throwaway dev root: ``genuine verify --anchors <dev-ca-dir>``.
 chain. It does **not** verify the per-card ISD or PIV-SSD keys (KDF/HSM-derived)
 — this tool has no access to those secrets, and the output says so.
 
+Remote service
+--------------
+
+``remote`` commands exit with a code that names the failure class (see
+:doc:`/exit-codes`):
+
+- **13** ``remote_connect``: the service could not be reached or the TLS
+  handshake failed. Check the network; the endpoint is fixed to
+  ``wss://piv.cryptnox.com``. With ``CRYPTNOX_REMOTE_URL`` set, only
+  ``authenticate`` and ``inspect`` run, and only to ``wss://`` or loopback.
+- **14** ``remote_protocol``: the service sent a frame the tool cannot
+  interpret. Update the tool; if the newest version fails the same way,
+  report it with the message.
+- **15** ``remote_policy``: the service asked for a card command the relay
+  policy refuses; the message names the command header. Nothing was sent to
+  the card for that command and the operation stopped. This is the tool
+  protecting the card; report the header so the policy can be reviewed.
+- **16** ``remote_failed``: the exchange completed and the service reported
+  the operation as failed; the error object carries the service's result.
+  A per-card rate limit exists; wait before retrying.
+
+``remote reset`` and ``remote dev-reset`` refuse to run non-interactively
+without ``--i-understand-this-is-irreversible``, and ``--yes`` is not
+accepted for them. ``remote attest`` refuses non-interactively without
+``--yes`` when the slot or the attestation container already holds a
+certificate.
+
+
 yubico-piv-tool interop
 -------------------------
 

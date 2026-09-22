@@ -79,7 +79,7 @@ def test_select_with_short_data_is_refused():
 # --------------------------------------------------------------------------- #
 def test_operations_without_rules_are_refused_up_front():
     with pytest.raises(RemotePolicyError, match="no relay policy"):
-        pol.RelayPolicy("reset")
+        pol.RelayPolicy("format-everything")
 
 
 # --------------------------------------------------------------------------- #
@@ -193,10 +193,13 @@ def test_piv_context_allows_only_piv_reads():
         apdu(0x00, 0xDB, 0x3F, 0xFF, b"\x5c\x03\x5f\xc1\x02", le=False),  # PUT DATA
         apdu(0x00, 0x87, 0x11, 0x9B, b"\x7c\x02\x81\x00", le=False),  # GENERAL AUTH
         apdu(0x80, 0xCA, 0x9F, 0x7F),  # GP GET DATA is not a PIV command
-        INIT_UPDATE,
     ):
         with pytest.raises(RemotePolicyError, match="not allowed while the piv"):
             policy.check(forbidden)
+    # The applet's admin channel may be probed, never authenticated.
+    allow(policy, INIT_UPDATE)
+    with pytest.raises(RemotePolicyError, match="EXTERNAL AUTHENTICATE"):
+        policy.check(EXT_AUTH)
 
 
 def test_inspect_caps_initialize_updates_per_domain():
@@ -251,3 +254,178 @@ def test_refusal_carries_the_header_for_review():
         policy.check(apdu(0x00, 0x47, 0x00, 0x9C))
     assert info.value.header == "0047009C"
     assert info.value.to_dict()["apdu_header"] == "0047009C"
+
+
+# --------------------------------------------------------------------------- #
+# reset / dev-reset: card content management, PIV only                        #
+# --------------------------------------------------------------------------- #
+PIV_PACKAGE_AID = pol.PIV_PACKAGE_AID
+FIDO2_PACKAGE_AID = bytes.fromhex("A000000647")
+SSD_PACKAGE_AID = bytes.fromhex("A0000001515350")
+
+
+def delete(aid: bytes, cla: int = 0x84, mac: bytes = b"\x00" * 8) -> bytes:
+    data = bytes([0x4F, len(aid)]) + aid + mac
+    return bytes([cla, 0xE4, 0x00, 0x00, len(data)]) + data + b"\x00"
+
+
+def wrapped(ins: int, p1: int = 0, p2: int = 0, n: int = 24) -> bytes:
+    return apdu(0x84, ins, p1, p2, b"\x00" * n, le=False)
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_reset_follows_the_documented_flow(op):
+    policy = pol.RelayPolicy(op)
+    allow(policy, CPLC)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    allow(policy, wrapped(0xF2, 0x40, 0x00))  # GET STATUS
+    allow(policy, delete(pol.PIV_AID))
+    allow(policy, delete(PIV_PACKAGE_AID))
+    allow(policy, delete(pol.PIV_SSD_AID))
+    allow(policy, wrapped(0xE6, 0x02, 0x00))  # INSTALL for load
+    for _ in range(10):
+        allow(policy, wrapped(0xE8, 0x00, 0x00, n=200))  # LOAD blocks
+    allow(policy, wrapped(0xE6, 0x0C, 0x00))  # INSTALL for install
+    allow(policy, wrapped(0xE6, 0x10, 0x00))  # extradition
+    allow(policy, select(pol.PIV_SSD_AID))
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    allow(policy, wrapped(0xD8, 0x00, 0x81))  # PUT KEY
+    allow(policy, select(pol.PIV_AID))
+    allow(policy, PIV_GET_DATA)
+    assert policy.load_blocks == 10
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+@pytest.mark.parametrize(
+    "aid", [WALLET_AID, FIDO2_AID, FIDO2_PACKAGE_AID, GENUINE_AID, SSD_PACKAGE_AID]
+)
+def test_reset_may_only_delete_piv_things(op, aid):
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    with pytest.raises(RemotePolicyError, match="DELETE of") as info:
+        policy.check(delete(aid))
+    assert info.value.header == "84E40000"
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_an_encrypted_delete_passes_on_instruction_and_context_alone(op):
+    # Under command encryption the AID is opaque; the header-level rules still
+    # hold (ISD context only) and the limitation is documented.
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    allow(policy, wrapped(0xE4, 0x00, 0x00))
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_content_management_never_leaves_the_card_manager(op):
+    policy = pol.RelayPolicy(op)
+    allow(policy, select(pol.PIV_SSD_AID))
+    for ins in (0xE4, 0xE6, 0xE8):
+        with pytest.raises(RemotePolicyError, match="not allowed while the piv-ssd"):
+            policy.check(wrapped(ins))
+    allow(policy, select(pol.PIV_AID))
+    for ins in (0xE4, 0xE6, 0xE8, 0xD8, 0x47, 0x87):
+        with pytest.raises(RemotePolicyError, match="not allowed while the piv"):
+            policy.check(wrapped(ins))
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_a_failed_external_authenticate_ends_the_operation(op):
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    policy.check(EXT_AUTH)
+    with pytest.raises(RemotePolicyError, match="EXTERNAL AUTHENTICATE failed"):
+        policy.observe(EXT_AUTH, 0x63, 0x00)
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_external_authenticate_is_capped_per_domain(op):
+    policy = pol.RelayPolicy(op)
+    cap = policy.rules.max_external_authenticates
+    for _ in range(cap):
+        allow(policy, INIT_UPDATE)
+        allow(policy, EXT_AUTH)
+    with pytest.raises(
+        RemotePolicyError, match=f"EXTERNAL AUTHENTICATE to the isd more than {cap}"
+    ):
+        policy.check(EXT_AUTH)
+
+
+def test_load_blocks_are_capped():
+    policy = pol.RelayPolicy("reset")
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    policy.load_blocks = policy.rules.max_load_blocks
+    with pytest.raises(RemotePolicyError, match="LOAD blocks"):
+        policy.check(wrapped(0xE8))
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+@pytest.mark.parametrize("aid", [WALLET_AID, FIDO2_AID, GENUINE_AID, DESFIRE_AID])
+def test_reset_cannot_select_other_card_functions(op, aid):
+    with pytest.raises(RemotePolicyError, match="SELECT of AID"):
+        pol.RelayPolicy(op).check(select(aid))
+
+
+def test_delete_target_parsing():
+    assert pol.delete_target(delete(pol.PIV_AID)) == pol.PIV_AID
+    assert pol.delete_target(wrapped(0xE4)) is None  # opaque
+    assert pol.delete_target(bytes.fromhex("84E40000034F01AA")) is None  # implausible length
+
+
+# --------------------------------------------------------------------------- #
+# attest: one slot, the management key, nothing else                          #
+# --------------------------------------------------------------------------- #
+def test_attest_needs_a_slot():
+    with pytest.raises(RemotePolicyError, match="needs the target slot"):
+        pol.RelayPolicy("attest")
+
+
+def test_attest_follows_the_documented_flow():
+    policy = pol.RelayPolicy("attest", slot=0x9C)
+    allow(policy, CPLC)
+    allow(policy, select(pol.PIV_AID))
+    allow(policy, INIT_UPDATE)  # the applet's admin channel, keyed by the SSD
+    allow(policy, EXT_AUTH)
+    allow(policy, wrapped(0xDB, 0x3F, 0xFF))  # key-object setup
+    allow(policy, apdu(0x00, 0x87, 0x03, 0x9B, b"\x7c\x02\x81\x00", le=False))
+    allow(policy, apdu(0x00, 0x47, 0x00, 0x9C, b"\xac\x03\x80\x01\x11", le=False))
+    allow(policy, apdu(0x00, 0xC0, 0x00, 0x00))
+    allow(policy, apdu(0x00, 0xDB, 0x3F, 0xFF, b"\x5c\x03\x5f\xc1\x20", le=False))
+    allow(policy, PIV_GET_DATA)
+
+
+def test_attest_generate_is_bound_to_the_requested_slot():
+    policy = pol.RelayPolicy("attest", slot=0x9C)
+    allow(policy, select(pol.PIV_AID))
+    for other in (0x9A, 0x9D, 0x9E, 0x82):
+        with pytest.raises(RemotePolicyError, match=f"GENERATE for slot {other:02X}"):
+            policy.check(apdu(0x00, 0x47, 0x00, other, b"\xac\x03\x80\x01\x11", le=False))
+
+
+def test_attest_never_exercises_a_slot_key():
+    policy = pol.RelayPolicy("attest", slot=0x9C)
+    allow(policy, select(pol.PIV_AID))
+    for key in (0x9A, 0x9C, 0x9D, 0x9E):
+        with pytest.raises(RemotePolicyError, match="only the management key"):
+            policy.check(apdu(0x00, 0x87, 0x11, key, b"\x7c\x02\x82\x00", le=False))
+
+
+def test_attest_cannot_manage_card_content():
+    policy = pol.RelayPolicy("attest", slot=0x9C)
+    allow(policy, INIT_UPDATE)
+    with pytest.raises(RemotePolicyError, match="EXTERNAL AUTHENTICATE to the isd|not allowed"):
+        policy.check(wrapped(0xE4))
+    for ins in (0xE4, 0xE6, 0xE8, 0xD8):
+        with pytest.raises(RemotePolicyError, match="not allowed while the isd"):
+            policy.check(wrapped(ins))
+
+
+def test_attest_cannot_select_other_card_functions():
+    for aid in (WALLET_AID, FIDO2_AID, GENUINE_AID, DESFIRE_AID):
+        with pytest.raises(RemotePolicyError, match="SELECT of AID"):
+            pol.RelayPolicy("attest", slot=0x9C).check(select(aid))

@@ -12,12 +12,14 @@ what the service actually needs.
 Where the service works inside a secure channel, only the class and instruction
 bytes stay in the clear. The policy is honest about that: it fences which
 security domain the channel was opened to and which instructions pass through
-it, and it cannot see what an encrypted command carries.
+it, and it cannot see what an encrypted command carries. Where a command's data
+does travel in the clear, the policy reads it: a DELETE may only name the PIV
+instance, the PIV package or the PIV security domain.
 
 Counters guard the other way a command can do harm without being forbidden:
 a failed GlobalPlatform authentication decrements a bounded retry counter, so
 the number of authentication attempts per security domain is capped, and a
-refused authentication ends the operation on the spot.
+failed authentication ends the operation on the spot.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from ..transport.errors import RemotePolicyError
 ISD_AID = bytes.fromhex("A000000151000000")
 PIV_SSD_AID = bytes.fromhex("A00000015153504101")
 PIV_AID = bytes.fromhex("A000000308000010000100")
+PIV_PACKAGE_AID = bytes.fromhex("A0000003084F46323031")
 
 #: Contexts a command can be evaluated in, keyed by the selected AID.
 ISD = "isd"
@@ -40,8 +43,14 @@ PIV = "piv"
 
 _CONTEXT_BY_AID: dict[bytes, str] = {ISD_AID: ISD, PIV_SSD_AID: PIV_SSD, PIV_AID: PIV}
 
-#: The operations this module has rules for.
+#: Operations grouped by what they may do to the card.
 READ_ONLY_OPS = ("authenticate", "inspect")
+DESTRUCTIVE_OPS = ("reset", "dev-reset")
+KEY_OPS = ("attest",)
+
+#: The PIV management key reference: the only key GENERAL AUTHENTICATE may
+#: address during a remote operation.
+MANAGEMENT_KEY_REF = 0x9B
 
 # Instructions, by name, so the tables read as prose.
 INS_SELECT = 0xA4
@@ -85,12 +94,48 @@ class OpRules:
     max_seconds: float
     #: INITIALIZE UPDATE attempts allowed per security domain.
     max_initialize_updates: int
-    #: Whether EXTERNAL AUTHENTICATE may be relayed at all.
-    allow_external_authenticate: bool
+    #: EXTERNAL AUTHENTICATE attempts allowed per security domain (0 = never).
+    max_external_authenticates: int = 0
+    #: AIDs a DELETE may name when its data is readable. ``None`` = no DELETE.
+    delete_targets: frozenset[bytes] | None = None
+    #: LOAD blocks allowed in one operation (0 = no LOAD).
+    max_load_blocks: int = 0
+    #: Whether GENERATE and GENERAL AUTHENTICATE are bound to a slot and the
+    #: management key. Only meaningful for key operations.
+    slot_bound: bool = False
 
 
 _GP_READS: frozenset[int] = frozenset(
     {INS_SELECT, INS_GET_DATA_GP, INS_GET_STATUS, INS_GET_RESPONSE}
+)
+_GP_AUTH: frozenset[int] = frozenset({INS_INITIALIZE_UPDATE, INS_EXTERNAL_AUTHENTICATE})
+_GP_CONTENT: frozenset[int] = frozenset({INS_DELETE, INS_INSTALL, INS_LOAD})
+_GP_KEYS: frozenset[int] = frozenset({INS_PUT_KEY, INS_STORE_DATA})
+_PIV_READS: frozenset[int] = frozenset({INS_SELECT, INS_GET_DATA_PIV, INS_GET_RESPONSE})
+
+#: What the service may delete: the PIV instance, its package, its security
+#: domain. Never a package or instance of any other card function.
+_PIV_DELETE_TARGETS: frozenset[bytes] = frozenset({PIV_AID, PIV_PACKAGE_AID, PIV_SSD_AID})
+
+_RESET_RULES = OpRules(
+    selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
+    allowed_ins={
+        # Card content management happens through the card manager only.
+        ISD: _GP_READS | _GP_AUTH | _GP_CONTENT | _GP_KEYS,
+        # The PIV security domain is created, keyed and verified; it never
+        # loads or deletes anything itself.
+        PIV_SSD: _GP_READS | _GP_AUTH | _GP_KEYS,
+        # The fresh applet is checked and may receive its baseline structure
+        # through its own admin channel; no key use, no key generation.
+        PIV: _PIV_READS | _GP_AUTH | {INS_PUT_DATA},
+    },
+    # A CAP of ~190 KB loads in ~800 blocks; the rest is bookkeeping.
+    max_apdus=1500,
+    max_seconds=1800.0,
+    max_initialize_updates=8,
+    max_external_authenticates=3,
+    delete_targets=_PIV_DELETE_TARGETS,
+    max_load_blocks=1500,
 )
 
 RULES: dict[str, OpRules] = {
@@ -104,14 +149,15 @@ RULES: dict[str, OpRules] = {
         max_apdus=20,
         max_seconds=60.0,
         max_initialize_updates=0,
-        allow_external_authenticate=False,
     ),
     "inspect": OpRules(
         selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
         allowed_ins={
             ISD: _GP_READS | {INS_INITIALIZE_UPDATE},
             PIV_SSD: _GP_READS | {INS_INITIALIZE_UPDATE},
-            PIV: frozenset({INS_SELECT, INS_GET_DATA_PIV, INS_GET_RESPONSE}),
+            # The applet hosts its own admin channel; the service probes its
+            # secure-channel version the same way, without authenticating.
+            PIV: _PIV_READS | {INS_INITIALIZE_UPDATE},
         },
         max_apdus=60,
         max_seconds=120.0,
@@ -119,13 +165,31 @@ RULES: dict[str, OpRules] = {
         # different P1 values (observed: KVN 00, then KVN 01). None of them costs
         # a retry as long as EXTERNAL AUTHENTICATE stays refused.
         max_initialize_updates=4,
-        allow_external_authenticate=False,
+    ),
+    "reset": _RESET_RULES,
+    "dev-reset": _RESET_RULES,
+    "attest": OpRules(
+        selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
+        allowed_ins={
+            ISD: _GP_READS | {INS_INITIALIZE_UPDATE},
+            PIV_SSD: _GP_READS | _GP_AUTH,
+            # The applet's admin channel for the key-object setup, then the
+            # management-key handshake, key generation and the certificate write.
+            PIV: _PIV_READS
+            | _GP_AUTH
+            | {INS_GENERAL_AUTHENTICATE, INS_GENERATE_ASYMMETRIC, INS_PUT_DATA},
+        },
+        max_apdus=200,
+        max_seconds=600.0,
+        max_initialize_updates=6,
+        max_external_authenticates=2,
+        slot_bound=True,
     ),
 }
 
 
 def rules_for(op: str) -> OpRules:
-    """The rule set for an operation; refuses operations with no rules yet."""
+    """The rule set for an operation; refuses operations with no rules."""
     try:
         return RULES[op]
     except KeyError:
@@ -188,6 +252,22 @@ def select_target(apdu: bytes) -> bytes | None:
     return aid
 
 
+def delete_target(apdu: bytes) -> bytes | None:
+    """The AID a DELETE names, when its data travels in the clear.
+
+    Under a secure channel with command encryption the data is opaque and this
+    returns ``None``; with a MAC alone the ``4F`` AID template is readable and
+    the MAC simply trails it.
+    """
+    body = apdu[5:]  # past CLA INS P1 P2 Lc
+    if len(body) < 3 or body[0] != 0x4F:
+        return None
+    length = body[1]
+    if not 5 <= length <= 16 or len(body) < 2 + length:
+        return None
+    return body[2 : 2 + length]
+
+
 @dataclass
 class RelayPolicy:
     """Stateful gate over one operation's command stream.
@@ -198,26 +278,32 @@ class RelayPolicy:
     """
 
     op: str
+    #: For key operations: the slot the operation was asked to generate into.
+    slot: int | None = None
     rules: OpRules = field(init=False)
     #: Context after a fresh connection: the card manager answers by default.
     context: str = ISD
     apdus: int = 0
+    load_blocks: int = 0
     initialize_updates: dict[str, int] = field(default_factory=dict)
+    external_authenticates: dict[str, int] = field(default_factory=dict)
     _pending_select: bytes | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.rules = rules_for(self.op)
+        if self.rules.slot_bound and self.slot is None:
+            raise RemotePolicyError(f"the {self.op} policy needs the target slot")
 
     # -- evaluation -------------------------------------------------------- #
     def check(self, apdu: bytes) -> Header:
         """Refuse or allow one command. Returns the parsed header on allow."""
         header = parse_header(apdu)
         self._pending_select = None
+        rules = self.rules
 
-        if self.apdus >= self.rules.max_apdus:
+        if self.apdus >= rules.max_apdus:
             raise RemotePolicyError(
-                f"the service sent more than {self.rules.max_apdus} commands in one "
-                f"{self.op} operation",
+                f"the service sent more than {rules.max_apdus} commands in one {self.op} operation",
                 header=header.hex,
             )
         if header.channel != 0:
@@ -237,7 +323,7 @@ class RelayPolicy:
             raise RemotePolicyError(
                 f"INS {header.ins:02X} is never relayed (card-holder verifier)", header=header.hex
             )
-        if header.ins == INS_EXTERNAL_AUTHENTICATE and not self.rules.allow_external_authenticate:
+        if header.ins == INS_EXTERNAL_AUTHENTICATE and rules.max_external_authenticates == 0:
             raise RemotePolicyError(
                 f"EXTERNAL AUTHENTICATE is not allowed during {self.op}; a failed attempt "
                 "burns a card-management retry",
@@ -247,7 +333,7 @@ class RelayPolicy:
         aid = select_target(apdu)
         if aid is not None:
             target = ISD_AID if aid == b"" else aid
-            if target not in self.rules.selectable:
+            if target not in rules.selectable:
                 raise RemotePolicyError(
                     f"SELECT of AID {target.hex().upper()} is not allowed during {self.op}",
                     header=header.hex,
@@ -255,7 +341,7 @@ class RelayPolicy:
             self._pending_select = target
             return header
 
-        allowed = self.rules.allowed_ins.get(self.context, frozenset())
+        allowed = rules.allowed_ins.get(self.context, frozenset())
         if header.ins not in allowed:
             raise RemotePolicyError(
                 f"INS {header.ins:02X} is not allowed while the {self.context} is selected "
@@ -264,14 +350,56 @@ class RelayPolicy:
             )
 
         if header.ins == INS_INITIALIZE_UPDATE:
-            count = self.initialize_updates.get(self.context, 0)
-            if count >= self.rules.max_initialize_updates:
+            self._enforce_cap(
+                self.initialize_updates, rules.max_initialize_updates, "INITIALIZE UPDATE", header
+            )
+        elif header.ins == INS_EXTERNAL_AUTHENTICATE:
+            self._enforce_cap(
+                self.external_authenticates,
+                rules.max_external_authenticates,
+                "EXTERNAL AUTHENTICATE",
+                header,
+            )
+        elif header.ins == INS_DELETE:
+            deleted = delete_target(apdu)
+            if deleted is not None and (
+                rules.delete_targets is None or deleted not in rules.delete_targets
+            ):
                 raise RemotePolicyError(
-                    f"INITIALIZE UPDATE to the {self.context} more than "
-                    f"{self.rules.max_initialize_updates} time(s) during {self.op}",
+                    f"DELETE of {deleted.hex().upper()} refused; only the PIV instance, "
+                    "package and security domain may be deleted",
                     header=header.hex,
                 )
+        elif header.ins == INS_LOAD:
+            if self.load_blocks >= rules.max_load_blocks:
+                raise RemotePolicyError(
+                    f"more than {rules.max_load_blocks} LOAD blocks in one {self.op} operation",
+                    header=header.hex,
+                )
+        elif rules.slot_bound and header.ins == INS_GENERATE_ASYMMETRIC and header.p2 != self.slot:
+            raise RemotePolicyError(
+                f"GENERATE for slot {header.p2:02X} refused; this operation was asked "
+                f"for slot {self.slot:02X}",
+                header=header.hex,
+            )
+        elif (
+            rules.slot_bound
+            and header.ins == INS_GENERAL_AUTHENTICATE
+            and header.p2 != MANAGEMENT_KEY_REF
+        ):
+            raise RemotePolicyError(
+                f"GENERAL AUTHENTICATE with key {header.p2:02X} refused; only the "
+                "management key may be exercised, never a slot key",
+                header=header.hex,
+            )
         return header
+
+    def _enforce_cap(self, counter: dict[str, int], cap: int, what: str, header: Header) -> None:
+        if counter.get(self.context, 0) >= cap:
+            raise RemotePolicyError(
+                f"{what} to the {self.context} more than {cap} time(s) during {self.op}",
+                header=header.hex,
+            )
 
     def observe(self, apdu: bytes, sw1: int, sw2: int) -> None:
         """Record what the card did with an allowed command."""
@@ -285,9 +413,15 @@ class RelayPolicy:
             return
         if header.ins == INS_INITIALIZE_UPDATE:
             self.initialize_updates[self.context] = self.initialize_updates.get(self.context, 0) + 1
-        if header.ins == INS_EXTERNAL_AUTHENTICATE and not ok:
-            raise RemotePolicyError(
-                f"EXTERNAL AUTHENTICATE failed (SW={sw1:02X}{sw2:02X}); stopping before "
-                "another attempt can burn a retry",
-                header=header.hex,
+        elif header.ins == INS_EXTERNAL_AUTHENTICATE:
+            self.external_authenticates[self.context] = (
+                self.external_authenticates.get(self.context, 0) + 1
             )
+            if not ok:
+                raise RemotePolicyError(
+                    f"EXTERNAL AUTHENTICATE failed (SW={sw1:02X}{sw2:02X}); stopping before "
+                    "another attempt can burn a retry",
+                    header=header.hex,
+                )
+        elif header.ins == INS_LOAD:
+            self.load_blocks += 1

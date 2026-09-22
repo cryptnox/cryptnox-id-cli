@@ -50,6 +50,53 @@ Operations
    key versions they carry. Key-free: an authentication attempt from the
    service is refused before it reaches the card.
 
+``attest``
+   Generates a key in one slot and returns a key-attestation certificate for
+   it, signed by the Cryptnox key-attestation CA and stored in the card's
+   attestation container as well. The relay policy admits the applet's admin
+   channel for the key-object setup, the management-key handshake (never a
+   slot key), key generation for the requested slot only, and the certificate
+   write. The tool then verifies the certificate against the pinned anchors and
+   binds it to the card, the slot and the certificate stored on the card. The
+   generation itself happening on the card is the service's claim; nothing the
+   relay sees authenticates it.
+
+``reset``
+   Wipes and reinstalls the PIV function. The service authenticates to the
+   card manager, deletes the PIV applet, its package and its security domain,
+   loads the applet again, recreates the security domain and loads the card's
+   keys, then verifies the result. Every PIV key and certificate is destroyed;
+   the keys were never exportable, so nothing can bring them back. Interactive
+   use requires typing ``RESET-PIV``; non-interactive use requires
+   ``--i-understand-this-is-irreversible``. ``--yes`` is not accepted.
+
+   The relay policy for this operation admits card content management through
+   the card manager only, lets a DELETE name nothing but the PIV instance, its
+   package and its security domain where the command travels in the clear,
+   caps authentication attempts per security domain, and stops at the first
+   failed authentication so no further attempt can spend a card-management
+   retry. Inside an encrypted channel the policy sees instructions, not
+   targets; that limit is real and is why the FIDO2 and genuineness state is
+   read before and after.
+
+``dev-reset``
+   As ``reset``, for development cards, leaving the card manager and the PIV
+   security domain on the publicly documented GlobalPlatform key so the PIV
+   function can be pre-personalized and personalized locally. Anyone with a
+   reader can then install or delete applets on the card, and the card is not
+   genuine until it is reset through the service again. The development access
+   credential comes from ``CRYPTNOX_REMOTE_DEV_TOKEN`` only.
+
+The ``--fused`` flag
+--------------------
+
+A fused production card has its card manager locked to a per-card key. The
+service derives that key when ``--fused`` is passed and uses the shared
+default otherwise. The tool cannot tell the two apart without a key, so the
+flag is the holder's statement. A wrong statement makes the service present
+the wrong key; the failed authentication costs one of the card's bounded
+card-management retries, and the relay stops there.
+
 What is sent to the service
 ---------------------------
 
