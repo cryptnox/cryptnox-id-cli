@@ -51,3 +51,23 @@ machine token (see :doc:`/json-output`).
    * - 11
      - ``ev2_error``
      - DESFire secure-messaging (session/MAC) failure.
+   * - 12
+     - ``remote_error``
+     - A remote PIV service operation failed for a reason without a more
+       specific class.
+   * - 13
+     - ``remote_connect``
+     - The remote PIV service could not be reached, or the TLS handshake
+       failed.
+   * - 14
+     - ``remote_protocol``
+     - The remote PIV service sent something the client cannot interpret
+       safely.
+   * - 15
+     - ``remote_policy``
+     - The remote PIV service asked for a card command the relay policy
+       refuses to send. The message names the command header.
+   * - 16
+     - ``remote_failed``
+     - The exchange completed, but the remote PIV service reported the
+       operation as failed.

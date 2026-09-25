@@ -14,6 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mechanisms.
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
+- `remote authenticate` and `remote inspect`: identify and probe the card
+  through the Cryptnox remote PIV service, with the card in the local reader.
+  The tool relays the commands the service sends under a fail-closed policy
+  that keeps every other card function out of reach, and reports what the
+  service asserted apart from what it verified locally. Adds the `websockets`
+  dependency and exit codes 12 to 16.
+- `remote reset` and `remote dev-reset`: wipe and reinstall the PIV function
+  through the service, behind the same irreversibility gate as `factory piv
+  preperso finalize` (typed phrase or explicit flag, `--yes` not accepted),
+  with the card's PIV state, data objects, security-domain key versions and
+  neighbouring functions read locally before consent and again afterwards.
+  The relay policy for these operations admits card content management
+  through the card manager only, restricts a readable DELETE to the PIV
+  instance, package and security domain, and stops at the first failed
+  authentication.
+- `remote attest`: generate a key in a slot through the service and receive
+  its key-attestation certificate. The certificate is verified locally against
+  the pinned anchors and bound to the card's CPLC UID, the requested slot, the
+  trust model and the certificate read back from the card before success is
+  reported.
 
 ## [1.0.3] - 2026-08-31
 
