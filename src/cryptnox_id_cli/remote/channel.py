@@ -48,11 +48,14 @@ MAX_MESSAGE_BYTES = 1 << 20
 class FrameChannel(Protocol):
     """A bidirectional stream of text messages."""
 
-    def send(self, message: str) -> None: ...
+    def send(self, message: str) -> None:
+        """Send one text message."""
 
-    def recv(self, timeout: float | None = None) -> str: ...
+    def recv(self, timeout: float | None = None) -> str:
+        """Receive one text message, waiting at most ``timeout`` seconds."""
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+        """Close the channel; safe to call more than once."""
 
 
 def validate_url(url: str, *, allow_insecure_loopback: bool = False) -> str:

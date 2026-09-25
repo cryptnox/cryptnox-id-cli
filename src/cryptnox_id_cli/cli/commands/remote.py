@@ -515,6 +515,8 @@ def _read_certificates(card: _Card, slot: int) -> tuple[bytes | None, bytes | No
         slot_cert = _read_cert_der(piv, slot_object) if slot_object else None
         attestation = _read_cert_der(piv, ATTESTATION_CONTAINER)
     except CryptnoxError:
+        # An applet that is absent, unselectable or refusing the read simply has
+        # no certificate to report; the operation goes ahead either way.
         pass
     _read_cplc(card.session)
     return slot_cert, attestation

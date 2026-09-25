@@ -293,7 +293,7 @@ FIDO2_PACKAGE_AID = bytes.fromhex("A000000647")
 SSD_PACKAGE_AID = bytes.fromhex("A0000001515350")
 
 
-def delete(aid: bytes, cla: int = 0x84, mac: bytes = b"\x00" * 8) -> bytes:
+def delete_apdu(aid: bytes, cla: int = 0x84, mac: bytes = b"\x00" * 8) -> bytes:
     data = bytes([0x4F, len(aid)]) + aid + mac
     return bytes([cla, 0xE4, 0x00, 0x00, len(data)]) + data + b"\x00"
 
@@ -309,9 +309,9 @@ def test_reset_follows_the_documented_flow(op):
     allow(policy, INIT_UPDATE)
     allow(policy, EXT_AUTH)
     allow(policy, wrapped(0xF2, 0x40, 0x00))  # GET STATUS
-    allow(policy, delete(pol.PIV_AID))
-    allow(policy, delete(PIV_PACKAGE_AID))
-    allow(policy, delete(pol.PIV_SSD_AID))
+    allow(policy, delete_apdu(pol.PIV_AID))
+    allow(policy, delete_apdu(PIV_PACKAGE_AID))
+    allow(policy, delete_apdu(pol.PIV_SSD_AID))
     allow(policy, wrapped(0xE6, 0x02, 0x00))  # INSTALL for load
     for _ in range(10):
         allow(policy, wrapped(0xE8, 0x00, 0x00, n=200))  # LOAD blocks
@@ -335,7 +335,7 @@ def test_reset_may_only_delete_piv_things(op, aid):
     allow(policy, INIT_UPDATE)
     allow(policy, EXT_AUTH)
     with pytest.raises(RemotePolicyError, match="DELETE of") as info:
-        policy.check(delete(aid))
+        policy.check(delete_apdu(aid))
     assert info.value.header == "84E40000"
 
 
@@ -401,7 +401,7 @@ def test_reset_cannot_select_other_card_functions(op, aid):
 
 
 def test_delete_target_parsing():
-    assert pol.delete_target(delete(pol.PIV_AID)) == pol.PIV_AID
+    assert pol.delete_target(delete_apdu(pol.PIV_AID)) == pol.PIV_AID
     assert pol.delete_target(wrapped(0xE4)) is None  # opaque
     assert pol.delete_target(bytes.fromhex("84E40000034F01AA")) is None  # implausible length
 

@@ -179,8 +179,13 @@ def test_open_channel_leaves_tls_off_for_plain_ws(monkeypatch):
 def test_open_channel_closes_on_exit_even_after_an_error(monkeypatch):
     conn = _FakeConnection()
     monkeypatch.setattr("websockets.sync.client.connect", lambda url, **kw: conn)
-    with pytest.raises(RuntimeError), ch.open_channel("wss://x"):
-        raise RuntimeError("inside")
+
+    def use_and_fail() -> None:
+        with ch.open_channel("wss://x"):
+            raise RuntimeError("inside")
+
+    with pytest.raises(RuntimeError, match="inside"):
+        use_and_fail()
     assert conn.closed is True
 
 
