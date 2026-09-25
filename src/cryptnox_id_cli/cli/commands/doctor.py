@@ -48,7 +48,7 @@ def command(app: AppContext) -> None:
 
     if reader_name:
         try:
-            session = app.make_session(connect(reader_name))
+            session = app.make_session(connect(reader_name), reader_name=reader_name)
         except NoCardError as exc:
             add("Card present", "fail", str(exc))
         except CryptnoxError as exc:
