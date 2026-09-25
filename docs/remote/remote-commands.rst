@@ -76,7 +76,7 @@ Reset
 
 .. code-block:: text
 
-   remote reset [--fused] [--i-understand-this-is-irreversible]
+   remote reset [--default-keys] [--i-understand-this-is-irreversible]
 
                          IRREVERSIBLY wipe and reinstall the PIV function: the
                          service deletes the PIV applet, its package and its
@@ -86,7 +86,7 @@ Reset
                          phrase RESET-PIV must be typed; non-interactively the
                          flag is required. --yes is not accepted.
 
-   remote dev-reset [--fused] [--i-understand-this-is-irreversible]
+   remote dev-reset [--default-keys] [--i-understand-this-is-irreversible]
 
                          Development cards only. As reset, but the card manager
                          and the PIV security domain are left on the public
@@ -96,10 +96,11 @@ Reset
                          phrase is DEV-RESET-PIV.
 
    Options:
-     --fused             the card is a fused production card: the service
-                         derives its per-card card-manager key. On a card that
-                         is not fused the derived key is wrong and the failed
-                         authentication costs a card-management retry.
+     --default-keys      development cards only: the service authenticates
+                         with the publicly known GlobalPlatform default key
+                         instead of deriving this card's own. A production
+                         card refuses it, and the failed authentication costs
+                         a card-management retry.
 
 Before asking for consent, both commands read and show what the card holds:
 the PIV personalization state and data objects, the PIV security domain and

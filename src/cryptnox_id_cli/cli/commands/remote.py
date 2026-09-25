@@ -339,15 +339,15 @@ def inspect(ctx: click.Context) -> None:
 # --------------------------------------------------------------------------- #
 # Destructive operations                                                      #
 # --------------------------------------------------------------------------- #
-_FUSED_HELP = (
-    "The card is a fused production card: the service derives its per-card "
-    "card-manager key. On a card that is not fused the derived key is wrong and the "
-    "failed authentication costs a card-management retry. Omit unless certain."
+_DEFAULT_KEYS_HELP = (
+    "Development cards only: have the service authenticate with the publicly known "
+    "GlobalPlatform default key instead of deriving this card's own. A production card "
+    "will refuse it, and the failed authentication costs a card-management retry."
 )
 
 
 def _confirm_destructive(
-    app: AppContext, op: str, phrase: str, understood: bool, card: _Card, fused: bool
+    app: AppContext, op: str, phrase: str, understood: bool, card: _Card, default_keys: bool
 ) -> dict[str, object]:
     """Show what is about to be destroyed and obtain consent. Returns the inventory."""
     before = _inventory(card)
@@ -363,11 +363,11 @@ def _confirm_destructive(
             "including the wallet. The card is not genuine again until it is reset through "
             "the service."
         )
-    if fused:
+    if default_keys:
         app.out.warn(
-            "--fused: the service will derive this card's per-card card-manager key. If "
-            "the card is not fused, that key is wrong and the failed authentication costs "
-            "a card-management retry."
+            "--default-keys: the service will authenticate with the publicly known "
+            "GlobalPlatform default key. A production card holds its own derived key and "
+            "will refuse this, and the failed authentication costs a card-management retry."
         )
     if not app.json:
         _print_inventory(app.out.console, "Before", before)
@@ -382,11 +382,12 @@ def _confirm_destructive(
 
 
 def _run_destructive(
-    ctx: click.Context, op: str, *, fused: bool, understood: bool, phrase: str
+    ctx: click.Context, op: str, *, default_keys: bool, understood: bool, phrase: str
 ) -> None:
     app: AppContext = ctx.obj
     url, _production = _endpoint(op)  # refuses any override for these operations
-    params: dict[str, object] = {"fused": fused}
+    # Sent explicitly either way, so behaviour never depends on the service's own default.
+    params: dict[str, object] = {"fused": not default_keys}
     if op == "dev-reset":
         credential = resolve_secret(
             redactor=app.redactor,
@@ -397,7 +398,7 @@ def _run_destructive(
 
     card = _open_card(app)
     try:
-        before = _confirm_destructive(app, op, phrase, understood, card, fused)
+        before = _confirm_destructive(app, op, phrase, understood, card, default_keys)
         app.out.note(f"remote {op} via {url}")
         report = _relay(app, ctx, card, op, params, url)
         after = _inventory(card)
@@ -413,7 +414,7 @@ def _run_destructive(
     payload: dict[str, object] = {
         "op": op,
         "endpoint": url,
-        "fused": fused,
+        "fused": not default_keys,
         "card": card_info,
         "before": before,
         "result": report.result,
@@ -433,7 +434,7 @@ def _run_destructive(
 
 
 @command.command("reset")
-@click.option("--fused", is_flag=True, help=_FUSED_HELP)
+@click.option("--default-keys", "default_keys", is_flag=True, help=_DEFAULT_KEYS_HELP)
 @click.option(
     "--i-understand-this-is-irreversible",
     "understood",
@@ -441,7 +442,7 @@ def _run_destructive(
     help="Required for non-interactive use.",
 )
 @click.pass_context
-def reset(ctx: click.Context, fused: bool, understood: bool) -> None:
+def reset(ctx: click.Context, default_keys: bool, understood: bool) -> None:
     """IRREVERSIBLY wipe and reinstall the PIV function through the service.
 
     The service deletes the PIV applet, its package and its security domain,
@@ -450,11 +451,13 @@ def reset(ctx: click.Context, fused: bool, understood: bool) -> None:
     key and certificate is destroyed. The other card functions are outside the
     operation.
     """
-    _run_destructive(ctx, "reset", fused=fused, understood=understood, phrase=RESET_PHRASE)
+    _run_destructive(
+        ctx, "reset", default_keys=default_keys, understood=understood, phrase=RESET_PHRASE
+    )
 
 
 @command.command("dev-reset")
-@click.option("--fused", is_flag=True, help=_FUSED_HELP)
+@click.option("--default-keys", "default_keys", is_flag=True, help=_DEFAULT_KEYS_HELP)
 @click.option(
     "--i-understand-this-is-irreversible",
     "understood",
@@ -462,7 +465,7 @@ def reset(ctx: click.Context, fused: bool, understood: bool) -> None:
     help="Required for non-interactive use.",
 )
 @click.pass_context
-def dev_reset(ctx: click.Context, fused: bool, understood: bool) -> None:
+def dev_reset(ctx: click.Context, default_keys: bool, understood: bool) -> None:
     """IRREVERSIBLY wipe the PIV function and leave the card on the public default keys.
 
     For development cards only. Needs the development access credential in
@@ -471,7 +474,13 @@ def dev_reset(ctx: click.Context, fused: bool, understood: bool) -> None:
     can be pre-personalized and personalized locally; the card is not genuine
     until reset through the service again.
     """
-    _run_destructive(ctx, "dev-reset", fused=fused, understood=understood, phrase=DEV_RESET_PHRASE)
+    _run_destructive(
+        ctx,
+        "dev-reset",
+        default_keys=default_keys,
+        understood=understood,
+        phrase=DEV_RESET_PHRASE,
+    )
 
 
 # --------------------------------------------------------------------------- #

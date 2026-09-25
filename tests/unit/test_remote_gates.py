@@ -166,7 +166,8 @@ def test_reset_payload_carries_before_after_and_params(wired):
     result = run(["--json", "remote", "reset", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
-    assert channel.sent[0] == {"type": "hello", "op": "reset", "params": {"fused": False}}
+    # The derived key is the default; only --default-keys turns it off.
+    assert channel.sent[0] == {"type": "hello", "op": "reset", "params": {"fused": True}}
     assert payload["before"]["piv_ssd_key_versions"] == [1]
     assert payload["before"]["piv_state"] == "PivNotPresent"
     assert payload["after"]["piv_ssd_key_versions"] == [1]
@@ -175,12 +176,18 @@ def test_reset_payload_carries_before_after_and_params(wired):
     assert payload["result"]["wiped_and_reprovisioned"] is True
 
 
-def test_fused_is_passed_through_and_warned(wired):
+def test_default_keys_selects_the_dev_path_and_warns(wired):
     channel = wired["arm"]([OK_RESULT])
-    result = run(["remote", "reset", "--fused", "--i-understand-this-is-irreversible"])
+    result = run(["remote", "reset", "--default-keys", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": True}
-    assert "--fused" in result.output
+    assert channel.sent[0]["params"] == {"fused": False}
+    assert "--default-keys" in result.output
+
+
+def test_fused_flag_no_longer_exists(wired):
+    wired["arm"]([OK_RESULT])
+    result = run(["remote", "reset", "--fused", "--i-understand-this-is-irreversible"])
+    assert result.exit_code == 2  # click usage error
 
 
 def test_dev_reset_sends_the_credential_from_the_environment_only(wired, monkeypatch):
@@ -190,7 +197,7 @@ def test_dev_reset_sends_the_credential_from_the_environment_only(wired, monkeyp
         ["--json", "remote", "dev-reset", "--i-understand-this-is-irreversible"],
     )
     assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": False, "dev_token": "dev-credential-value"}
+    assert channel.sent[0]["params"] == {"fused": True, "dev_token": "dev-credential-value"}
     assert "dev-credential-value" not in result.output
 
 

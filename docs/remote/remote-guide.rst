@@ -87,15 +87,19 @@ Operations
    genuine until it is reset through the service again. The development access
    credential comes from ``CRYPTNOX_REMOTE_DEV_TOKEN`` only.
 
-The ``--fused`` flag
---------------------
+The ``--default-keys`` flag
+---------------------------
 
-A fused production card has its card manager locked to a per-card key. The
-service derives that key when ``--fused`` is passed and uses the shared
-default otherwise. The tool cannot tell the two apart without a key, so the
-flag is the holder's statement. A wrong statement makes the service present
-the wrong key; the failed authentication costs one of the card's bounded
-card-management retries, and the relay stops there.
+By default the service authenticates to the card manager with the card's own
+key, derived per card from its identity. That is the state a card leaves the
+factory in. A development card, or one deliberately put on the published
+GlobalPlatform default key, needs ``--default-keys`` instead; without it the
+service presents a derived key the card does not hold, the authentication
+fails, and one of the card's bounded card-management retries is spent. The
+flag is the caller's statement about the card, so the default is the safe one:
+forgetting it on a development card costs a failed authentication and nothing
+else, while the reverse mistake on a production card would present a published
+key to a card that should only ever answer to its own.
 
 What is sent to the service
 ---------------------------
