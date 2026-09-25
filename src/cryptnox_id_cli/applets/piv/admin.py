@@ -138,6 +138,17 @@ class PivAdmin:
                 "expected 0x02 or 0x03)."
             )
 
+    def forget_channel(self) -> None:
+        """Drop the host's secure-channel state.
+
+        A re-SELECT of the applet resets the card's channel unconditionally, so after
+        one the host's session keys describe a channel that no longer exists. Clearing
+        them here keeps the two sides in step: the next :meth:`send` says "secure
+        channel not open" instead of wrapping into a void.
+        """
+        self.scp = None
+        self.scp_version = None
+
     def send(self, apdu: APDU, *, context: str | None = None) -> Response:
         if self.scp is None:
             raise Scp03Error("secure channel not open")

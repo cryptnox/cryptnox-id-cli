@@ -88,6 +88,23 @@ def parse(data: bytes | bytearray, *, recurse: bool = True) -> list[TLV]:
     return out
 
 
+def peek(data: bytes | bytearray) -> tuple[int, int, int] | None:
+    """``(tag, declared length, header length)`` of the first TLV in ``data``.
+
+    Returns ``None`` when the header itself is incomplete or uses a length form this
+    parser does not support. Never raises, and never checks that the value actually
+    fits the buffer - which is the point: it reads what a *truncated* buffer claims
+    its first object's size to be.
+    """
+    buf = bytes(data)
+    try:
+        tag, off = _read_tag(buf, 0)
+        length, off = _read_len(buf, off)
+    except ValueError:
+        return None
+    return tag, length, off
+
+
 def find(tlvs: list[TLV], tag: int) -> TLV | None:
     """Depth-first search for the first TLV with ``tag``."""
     for t in tlvs:

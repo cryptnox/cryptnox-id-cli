@@ -12,13 +12,14 @@ import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, NamedTuple
 
 import click
 from rich.console import Console
 
 from cryptnox_id_cli import CLI_NAME, trust
 from cryptnox_id_cli.applets.piv import constants as pivc
-from cryptnox_id_cli.applets.piv import keyimport
+from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as preperso_mod
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
@@ -36,9 +37,15 @@ from cryptnox_id_cli.crypto import csr as csr_mod
 from cryptnox_id_cli.crypto import piv_objects, x509util
 from cryptnox_id_cli.crypto.attestation import verify_attestation_chain
 from cryptnox_id_cli.output.render import state_style
-from cryptnox_id_cli.secrets.resolver import resolve_scp03_keys, resolve_secret
+from cryptnox_id_cli.secrets.resolver import (
+    MGMT_KEY_ENV,
+    resolve_mgmt_key,
+    resolve_scp03_keys,
+    resolve_secret,
+)
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError, describe_sw
+from cryptnox_id_cli.transport.pcsc import is_contactless_interface
 from cryptnox_id_cli.util import tlv
 from cryptnox_id_cli.util.hexutil import to_hex
 
@@ -813,8 +820,9 @@ def perso() -> None:
 @click.option(
     "--default-keys",
     is_flag=True,
-    help="Use the default GlobalPlatform TEST keys "
-    "(publicly known - fine for dev/eval, never for deployment).",
+    help="Use the publicly known GlobalPlatform TEST keys for the admin channel, and "
+    "the same published value for the PIV management key (9B) if the card needs it "
+    "(fine for dev/eval, never for deployment).",
 )
 @click.option(
     "--out", "out_", type=click.Path(dir_okay=False), help="Write public-key PEM to FILE."
@@ -871,7 +879,10 @@ def perso_generate_key(
             probe = session.transmit(keyimport.probe_apdu(ref, mech), context=f"probe {slot}")
             if probe.sw == 0x6A86:
                 _create_key_object(app, adm, keys, ref, mech, False, slot)
-        public_key = _generate_key_on_card(adm, keys, ref, mech, label=slot)
+        generated = _generate_key_on_card(
+            app, adm, keys, ref, mech, label=slot, default_keys=default_keys
+        )
+    public_key = generated.public_key
     pem = perso_mod.public_key_pem(public_key)
     der = public_key.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
@@ -885,10 +896,13 @@ def perso_generate_key(
         "public_key_sha256": fingerprint,
         "out": out_,
         "public_key_pem": None if out_ else pem.decode(),
+        "generate_path": generated.path,
+        "management_key": generated.management_key,
     }
+    how = "on-card, via the PIV management key" if generated.management_key else "on-card"
 
     def human(c: Console) -> None:
-        c.print(f"[green]Generated {alg} key in slot {slot}[/green] (on-card).")
+        c.print(f"[green]Generated {alg} key in slot {slot}[/green] ({how}).")
         c.print(f"  Public key SHA-256: {fingerprint}")
         if out_:
             c.print(f"  Public key PEM -> {out_}")
@@ -907,7 +921,49 @@ def _set_verifier(adm: PivAdmin, keys, ref: int, padded: bytes, *, label: str):
     return adm.send(perso_mod.set_verifier_value_apdu(ref, padded), context=f"SET {label}")
 
 
-def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: str):
+class GeneratedKey(NamedTuple):
+    """An on-card generated public key and the path that produced it."""
+
+    #: An RSA or EC public key from ``cryptography``; untyped like every other
+    #: public-key value in this module (the two classes share no protocol).
+    public_key: Any
+    #: ``admin-channel`` or ``management-key``.
+    path: str
+    #: ``{"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}`` on the management-key
+    #: path, ``None`` on the admin channel.
+    management_key: dict[str, object] | None
+
+
+def _parse_generated(mech: int, data: bytes, *, label: str, path: str):
+    """Parse a GENERATE response, turning a malformed template into a CLI error."""
+    try:
+        return perso_mod.parse_public_key(mech, data)
+    except ValueError as exc:
+        raise CryptnoxError(
+            f"GENERATE key {label}: the card returned a public-key template this CLI "
+            f"cannot parse ({len(data)} bytes over the {path} path, SW=9000): {exc}. "
+            "Re-run with --verbose to capture the exchange."
+        ) from exc
+
+
+def _generate_key_on_card(
+    app: AppContext,
+    adm: PivAdmin,
+    keys,
+    ref: int,
+    mech: int,
+    *,
+    label: str,
+    default_keys: bool = False,
+) -> GeneratedKey:
+    """Generate a key pair on the card and return its public half.
+
+    The admin channel is tried first and is the whole story on a card that can return
+    the full public-key template through it. A card that cannot says so in its own
+    response - success, but only as many bytes as were asked for, with the template's
+    own header declaring more - and only then does the generation repeat over plain
+    APDUs behind a PIV management key authentication.
+    """
     adm.select()
     adm.open(keys)
     resp = adm.send(perso_mod.generate_keypair_apdu(ref, mech), context=f"GENERATE {label}")
@@ -915,7 +971,109 @@ def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: st
         raise CryptnoxError(f"GENERATE key {label} failed (SW=6F00): {_IMPORT_SW_HINTS[0x6F00]}.")
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"GENERATE key {label}")
-    return perso_mod.parse_public_key(mech, resp.data)
+    if perso_mod.generate_response_truncated(mech, resp):
+        return _generate_via_mgmt_key(
+            app,
+            adm,
+            ref,
+            mech,
+            label=label,
+            default_keys=default_keys,
+            received=len(resp.data),
+            declared=perso_mod.declared_template_bytes(resp.data),
+        )
+    return GeneratedKey(
+        _parse_generated(mech, resp.data, label=label, path="admin-channel"),
+        "admin-channel",
+        None,
+    )
+
+
+def _atr_or_none(session) -> bytes | None:
+    """The session's ATR when the transport can supply one (diagnostic use only)."""
+    try:
+        return session.atr
+    except Exception:  # noqa: BLE001 - a missing ATR only costs a less precise message
+        return None
+
+
+def _generate_via_mgmt_key(
+    app: AppContext,
+    adm: PivAdmin,
+    ref: int,
+    mech: int,
+    *,
+    label: str,
+    default_keys: bool,
+    received: int,
+    declared: int | None,
+) -> GeneratedKey:
+    """Repeat the generation over plain APDUs, authenticating the management key first.
+
+    The card generated and stored a key pair on the truncated attempt already - the
+    applet builds the response only after generating - so that first key is gone
+    whatever happens here, and RSA generation runs twice on such a card.
+    """
+    declared_text = f"{declared}" if declared is not None else "more"
+    app.out.warn(
+        f"the admin channel returned {received} of {declared_text} bytes of the public-key "
+        "template; completing the generation with the PIV management key (9B) over plain "
+        f"APDUs. The first attempt already replaced the key in slot {label}; the key that "
+        "remains is the one generated now."
+    )
+    material = resolve_mgmt_key(
+        app.redactor,
+        default_keys=default_keys,
+        missing_message=(
+            f"The card returned {received} of {declared_text} bytes of the public-key "
+            "template over the admin channel, so this command must authenticate the PIV "
+            "management key (slot 9B) and repeat the generation over plain APDUs. Set "
+            f"${MGMT_KEY_ENV} (hex: 32, 48 or 64 characters for AES-128/192/256), or pass "
+            "--default-keys if this card still holds the published development value."
+        ),
+    )
+    # A re-SELECT resets the card's secure channel, which is exactly the state the plain
+    # phase wants; the key-holder role granted afterwards survives every later command.
+    adm.select()
+    adm.forget_channel()
+    contactless = is_contactless_interface(adm.card.reader_name, _atr_or_none(adm.card))
+    auth = mgmt_auth.authenticate(adm.card.transmit, material, contactless=contactless)
+    app.out.detail(
+        f"PIV management key 9B: {mgmt_auth.mechanism_name(auth.mechanism)}, mutual "
+        f"authentication, card verified (value from {auth.source})."
+    )
+
+    context = f"GENERATE {label} (management-key path)"
+    resp = adm.card.transmit(perso_mod.generate_keypair_apdu(ref, mech), context=context)
+    if resp.sw == 0x6F00 and keyimport.rsa_modulus_len(mech):
+        raise CryptnoxError(f"GENERATE key {label} failed (SW=6F00): {_IMPORT_SW_HINTS[0x6F00]}.")
+    if resp.sw == 0x6982:
+        raise StatusWordError(
+            resp.sw1,
+            resp.sw2,
+            context=(
+                f"GENERATE key {label} (management-key path; 9B authenticated, so slot "
+                f"{label}'s key object is bound to a different admin key than 9B)"
+            ),
+        )
+    if not resp.ok:
+        raise StatusWordError(
+            resp.sw1, resp.sw2, context=f"GENERATE key {label} (management-key path)"
+        )
+    if perso_mod.generate_response_truncated(mech, resp):
+        raise CryptnoxError(
+            f"GENERATE key {label}: the card truncated the response on the plain path as "
+            f"well ({len(resp.data)} bytes); this CLI has no further fallback."
+        )
+    info: dict[str, object] = {
+        "mechanism": mgmt_auth.mechanism_name(auth.mechanism),
+        "source": auth.source,
+    }
+    return GeneratedKey(
+        _parse_generated(mech, resp.data, label=label, path="management-key"),
+        "management-key",
+        info,
+    )
 
 
 def _import_cert_der(adm: PivAdmin, keys, ref: int, cert_der: bytes, *, label: str):
@@ -2201,8 +2359,9 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
 @click.option(
     "--default-keys",
     is_flag=True,
-    help="Use the default GlobalPlatform TEST keys "
-    "(publicly known - fine for dev/eval, never for deployment).",
+    help="Use the publicly known GlobalPlatform TEST keys for the admin channel, and "
+    "the same published value for the PIV management key (9B) if the card needs it "
+    "(fine for dev/eval, never for deployment).",
 )
 @click.option(
     "--dry-run", "dry_run", is_flag=True, help="Detect, plan and show the steps; write nothing."
@@ -2416,7 +2575,10 @@ def quickstart(
                         raise StatusWordError(resp.sw1, resp.sw2, context="SET PUK")
                     record(planned_step.step, "ok", sw=resp.sw_hex())
                 elif planned_step.step == "generate-key":
-                    public_key = _generate_key_on_card(adm, keys, ref, mech, label=slot)
+                    generated = _generate_key_on_card(
+                        app, adm, keys, ref, mech, label=slot, default_keys=default_keys
+                    )
+                    public_key = generated.public_key
                     spki = public_key.public_bytes(
                         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
                     )
@@ -2427,7 +2589,12 @@ def quickstart(
                     record(
                         planned_step.step,
                         "ok",
-                        detail={"algorithm": alg, "public_key_sha256": fingerprint},
+                        detail={
+                            "algorithm": alg,
+                            "public_key_sha256": fingerprint,
+                            "generate_path": generated.path,
+                            "management_key": generated.management_key,
+                        },
                     )
                 elif planned_step.step == "certificate":
                     if spki is None:  # unreachable: generate-key runs whenever certificate runs

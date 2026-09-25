@@ -19,6 +19,8 @@ Operator commands live under ``piv``; factory pre-personalization lives under
 keys — development/evaluation cards use the GlobalPlatform test keys
 (``--default-keys``); provisioned cards take theirs from the
 ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment variables.
+``PIV_MGMT_KEY`` carries the PIV management key (``9B``) for cards that need it
+(see Step 2).
 
 Quickstart (one shot)
 ----------------------
@@ -104,6 +106,19 @@ on-card just as well — ``ms-logon`` creates an ``RSA2048`` object on 9A, and::
 
 succeeds there, with the private key never leaving the card. Requesting a
 mechanism the slot has no object for returns ``6A80``.
+
+Over the admin channel some cards deliver at most 256 bytes of a public-key
+template, which an RSA template exceeds. ``generate-key`` reads that from the
+response and completes the generation with the PIV management key (``9B``) over
+plain APDUs; the command line is the same either way. That path is contact-only
+and needs the ``9B`` value — ``--default-keys`` on development cards,
+``PIV_MGMT_KEY`` otherwise. Profiles create the ``9B`` key object but carry no
+value; load one once with:
+
+.. code-block:: console
+
+   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+   $ cryptnox-id piv perso generate-key --slot 9A --algorithm RSA2048 --out 9a.pub.pem --default-keys
 
 ``piv quickstart`` follows the same rule with training wheels: it defaults to
 ECC P-256 everywhere, accepts explicit RSA only for ``--profile ms-logon`` on

@@ -12,7 +12,7 @@ from __future__ import annotations
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
-from cryptnox_id_cli.transport.apdu import APDU
+from cryptnox_id_cli.transport.apdu import APDU, Response
 from cryptnox_id_cli.util import tlv
 
 INS_CHANGE_REFERENCE_DATA = 0x24
@@ -38,6 +38,14 @@ _EC_CURVES = {0x11: ec.SECP256R1, 0x14: ec.SECP384R1}
 # Asymmetric algorithm name -> mechanism id (those this applet supports).
 ALGORITHMS = {"ECCP256": 0x11, "ECCP384": 0x14, "RSA2048": 0x07, "RSA3072": 0x05, "RSA4096": 0x16}
 
+#: What ``generate_keypair_apdu`` asks for (Le = 0x00 on the wire, i.e. "up to 256").
+#: A card whose response layer cannot chain cuts the template at exactly this length.
+GENERATE_LE = 256
+
+#: Mechanisms whose 7F49 template exceeds one 256-byte response. RSA only: the ECC
+#: templates are 70 (P-256) and 102 (P-384) bytes and can never be cut.
+RSA_MECHANISMS = frozenset({0x07, 0x05, 0x16})
+
 
 def pad_pin(value: bytes, length: int = 8) -> bytes:
     """PIV PIN/PUK values are padded to 8 bytes with 0xFF."""
@@ -59,7 +67,38 @@ def generate_keypair_apdu(slot: int, mechanism: int) -> APDU:
     request = tlv.build_constructed(
         TAG_GENERATE_REQUEST, tlv.build(TAG_MECHANISM, bytes([mechanism]))
     )
-    return APDU(0x00, INS_GENERATE_ASYMMETRIC, 0x00, slot, data=request, le=256)
+    return APDU(0x00, INS_GENERATE_ASYMMETRIC, 0x00, slot, data=request, le=GENERATE_LE)
+
+
+def declared_template_bytes(data: bytes) -> int | None:
+    """Total size (header + value) the leading 7F49 header declares.
+
+    ``None`` when ``data`` does not start with a readable public-key template header.
+    Read from the header alone, so it works on a response that was cut short.
+    """
+    header = tlv.peek(data)
+    if header is None:
+        return None
+    tag, length, header_len = header
+    return header_len + length if tag == TAG_PUBKEY_TEMPLATE else None
+
+
+def generate_response_truncated(mechanism: int, resp: Response) -> bool:
+    """True when a GENERATE response was cut short by the card's response layer.
+
+    Some cards deliver at most ``GENERATE_LE`` bytes of a secured response and end it
+    with a plain success status instead of chaining the remainder, so the caller gets a
+    complete-looking answer holding a partial template. The signature is exact: an RSA
+    mechanism (ECC templates are far below the cut), success, exactly the requested
+    length, and a 7F49 header declaring more than arrived. No card identity, version or
+    build is consulted - only the card's own response.
+    """
+    if mechanism not in RSA_MECHANISMS:
+        return False
+    if resp.sw != 0x9000 or len(resp.data) != GENERATE_LE:
+        return False
+    declared = declared_template_bytes(resp.data)
+    return declared is not None and declared > len(resp.data)
 
 
 def parse_public_key(mechanism: int, response: bytes):

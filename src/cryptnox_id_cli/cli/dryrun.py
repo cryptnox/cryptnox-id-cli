@@ -115,6 +115,7 @@ NO_DRY_RUN = frozenset(
         "fido credential self-test",
         "fido pin change",
         "fido pin set",
+        "factory piv preperso set-mgmt-key",
         "fido reset",
         "mifare app create",
         "mifare app delete",

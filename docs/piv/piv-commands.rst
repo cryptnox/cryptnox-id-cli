@@ -8,6 +8,10 @@ admin keys come from ``--default-keys`` (development cards) or the
 variables. PIN values come from masked prompts or ``CRYPTNOX_PIV_PIN`` /
 ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_NEW_PUK`` — never the command line.
 
+On-card generation of a large public key can also use the card's **PIV
+management key** (key reference ``9B``), whose value comes from
+``--default-keys`` or ``PIV_MGMT_KEY`` — never the command line.
+
 Inspection
 ----------
 
@@ -132,6 +136,17 @@ Notes
   imported there. ``ms-logon`` also creates an RSA-2048 object on 9A, and
   ``generate-key --slot 9A --algorithm RSA2048`` generates on-card on such a
   card. Asking for a mechanism the slot has no object for returns ``6A80``.
+* Some cards cannot return an RSA public-key template larger than 256 bytes over
+  the admin channel. ``generate-key`` detects that from the card's own response
+  and finishes the generation over plain APDUs, authenticating the PIV management
+  key (``9B``) first. The management key is contact-only and its value comes from
+  ``--default-keys`` (development cards) or ``PIV_MGMT_KEY``; a card whose ``9B``
+  object holds no value is reported with the command that loads one
+  (``factory piv preperso set-mgmt-key``). ECC is unaffected, and cards that
+  return the full template take the admin channel as before.
+* When that path is taken, the key pair from the first attempt is replaced by the
+  one generated over the plain path, whose public half is the one reported; RSA
+  generation therefore runs twice on such a card.
 * ``piv quickstart`` defaults to ECC P-256. It accepts ``--algorithm RSA*``
   only for ``--profile ms-logon`` on slot 9A — the one built-in shape with an
   RSA key object — and rejects it elsewhere; pass ``--algorithm RSA2048``
