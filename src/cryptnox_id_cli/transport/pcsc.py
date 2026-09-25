@@ -95,17 +95,6 @@ def reader_states() -> list[ReaderInfo]:
         SCardReleaseContext(hcontext)
 
 
-def list_reader_names() -> list[str]:
-    try:
-        from smartcard.System import readers as _readers
-    except ImportError as exc:  # pragma: no cover
-        raise TransportError(f"pyscard unavailable: {exc}") from exc
-    try:
-        return [str(r) for r in _readers()]
-    except Exception as exc:  # pragma: no cover - defensive
-        raise TransportError(f"Cannot list readers: {exc}") from exc
-
-
 def _listing(infos: list[ReaderInfo]) -> str:
     return ", ".join(f"[{r.index}] {r.name}" for r in infos)
 

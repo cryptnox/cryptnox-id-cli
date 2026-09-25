@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
 
+### Removed
+
+- `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
+  returns the same names along with card presence and ATR.
+
 ## [1.0.3] - 2026-08-31
 
 ### Changed
