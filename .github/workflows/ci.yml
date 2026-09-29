@@ -45,7 +45,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential swig libpcsclite-dev
       - run: pip install -e ".[dev]"
-      - run: pytest -q -m "not real_card"
+      # Bare --cov picks up [tool.coverage.run] source; the project-wide floor comes
+      # from [tool.coverage.report] fail_under, so there is one place to edit when
+      # ratcheting. Both matrix entries are measured: src carries no version-specific
+      # branches today, so 3.10 and 3.14 are expected to report the same number, and a
+      # divergence is itself worth seeing.
+      - run: pytest -q -m "not real_card" --cov --cov-report=term-missing --cov-report=xml
+      # Second, tighter floor on the layer that actually needs to move: the command
+      # modules hold 1699 of the 2158 missed statements. coverage.py has no per-file
+      # fail_under, so this is a separate report over the same data.
+      - run: coverage report --include='src/cryptnox_id_cli/cli/commands/*' --fail-under=36
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: ${{ !env.ACT && matrix.python-version == '3.14' }}
+        with:
+          name: coverage
+          path: coverage.xml
 
   build:
     runs-on: ubuntu-latest

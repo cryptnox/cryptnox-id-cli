@@ -53,6 +53,7 @@ Changelog = "https://github.com/cryptnox/cryptnox-id-cli/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
+    "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.8",
     "pyinstaller>=6.0",
@@ -103,4 +104,20 @@ markers = [
     "real_card: test requires a physical card on the ACS reader (opt-in)",
     "destructive: test mutates the card; requires CRYPTNOX_ALLOW_DESTRUCTIVE_TESTS=1",
 ]
+# Deliberately no --cov here: it would make a bare `pytest` fail for anyone without
+# pytest-cov installed, and slow every local run. CI passes the flags explicitly.
 addopts = "-ra"
+
+[tool.coverage.run]
+source = ["cryptnox_id_cli"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# NOTE: with branch = true, this gate compares the COMBINED statement-and-branch
+# percentage that `coverage report` prints - not line coverage alone. At the time
+# this gate was introduced the three numbers were 60.25% combined, 64.11% line,
+# 43.62% branch, so reading it as a line-coverage floor overstates the suite by
+# four points. Raise it in the same commit as the tests that earn the increase.
+fail_under = 60
