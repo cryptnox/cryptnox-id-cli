@@ -99,6 +99,19 @@ def test_scp03_key_error_does_not_assert_the_card_uses_default_keys(monkeypatch)
         assert var in msg
 
 
+@pytest.mark.parametrize("bad", _SCP03_ENV)
+def test_a_malformed_scp03_key_names_the_variable_and_not_the_value(monkeypatch, bad):
+    """One mistyped digit leaves the rest of the key readable, so the error must go
+    through the funnel and carry the variable's name only."""
+    typo = "40" * 15 + "4Z"
+    for var in _SCP03_ENV:
+        monkeypatch.setenv(var, typo if var == bad else "40" * 16)
+    with pytest.raises(SecretInputError, match=rf"\${bad} is not valid hex") as exc:
+        resolve_scp03_keys(Redactor())
+    assert typo not in str(exc.value)
+    assert exc.value.__cause__ is None
+
+
 def test_resolver_docstring_admits_the_cli_path_exists():
     """resolver.py claimed secrets come 'never [from] the CLI' while --pin/--puk/
     --password options exist; the docstring must describe the real precedence."""
