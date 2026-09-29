@@ -105,3 +105,59 @@ def test_chained_change_reference_data_masked():
         out = Redactor().redact_command(apdu)
         assert component not in out
         assert "REDACTED" in out
+
+
+# ---------------------------------------------------------------- short Lc --- #
+# An Lc larger than the bytes actually present cannot be split into a data field.
+# The parser then reports no data, and a `if data and ...` guard would wave the
+# command through to the registered-secret path - which masks nothing when the PIN
+# was never registered. The bytes land in a file whose own header says the secrets
+# in it are redacted, so this fails closed instead.
+
+
+def test_verify_with_overlong_lc_does_not_leak_the_pin():
+    # Lc claims 6 bytes, only 3 follow: ASCII "123".
+    out = Redactor().redact_command(bytes.fromhex("0020008006313233"))
+    assert "313233" not in out
+    assert out.startswith("00200080")
+    assert "REDACTED" in out
+
+
+def test_change_reference_data_with_overlong_lc_does_not_leak():
+    out = Redactor().redact_command(bytes.fromhex("00240080FF313233"))
+    assert "313233" not in out
+    assert "REDACTED" in out
+
+
+def test_ctap_clientpin_with_overlong_lc_does_not_leak():
+    # clientPIN is identifiable only from the first data byte, which is exactly what
+    # an unparseable length hides, so CTAP messages fail closed as a family.
+    out = Redactor().redact_command(bytes.fromhex("80100000060601"))
+    assert out.startswith("80100000")
+    assert "REDACTED" in out
+
+
+def test_extended_length_with_overlong_lc_does_not_leak():
+    # 00 <Lc hi> <Lc lo> = 0x0010 claimed, 3 bytes present.
+    out = Redactor().redact_command(bytes.fromhex("00200080" + "000010" + "313233"))
+    assert "313233" not in out
+    assert "REDACTED" in out
+
+
+def test_pin_status_probe_stays_readable():
+    # Control: the case-1 retry-counter probe carries no data and must keep rendering,
+    # otherwise the transcript loses the command it is most often read for.
+    assert Redactor().redact_command(bytes.fromhex("00200080")) == "00200080"
+
+
+def test_non_sensitive_command_with_overlong_lc_still_renders():
+    # Control: failing closed applies to commands that can carry a secret, not to
+    # every malformed APDU - raw `apdu send` debugging depends on seeing the bytes.
+    out = Redactor().redact_command(bytes.fromhex("00CB3FFF05AABB"))
+    assert out == "00CB3FFF05AABB"
+
+
+def test_well_formed_sensitive_command_is_unchanged_by_the_guard():
+    # Control: the ordinary path keeps its Lc and trailing bytes.
+    out = Redactor().redact_command(bytes.fromhex("00200080043132333435"))
+    assert out == "0020008004<REDACTED:4B>35"

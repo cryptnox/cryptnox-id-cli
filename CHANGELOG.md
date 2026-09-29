@@ -34,6 +34,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the pinned anchors and bound to the card's CPLC UID, the requested slot, the
   trust model and the certificate read back from the card before success is
   reported.
+- Coverage measurement in CI: `pytest-cov` in the `dev` extra, a project-wide
+  floor from `fail_under`, and a tighter floor over the command modules. With
+  branch coverage enabled both floors compare the combined statement-and-branch
+  percentage, which sits below line coverage alone.
+
+### Removed
+
+- `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
+  returns the same names along with card presence and ATR.
+
+### Fixed
+
+- The APDU transcript no longer renders the data field of a secret-bearing
+  command whose length byte disagrees with the bytes present. An `Lc` larger
+  than the remaining bytes left the data field unsplit, and the command then
+  took the path that masks only values registered with the redactor, so an
+  unregistered PIN could reach the log in the clear. Commands that can carry a
+  secret now withhold the whole body when the length does not parse; commands
+  that cannot still render in full, and the case-1 retry-counter probe is
+  unaffected.
+- `doctor` no longer advises "use a DESFire-capable contactless reader" to
+  someone already on a contactless one. It now tells the detector which reader
+  the session is on, so the DESFire diagnosis uses the reader name as well as
+  the ATR. Cards that answer with their own wired-style ATR rather than the
+  PC/SC composed contactless one were the affected case.
 
 ## [1.0.3] - 2026-08-31
 

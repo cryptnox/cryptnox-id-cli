@@ -63,25 +63,33 @@ def _replace_aligned(text: str, needle: str, marker: str) -> str:
     return "".join(out)
 
 
-def _parse_command(apdu: bytes) -> tuple[int, int, int, int, bytes, bytes] | None:
-    """Best-effort split into (cla, ins, p1, p2, data, trailer). Short + extended."""
+def _parse_command(apdu: bytes) -> tuple[int, int, int, int, bytes, bytes, bool] | None:
+    """Best-effort split into (cla, ins, p1, p2, data, trailer, data_located).
+
+    ``data_located`` is False when the length field disagrees with the bytes present,
+    so the data field could not be isolated and everything after the header sits in
+    ``trailer``. Callers must not read that as "carries no data": an Lc larger than
+    the remaining bytes is exactly how a truncated VERIFY looks.
+    """
     if len(apdu) < 4:
         return None
     cla, ins, p1, p2 = apdu[0], apdu[1], apdu[2], apdu[3]
     body = apdu[4:]
     if not body:
-        return (cla, ins, p1, p2, b"", b"")
+        return (cla, ins, p1, p2, b"", b"", True)
     if len(body) == 1:  # Le only (case 2)
-        return (cla, ins, p1, p2, b"", body)
+        return (cla, ins, p1, p2, b"", body, True)
     if body[0] == 0x00 and len(body) >= 3:  # extended length
         lc = (body[1] << 8) | body[2]
         if lc and len(body) >= 3 + lc:
-            return (cla, ins, p1, p2, body[3 : 3 + lc], body[3 + lc :])
-        return (cla, ins, p1, p2, b"", body)  # extended Le, no data
+            return (cla, ins, p1, p2, body[3 : 3 + lc], body[3 + lc :], True)
+        # lc == 0 is the extended Le form and genuinely carries no data; any other
+        # value is an Lc that overruns what is here.
+        return (cla, ins, p1, p2, b"", body, lc == 0)
     lc = body[0]  # short length
     if lc and len(body) >= 1 + lc:
-        return (cla, ins, p1, p2, body[1 : 1 + lc], body[1 + lc :])
-    return (cla, ins, p1, p2, b"", body)
+        return (cla, ins, p1, p2, body[1 : 1 + lc], body[1 + lc :], True)
+    return (cla, ins, p1, p2, b"", body, False)
 
 
 def _is_sensitive(cla: int, ins: int, data: bytes) -> bool:
@@ -89,6 +97,17 @@ def _is_sensitive(cla: int, ins: int, data: bytes) -> bool:
         return True
     # CTAP message (CLA 0x80, INS 0x10) carrying clientPIN (cmd byte 0x06).
     return (cla & 0xF0) == 0x80 and ins == 0x10 and data[:1] == b"\x06"
+
+
+def _may_carry_secret(cla: int, ins: int) -> bool:
+    """Sensitivity decided from the header alone, for a body that would not split.
+
+    Used only when the length field is inconsistent, so the data bytes cannot be
+    inspected. CTAP is treated as sensitive as a family here: ``clientPIN`` is
+    identifiable only from the first data byte, which is precisely what an
+    unparseable length hides.
+    """
+    return ins in SENSITIVE_INS or ((cla & 0xF0) == 0x80 and ins == 0x10)
 
 
 class Redactor:
@@ -121,12 +140,18 @@ class Redactor:
         parsed = _parse_command(apdu)
         if parsed is None:
             return self.mask(apdu.hex().upper())
-        cla, ins, p1, p2, data, trailer = parsed
+        cla, ins, p1, p2, data, trailer, data_located = parsed
         if data and _is_sensitive(cla, ins, data):
             header = apdu[:4].hex().upper()
             lc = f"{len(data):02X}" if len(data) <= 0xFF else f"00{len(data):04X}"
             tail = trailer.hex().upper()
             return f"{header}{lc}{_MARK.format(n=len(data))}{tail}"
+        if not data_located and trailer and _may_carry_secret(cla, ins):
+            # Fail closed. The length field did not agree with the bytes present, so
+            # the data field was never isolated and the registered-secret path below
+            # would mask nothing unless the value happened to be registered. Emit the
+            # header and the length of what was withheld, without inventing an Lc.
+            return f"{apdu[:4].hex().upper()}{_MARK.format(n=len(trailer))}"
         return self.mask(apdu.hex().upper())
 
     def redact_response_data(self, data: bytes | bytearray, *, ins: int) -> str:
