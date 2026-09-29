@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
   returns the same names along with card presence and ATR.
 
+### Fixed
+
+- `doctor` no longer advises "use a DESFire-capable contactless reader" to
+  someone already on a contactless one. It now tells the detector which reader
+  the session is on, so the DESFire diagnosis uses the reader name as well as
+  the ATR. Cards that answer with their own wired-style ATR rather than the
+  PC/SC composed contactless one were the affected case.
+
 ## [1.0.3] - 2026-08-31
 
 ### Changed
