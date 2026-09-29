@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The APDU transcript no longer renders the data field of a secret-bearing
+  command whose length byte disagrees with the bytes present. An `Lc` larger
+  than the remaining bytes left the data field unsplit, and the command then
+  took the path that masks only values registered with the redactor, so an
+  unregistered PIN could reach the log in the clear. Commands that can carry a
+  secret now withhold the whole body when the length does not parse; commands
+  that cannot still render in full, and the case-1 retry-counter probe is
+  unaffected.
 - `doctor` no longer advises "use a DESFire-capable contactless reader" to
   someone already on a contactless one. It now tells the detector which reader
   the session is on, so the DESFire diagnosis uses the reader name as well as
