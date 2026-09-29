@@ -156,7 +156,7 @@ def describe_sw(sw1: int, sw2: int) -> SWInfo:
     # Family fallbacks.
     if sw1 == 0x63:
         return SWInfo(sw, "WARNING", "Operation completed with warning / counter changed.")
-    if sw1 in (0x62, 0x63):
+    if sw1 == 0x62:
         return SWInfo(sw, "WARNING", f"Warning (SW={sw:04X}).")
     if sw1 in (0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F):
         return SWInfo(sw, "ERROR", f"Card returned error SW={sw:04X}.")
