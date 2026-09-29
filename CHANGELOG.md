@@ -14,14 +14,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mechanisms.
 - `perso generate-key --create-key-object` - the same dev/eval fallback
   `import-key` already had.
+- Coverage measurement in CI: `pytest-cov` in the `dev` extra, a project-wide
+  floor from `fail_under`, and a tighter floor over the command modules. With
+  branch coverage enabled both floors compare the combined statement-and-branch
+  percentage, which sits below line coverage alone.
 - `factory piv preperso set-mgmt-key` - load the PIV management key (9B)
   value over the admin channel; `--replace` replaces a value that is set.
   `factory piv preperso status` reports whether 9B holds a value.
 - `PIV_MGMT_KEY` (hex) for the PIV management key, alongside the existing
   `PIV_SCP03_*` admin-channel variables.
 
+### Removed
+
+- `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
+  returns the same names along with card presence and ATR.
+
 ### Fixed
 
+- The APDU transcript no longer renders the data field of a secret-bearing
+  command whose length byte disagrees with the bytes present. An `Lc` larger
+  than the remaining bytes left the data field unsplit, and the command then
+  took the path that masks only values registered with the redactor, so an
+  unregistered PIN could reach the log in the clear. Commands that can carry a
+  secret now withhold the whole body when the length does not parse; commands
+  that cannot still render in full, and the case-1 retry-counter probe is
+  unaffected.
+- `doctor` no longer advises "use a DESFire-capable contactless reader" to
+  someone already on a contactless one. It now tells the detector which reader
+  the session is on, so the DESFire diagnosis uses the reader name as well as
+  the ATR. Cards that answer with their own wired-style ATR rather than the
+  PC/SC composed contactless one were the affected case.
 - `perso generate-key` and `quickstart` complete on cards that return at most
   256 bytes of an RSA public-key template over the admin channel: the
   truncated response is detected and the generation is repeated over plain
