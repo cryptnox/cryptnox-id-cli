@@ -71,6 +71,9 @@ Top-level commands
    * - ``report card`` / ``report piv`` / ``report mifare`` / ``report fido`` /
        ``report genuine`` / ``report full``
      - Secret-safe JSON reports (``--out FILE``).
+   * - ``remote authenticate`` / ``remote inspect``
+     - Operations run through the Cryptnox remote PIV service, with the card
+       in the local reader; see :doc:`/remote/remote-commands`.
    * - ``shell``
      - Interactive prompt: run subcommands without the ``cryptnox-id`` prefix
        (type ``piv info``); global options passed when launching carry into every
