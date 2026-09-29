@@ -52,9 +52,9 @@ jobs:
       # divergence is itself worth seeing.
       - run: pytest -q -m "not real_card" --cov --cov-report=term-missing --cov-report=xml
       # Second, tighter floor on the layer that actually needs to move: the command
-      # modules hold 1699 of the 2158 missed statements. coverage.py has no per-file
+      # modules hold 1658 of the 2111 missed statements. coverage.py has no per-file
       # fail_under, so this is a separate report over the same data.
-      - run: coverage report --include='src/cryptnox_id_cli/cli/commands/*' --fail-under=36
+      - run: coverage report --include='src/cryptnox_id_cli/cli/commands/*' --fail-under=38
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         if: ${{ !env.ACT && matrix.python-version == '3.14' }}
         with:
