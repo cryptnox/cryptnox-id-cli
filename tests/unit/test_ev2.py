@@ -1,6 +1,7 @@
 """DESFire EV2 auth + secure-messaging tests (offline; the card is the final arbiter)."""
 
 import pytest
+from _cardfakes import QueueConn
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 
@@ -50,23 +51,6 @@ def test_command_mac_layout():
         _cmac(KEY, bytes([0x3D, 0x00, 0x00]) + bytes.fromhex("AABBCCDD") + payload)
     )
     assert sess.command_mac(0x3D, payload) == expected
-
-
-class QueueConn:
-    def __init__(self, responses):
-        self._responses = list(responses)
-        self.sent: list[bytes] = []
-
-    def transmit(self, apdu):
-        self.sent.append(bytes(apdu))
-        data, sw1, sw2 = self._responses.pop(0)
-        return list(data), sw1, sw2
-
-    def get_atr(self):
-        return b""
-
-    def disconnect(self):
-        pass
 
 
 class FakeEv2Card:
