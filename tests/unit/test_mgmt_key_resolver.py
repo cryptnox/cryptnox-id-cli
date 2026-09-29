@@ -61,6 +61,17 @@ def test_a_value_of_an_impossible_length_is_refused(monkeypatch):
         resolve_mgmt_key(Redactor())
 
 
+@pytest.mark.parametrize("text", ["40" * 31 + "4Z", "40" * 31 + "4"])
+def test_a_malformed_value_is_refused_without_echoing_it(monkeypatch, text):
+    # One mistyped digit leaves the rest of the key readable, so the error names the
+    # variable and never the value.
+    monkeypatch.setenv("PIV_MGMT_KEY", text)
+    with pytest.raises(SecretInputError, match=r"\$PIV_MGMT_KEY is not valid hex") as excinfo:
+        resolve_mgmt_key(Redactor())
+    assert text not in str(excinfo.value)
+    assert excinfo.value.__cause__ is None
+
+
 def test_the_alias_is_honoured_only_when_the_primary_is_unset(monkeypatch):
     monkeypatch.setenv("CARD_PIV_MGMT_KEY", "AA" * 32)
     assert resolve_mgmt_key(Redactor()).source == "$CARD_PIV_MGMT_KEY"

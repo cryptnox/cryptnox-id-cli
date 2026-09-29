@@ -11,6 +11,8 @@ variables. PIN values come from masked prompts or ``CRYPTNOX_PIV_PIN`` /
 On-card generation of a large public key can also use the card's **PIV
 management key** (key reference ``9B``), whose value comes from
 ``--default-keys`` or ``PIV_MGMT_KEY`` — never the command line.
+``--default-keys`` covers both the admin channel and the management key: when
+it is given, ``PIV_MGMT_KEY`` is not read.
 
 Inspection
 ----------

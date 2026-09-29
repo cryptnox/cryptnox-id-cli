@@ -897,9 +897,9 @@ def perso_generate_key(
         "out": out_,
         "public_key_pem": None if out_ else pem.decode(),
         "generate_path": generated.path,
-        "management_key": generated.management_key,
+        "management_key_auth": generated.management_key_auth,
     }
-    how = "on-card, via the PIV management key" if generated.management_key else "on-card"
+    how = "on-card, via the PIV management key" if generated.management_key_auth else "on-card"
 
     def human(c: Console) -> None:
         c.print(f"[green]Generated {alg} key in slot {slot}[/green] ({how}).")
@@ -931,7 +931,7 @@ class GeneratedKey(NamedTuple):
     path: str
     #: ``{"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}`` on the management-key
     #: path, ``None`` on the admin channel.
-    management_key: dict[str, object] | None
+    management_key_auth: dict[str, object] | None
 
 
 def _parse_generated(mech: int, data: bytes, *, label: str, path: str):
@@ -2593,7 +2593,7 @@ def quickstart(
                             "algorithm": alg,
                             "public_key_sha256": fingerprint,
                             "generate_path": generated.path,
-                            "management_key": generated.management_key,
+                            "management_key_auth": generated.management_key_auth,
                         },
                     )
                 elif planned_step.step == "certificate":

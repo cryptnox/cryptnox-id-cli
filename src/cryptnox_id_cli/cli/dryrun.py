@@ -106,6 +106,7 @@ READ_ONLY = frozenset(
 #: partition test forces every new command to be classified here or above.
 NO_DRY_RUN = frozenset(
     {
+        "factory piv preperso set-mgmt-key",
         "fido config min-pin-length",
         "fido config toggle-always-uv",
         "fido credential assert",
@@ -115,7 +116,6 @@ NO_DRY_RUN = frozenset(
         "fido credential self-test",
         "fido pin change",
         "fido pin set",
-        "factory piv preperso set-mgmt-key",
         "fido reset",
         "mifare app create",
         "mifare app delete",

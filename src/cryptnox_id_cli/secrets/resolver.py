@@ -71,6 +71,21 @@ def resolve_secret(
     return secret
 
 
+def _hex_from_env(raw: str, source: str) -> bytes:
+    """Parse a hex key value read from ``source``, naming the variable on failure.
+
+    The value is not registered with the redactor until it parses, so the error must
+    not carry it: the parser's own message quotes its input, and one mistyped digit
+    leaves the rest of the key readable.
+    """
+    try:
+        return from_hex(raw)
+    except ValueError:
+        raise SecretInputError(
+            f"{source} is not valid hex: expected an even number of hex digits."
+        ) from None
+
+
 def resolve_scp03_keys(
     redactor: Redactor,
     *,
@@ -89,7 +104,11 @@ def resolve_scp03_keys(
         return Scp03Keys.same(DEFAULT_GP_KEY)
     enc, mac, dek = (os.environ.get(v) for v in (enc_env, mac_env, dek_env))
     if enc and mac and dek:
-        keys = Scp03Keys(from_hex(enc), from_hex(mac), from_hex(dek))
+        keys = Scp03Keys(
+            _hex_from_env(enc, f"${enc_env}"),
+            _hex_from_env(mac, f"${mac_env}"),
+            _hex_from_env(dek, f"${dek_env}"),
+        )
         for k in (keys.enc, keys.mac, keys.dek):
             redactor.register(k)
         return keys
@@ -129,7 +148,7 @@ def resolve_mgmt_key(
     if raw is None:
         raw, source = os.environ.get(env_alias), f"${env_alias}"
     if raw is not None:
-        value = from_hex(raw)
+        value = _hex_from_env(raw, source)
         mechanism = mechanism_for_key_length(len(value))
         if mechanism is None:
             raise SecretInputError(

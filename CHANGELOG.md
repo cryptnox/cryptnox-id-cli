@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   return the full template are unaffected.
 - A public-key template the CLI cannot parse now ends in a CLI error naming
   the response length, instead of an unhandled exception.
+- A `PIV_SCP03_*` value that is not valid hex now ends in a CLI error naming
+  the variable, instead of an unhandled exception that printed the value.
 
 ## [1.0.3] - 2026-08-31
 

@@ -26,9 +26,10 @@ The PIV **management key** (key reference ``9B``) is the applet's own
 administration key. Profiles create its key object but never carry a value,
 because profiles are shareable files; ``set-mgmt-key`` writes the value over the
 admin channel from ``--default-keys`` or ``PIV_MGMT_KEY``
-(``CARD_PIV_MGMT_KEY`` is accepted as an alias). It refuses to create a missing
-``9B`` object and refuses to overwrite a value that is already set unless
-``--replace`` is given; ``status`` shows whether ``9B`` holds a value.
+(``CARD_PIV_MGMT_KEY`` is accepted as an alias). With ``--default-keys`` the
+published value is written and the variable is not read. It refuses to create a
+missing ``9B`` object and refuses to overwrite a value that is already set
+unless ``--replace`` is given; ``status`` shows whether ``9B`` holds a value.
 
 Built-in profiles: ``cryptnox-default`` (the applet's own reference structure),
 ``developer`` / ``npivp-lab`` (the same structure, labelled for non-production

@@ -146,7 +146,7 @@ def test_a_card_that_returns_the_full_template_is_untouched(template, rsa_key, c
     generated = _generate(adm, _app())
 
     assert generated.path == "admin-channel"
-    assert generated.management_key is None
+    assert generated.management_key_auth is None
     assert generated.public_key.public_numbers() == rsa_key.public_key().public_numbers()
     assert adm.events == ["select", "open", "send:47"]
     assert [cmd[:8] for cmd in session.sent] == ["00A40400"], "only the admin SELECT was sent"
@@ -170,7 +170,7 @@ def test_the_fallback_selects_authenticates_and_regenerates(template, rsa_key, m
     generated = _generate(adm, _app())
 
     assert generated.path == "management-key"
-    assert generated.management_key == {"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}
+    assert generated.management_key_auth == {"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}
     assert generated.public_key.public_numbers() == rsa_key.public_key().public_numbers()
     assert adm.events == ["select", "open", "send:47", "select", "forget_channel"]
     # SELECT, witness request, mutual response, plain GENERATE - in that order, with
@@ -199,7 +199,7 @@ def test_default_keys_supplies_the_published_development_value(template):
     session = FakeSession(template, key=DEFAULT_GP_KEY * 2)
     adm = FakeAdmin(session, Response(template[:256], 0x90, 0x00))
     generated = _generate(adm, _app(), default_keys=True)
-    assert generated.management_key == {"mechanism": "AES-256", "source": "--default-keys"}
+    assert generated.management_key_auth == {"mechanism": "AES-256", "source": "--default-keys"}
 
 
 # ----------------------------------------------------------------- refusals ---
@@ -303,7 +303,7 @@ def test_the_json_payload_reports_the_path_and_the_management_key(template, monk
 
     payload = json.loads(result.stdout)
     assert payload["generate_path"] == "management-key"
-    assert payload["management_key"] == {"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}
+    assert payload["management_key_auth"] == {"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}
 
 
 def test_the_exit_code_for_a_management_key_failure_is_seven(template, monkeypatch):
@@ -333,3 +333,113 @@ def test_the_exit_code_for_a_management_key_failure_is_seven(template, monkeypat
     error = json.loads(result.stdout or result.output)
     assert error["error"] == "mgmt_key"
     assert error["stage"] == "empty"
+
+
+# ---------------------------------------------------- quickstart, end to end ---
+class FakeCard(FakeSession):
+    """FakeSession plus the card state the steps after the fallback depend on.
+
+    SELECT closes the secure channel and drops the key-holder role, a completed 9B
+    exchange grants the role, and every command is answered the way the card answers
+    it in that state: GENERATE is cut at 256 bytes inside the channel and complete
+    behind the role, PUT DATA needs the channel.
+    """
+
+    REFUSED = Response(b"", 0x69, 0x82)
+
+    def __init__(self, template: bytes) -> None:
+        super().__init__(template)
+        self.channel_open = False
+        self.key_holder = False
+
+    def transmit(self, apdu, *, context: str | None = None) -> Response:
+        self.sent.append(apdu.to_bytes().hex().upper())
+        if apdu.ins == 0xA4:
+            self.channel_open = self.key_holder = False
+            return Response(b"", 0x90, 0x00)
+        if apdu.ins == 0x87:
+            resp = self._general_authenticate(apdu)
+            fields = {c.tag for c in tlv.parse(apdu.data)[0].children}
+            self.key_holder = resp.ok and ma.TAG_CHALLENGE in fields
+            return resp
+        if apdu.ins == perso_mod.INS_GENERATE_ASYMMETRIC:
+            if self.channel_open:
+                return Response(self.template[:256], 0x90, 0x00)
+            return Response(self.template, 0x90, 0x00) if self.key_holder else self.REFUSED
+        if apdu.ins == perso_mod.INS_PUT_DATA:
+            return Response(b"", 0x90, 0x00) if self.channel_open else self.REFUSED
+        return Response(b"", 0x6A, 0x82)
+
+
+class _PlainChannel:
+    """Stands in for the channel's wrapping; FakeCard tracks the channel itself."""
+
+    def wrap(self, apdu):
+        return apdu
+
+    def unwrap(self, resp):
+        return resp
+
+
+def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_key, monkeypatch):
+    # The fallback leaves the card with no secure channel and the host with none
+    # either, so the certificate write that follows has to open its own.
+    import json
+
+    from cryptography.hazmat.primitives.asymmetric import padding, utils
+
+    from cryptnox_id_cli.applets.piv import keyimport
+    from cryptnox_id_cli.applets.piv.admin import PivAdmin
+
+    card = FakeCard(template)
+
+    @contextlib.contextmanager
+    def fake_session(self):
+        yield card
+
+    def open_channel(self, keys, **kw) -> None:
+        self.scp = _PlainChannel()
+        self.scp_version = 0x03
+        self.card.channel_open = True
+
+    def sign_off_card(session, ref, mech, pin, build):
+        digest_alg = utils.Prehashed(keyimport.digest_for_mechanism(mech))
+        return build(lambda digest: rsa_key.sign(digest, padding.PKCS1v15(), digest_alg))
+
+    facts = piv_cmd.CardFacts(
+        pin_configured=True,
+        puk_configured=True,
+        key_object_present=True,
+        cert_present=False,
+        chuid_present=True,
+        ccc_present=True,
+    )
+    monkeypatch.setattr(AppContext, "open_session", fake_session)
+    monkeypatch.setattr(PivAdmin, "open", open_channel)
+    monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x"))
+    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
+    monkeypatch.setattr(piv_cmd, "_pin_truth", lambda piv, pin: ("match", None))
+    monkeypatch.setattr(piv_cmd, "_sign_with_session", sign_off_card)
+    monkeypatch.setenv("PIV_MGMT_KEY", KEY256.hex())
+    monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
+    for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):
+        monkeypatch.setenv(var, "40" * 16)  # open_channel ignores the keys
+
+    result = CliRunner().invoke(
+        root,
+        ["--json", "--yes", "piv", "quickstart", "--profile", "ms-logon"]
+        + ["--slot", "9A", "--algorithm", "RSA2048"],
+    )
+    assert result.exit_code == 0, result.output
+
+    steps = {s["step"]: s for s in json.loads(result.stdout)["steps"]}
+    assert steps["generate-key"]["detail"]["generate_path"] == "management-key"
+    assert steps["certificate"]["status"] == "ok"
+    assert steps["smoke-test"]["status"] == "ok"
+
+    in_channel, plain = (i for i, cmd in enumerate(card.sent) if cmd[:8] == "0047009A")
+    assert card.sent[plain - 1][:8] == "00870C9B", "generated behind the 9B role"
+    after = [cmd[:8] for cmd in card.sent[plain + 1 :]]
+    assert after[0] == "00A40400", "the certificate step starts from a fresh SELECT"
+    assert all(cmd[2:8] == "DB3FFF" for cmd in after[1:]), after
+    assert len(after) > 1

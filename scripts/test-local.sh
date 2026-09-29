@@ -50,10 +50,11 @@ run() {
   local label=$1 hard=$2 ver=$3 script=$4
   echo "==================== ${label} (py${ver}) ===================="
   # ':ro,z' - z relabels for SELinux, else the container can't read the mount.
-  # The repo is copied into the container rather than used in place, so no job
-  # writes to your checkout. .git and everything .gitignore covers stays behind:
-  # .git mutates whenever git runs on the host (index.lock), and local venvs,
-  # caches and build output would only slow the copy and could mask a clean build.
+  # That label is the one thing this script changes on your checkout: the repo is
+  # copied into the container rather than used in place, so no job writes a file
+  # there. .git and everything .gitignore covers stays behind: .git mutates
+  # whenever git runs on the host (index.lock), and local venvs, caches and build
+  # output would only slow the copy and could mask a clean build.
   if docker run --rm -v "${REPO_ROOT}:/src:ro,z" -w /work "python:${ver}-slim" \
       bash -c "set -e; tar -cf - -C /src \
         --exclude='./.git' --exclude='./.venv' --exclude='./venv' --exclude='./env' \
