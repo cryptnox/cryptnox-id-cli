@@ -29,7 +29,7 @@ from cryptnox_id_cli.transport.pcsc import CardSession, is_contactless_interface
 FIDO_AID = bytes.fromhex("A0000006472F0001")
 CTAP_GETINFO = bytes([0x04])
 
-_MANDATORY = ("chuid", "ccc", "discovery")
+_MANDATORY = tuple(o.name for o in piv_obj.PIV_OBJECTS if o.mandatory)
 _PROBE_OBJECTS = (
     "chuid",
     "ccc",
