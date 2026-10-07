@@ -9,50 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `RSA4096` alongside the existing algorithms: `perso generate-key`,
-  `perso import-key`, CSR/self-signed-cert signing, and profile key
-  mechanisms.
-- `perso generate-key --create-key-object` - the same dev/eval fallback
+- `RSA4096` in `perso generate-key`, `perso import-key`, CSR and
+  self-signed-cert signing, and profile key mechanisms.
+- `perso generate-key --create-key-object`, the dev/eval fallback
   `import-key` already had.
-- Coverage measurement in CI: `pytest-cov` in the `dev` extra, a project-wide
-  floor from `fail_under`, and a tighter floor over the command modules. With
-  branch coverage enabled both floors compare the combined statement-and-branch
-  percentage, which sits below line coverage alone.
-- `factory piv preperso set-mgmt-key` - load the PIV management key (9B)
-  value over the admin channel; `--replace` replaces a value that is set.
+- Coverage measurement in CI (`pytest-cov` in the `dev` extra) with a
+  project-wide floor and a tighter one over the command modules, both on
+  combined statement-and-branch coverage.
+- `factory piv preperso set-mgmt-key`: load the PIV management key (9B)
+  over the admin channel; `--replace` overwrites a set value.
   `factory piv preperso status` reports whether 9B holds a value.
-- `PIV_MGMT_KEY` (hex) for the PIV management key, alongside the existing
-  `PIV_SCP03_*` admin-channel variables.
+- `PIV_MGMT_KEY` (hex) for the PIV management key, next to `PIV_SCP03_*`.
 
 ### Removed
 
-- `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
-  returns the same names along with card presence and ATR.
+- `transport.pcsc.list_reader_names()`; `reader_states()` returns the same
+  names with card presence and ATR.
 
 ### Fixed
 
-- The APDU transcript no longer renders the data field of a secret-bearing
-  command whose length byte disagrees with the bytes present. An `Lc` larger
-  than the remaining bytes left the data field unsplit, and the command then
-  took the path that masks only values registered with the redactor, so an
-  unregistered PIN could reach the log in the clear. Commands that can carry a
-  secret now withhold the whole body when the length does not parse; commands
-  that cannot still render in full, and the case-1 retry-counter probe is
-  unaffected.
-- `doctor` no longer advises "use a DESFire-capable contactless reader" to
-  someone already on a contactless one. It now tells the detector which reader
-  the session is on, so the DESFire diagnosis uses the reader name as well as
-  the ATR. Cards that answer with their own wired-style ATR rather than the
-  PC/SC composed contactless one were the affected case.
-- `perso generate-key` and `quickstart` complete on cards that return at most
-  256 bytes of an RSA public-key template over the admin channel: the
-  truncated response is detected and the generation is repeated over plain
-  APDUs after authenticating the PIV management key (9B). ECC and cards that
-  return the full template are unaffected.
-- A public-key template the CLI cannot parse now ends in a CLI error naming
-  the response length, instead of an unhandled exception.
-- A `PIV_SCP03_*` value that is not valid hex now ends in a CLI error naming
-  the variable, instead of an unhandled exception that printed the value.
+- `PivPersonalized` no longer requires the optional Discovery Object; CHUID,
+  CCC and a set PIN suffice. Discovery is still probed and listed.
+- `factory piv preperso status` reports `finalize_allowed` under the rule
+  `finalize` applies (applet selectable, not SECURED) and adds
+  `load_config_allowed` for a blank applet.
+- The APDU transcript withholds the whole body of a secret-bearing command
+  whose `Lc` disagrees with the bytes present, instead of rendering an
+  unmasked data field. Other commands still render in full.
+- `doctor` uses the reader name as well as the ATR for the DESFire
+  diagnosis, so it no longer recommends a contactless reader to someone
+  already on one.
+- `perso generate-key` and `quickstart` handle an RSA public-key template
+  truncated at 256 bytes over the admin channel by repeating the generation
+  over plain APDUs after 9B authentication.
+- An unparseable public-key template ends in a CLI error naming the response
+  length, not an unhandled exception.
+- A `PIV_SCP03_*` value that is not valid hex ends in a CLI error naming the
+  variable, not an unhandled exception that printed the value.
 
 ## [1.0.3] - 2026-08-31
 

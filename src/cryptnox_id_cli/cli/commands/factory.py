@@ -103,7 +103,9 @@ def status(app: AppContext) -> None:
         except CryptnoxError:
             scp_supported = False
         mgmt = _probe_mgmt_key(session)
-    finalize_allowed = st.piv == PivState.PRE_PERSONALIZED
+    # Same gate as the finalize command: selectable and not yet SECURED.
+    finalize_allowed = st.piv not in (PivState.NOT_PRESENT, PivState.UNKNOWN, PivState.SECURED)
+    load_config_allowed = st.piv == PivState.PRE_PERSONALIZED
     scp_ver_label = scp_label(scp_version)
     payload = {
         "state": st.piv.label,
@@ -111,6 +113,7 @@ def status(app: AppContext) -> None:
         "scp_version": scp_ver_label if scp_supported else None,
         "secured": st.piv == PivState.SECURED,
         "finalize_allowed": finalize_allowed,
+        "load_config_allowed": load_config_allowed,
         "management_key": mgmt,
     }
 
@@ -120,13 +123,17 @@ def status(app: AppContext) -> None:
         con.print(f"  Admin secure channel available: {avail}")
         con.print(f"  Finalized (SECURED): {'yes' if payload['secured'] else 'no/undetermined'}")
         con.print(f"  Management key (9B): {_mgmt_key_line(mgmt)}")
-        if finalize_allowed:
-            con.print("  Pre-perso load + finalize: [green]allowed[/green]")
+        if load_config_allowed:
+            con.print("  Pre-perso load-config: [green]allowed[/green] (no structure yet)")
         else:
             con.print(
-                f"  [yellow]finalize is NOT allowed[/yellow] in state {st.piv.label} "
-                "(only on a confidently PivPrePersonalized card)."
+                "  Pre-perso load-config: structure present; it can only add elements, "
+                "existing ones cannot be changed or removed"
             )
+        if finalize_allowed:
+            con.print("  Finalize: [green]allowed[/green]")
+        else:
+            con.print(f"  Finalize: [yellow]not allowed[/yellow] in state {st.piv.label}")
 
     app.out.result(payload, human)
 
