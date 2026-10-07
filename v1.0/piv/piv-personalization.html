@@ -164,7 +164,9 @@ application’s PIN has its own retry counter and is managed separately.</p>
 <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span></code>. The SCP03 admin channel uses the card’s GlobalPlatform
 keys — development/evaluation cards use the GlobalPlatform test keys
 (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>); provisioned cards take theirs from the
-<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment variables.</p>
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment variables.
+<code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> carries the PIV management key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) for cards that need it
+(see Step 2).</p>
 <section id="quickstart-one-shot">
 <h2>Quickstart (one shot)<a class="headerlink" href="#quickstart-one-shot" title="Link to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> chains the steps below over one card connection, skipping
@@ -240,6 +242,17 @@ on-card just as well — <code class="docutils literal notranslate"><span class=
 </div>
 <p>succeeds there, with the private key never leaving the card. Requesting a
 mechanism the slot has no object for returns <code class="docutils literal notranslate"><span class="pre">6A80</span></code>.</p>
+<p>Over the admin channel some cards deliver at most 256 bytes of a public-key
+template, which an RSA template exceeds. <code class="docutils literal notranslate"><span class="pre">generate-key</span></code> reads that from the
+response and completes the generation with the PIV management key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) over
+plain APDUs; the command line is the same either way. That path is contact-only
+and needs the <code class="docutils literal notranslate"><span class="pre">9B</span></code> value — <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> on development cards,
+<code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> otherwise. Profiles create the <code class="docutils literal notranslate"><span class="pre">9B</span></code> key object but carry no
+value; load one once with:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>set-mgmt-key<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span>--out<span class="w"> </span>9a.pub.pem<span class="w"> </span>--default-keys
+</pre></div>
+</div>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> follows the same rule with training wheels: it defaults to
 ECC P-256 everywhere, accepts explicit RSA only for <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on
 9A (the one built-in shape with an RSA object, and the one Windows needs —

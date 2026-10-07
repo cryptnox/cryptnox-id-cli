@@ -185,8 +185,9 @@ an Administrator terminal.</p></td>
 <td><p>The card rejected a command (the message carries the ISO status word).</p></td>
 </tr>
 <tr class="row-odd"><td><p>7</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">scp03_error</span></code></p></td>
-<td><p>SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch).</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">scp03_error</span></code> / <code class="docutils literal notranslate"><span class="pre">mgmt_key</span></code></p></td>
+<td><p>SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch), or
+PIV management-key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) authentication failed.</p></td>
 </tr>
 <tr class="row-even"><td><p>8</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">profile_error</span></code></p></td>
