@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   floor from `fail_under`, and a tighter floor over the command modules. With
   branch coverage enabled both floors compare the combined statement-and-branch
   percentage, which sits below line coverage alone.
+- `factory piv preperso set-mgmt-key` - load the PIV management key (9B)
+  value over the admin channel; `--replace` replaces a value that is set.
+  `factory piv preperso status` reports whether 9B holds a value.
+- `PIV_MGMT_KEY` (hex) for the PIV management key, alongside the existing
+  `PIV_SCP03_*` admin-channel variables.
 
 ### Removed
 
@@ -39,6 +44,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the session is on, so the DESFire diagnosis uses the reader name as well as
   the ATR. Cards that answer with their own wired-style ATR rather than the
   PC/SC composed contactless one were the affected case.
+- `perso generate-key` and `quickstart` complete on cards that return at most
+  256 bytes of an RSA public-key template over the admin channel: the
+  truncated response is detected and the generation is repeated over plain
+  APDUs after authenticating the PIV management key (9B). ECC and cards that
+  return the full template are unaffected.
+- A public-key template the CLI cannot parse now ends in a CLI error naming
+  the response length, instead of an unhandled exception.
+- A `PIV_SCP03_*` value that is not valid hex now ends in a CLI error naming
+  the variable, instead of an unhandled exception that printed the value.
 
 ## [1.0.3] - 2026-08-31
 

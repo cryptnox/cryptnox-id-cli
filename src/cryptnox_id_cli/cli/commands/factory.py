@@ -14,12 +14,13 @@ import yaml
 from rich.console import Console
 
 from cryptnox_id_cli.applets.piv import constants as c
+from cryptnox_id_cli.applets.piv import mgmt_auth
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
 from cryptnox_id_cli.applets.piv.admin import PivAdmin, scp_label
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
 from cryptnox_id_cli.cli.context import AppContext
-from cryptnox_id_cli.secrets.resolver import resolve_scp03_keys
+from cryptnox_id_cli.secrets.resolver import resolve_mgmt_key, resolve_scp03_keys
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.state.model import PivState
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError
@@ -45,6 +46,47 @@ def preperso() -> None:
     """PIV pre-personalization (OpenFIPS201 vendor, over SCP03)."""
 
 
+def _probe_mgmt_key(session: object) -> dict[str, object] | None:
+    """Read-only look at slot 9B: does the key object exist, does it hold a value?
+
+    At most three short GENERAL AUTHENTICATE requests, none of which writes anything
+    or consumes a retry counter (9B has none). ``None`` when the PIV applet is not
+    selectable at all - that is already visible in the lifecycle state.
+    """
+    try:
+        adm = PivAdmin(session)  # type: ignore[arg-type]
+        adm.select()
+        found = mgmt_auth.probe(adm.card.transmit, mgmt_auth.MECHANISM_PROBE_ORDER)
+    except CryptnoxError:
+        return None
+    if found.mechanism is None:
+        return {"present": False, "mechanism": None, "value_set": None, "sw": f"{found.sw:04X}"}
+    # 6983 is "no value"; 6982 is "not usable on this interface", which says nothing
+    # about the value. Everything else means the object answered, so a value is there.
+    value_set: bool | None = None
+    if found.sw == 0x6983:
+        value_set = False
+    elif found.sw != 0x6982:
+        value_set = True
+    return {
+        "present": True,
+        "mechanism": mgmt_auth.mechanism_name(found.mechanism),
+        "value_set": value_set,
+        "sw": f"{found.sw:04X}",
+    }
+
+
+def _mgmt_key_line(mgmt: dict[str, object] | None) -> str:
+    if mgmt is None:
+        return "not determined"
+    if not mgmt["present"]:
+        return "absent"
+    name = mgmt["mechanism"]
+    if mgmt["value_set"] is None:
+        return f"{name}, not accessible on this interface"
+    return f"{name}, {'value set' if mgmt['value_set'] else 'no value'}"
+
+
 # --------------------------------------------------------------------------- #
 @preperso.command("status")
 @click.pass_obj
@@ -60,6 +102,7 @@ def status(app: AppContext) -> None:
             scp_version = probe.get("scp_version")
         except CryptnoxError:
             scp_supported = False
+        mgmt = _probe_mgmt_key(session)
     finalize_allowed = st.piv == PivState.PRE_PERSONALIZED
     scp_ver_label = scp_label(scp_version)
     payload = {
@@ -68,6 +111,7 @@ def status(app: AppContext) -> None:
         "scp_version": scp_ver_label if scp_supported else None,
         "secured": st.piv == PivState.SECURED,
         "finalize_allowed": finalize_allowed,
+        "management_key": mgmt,
     }
 
     def human(con: Console) -> None:
@@ -75,6 +119,7 @@ def status(app: AppContext) -> None:
         avail = f"yes ({scp_ver_label})" if scp_supported else "no"
         con.print(f"  Admin secure channel available: {avail}")
         con.print(f"  Finalized (SECURED): {'yes' if payload['secured'] else 'no/undetermined'}")
+        con.print(f"  Management key (9B): {_mgmt_key_line(mgmt)}")
         if finalize_allowed:
             con.print("  Pre-perso load + finalize: [green]allowed[/green]")
         else:
@@ -243,6 +288,110 @@ def load_config(
     if not applied_ok:
         # Partial/failed structural load must not look like success to a caller's exit check.
         sys.exit(6)
+
+
+#: Why the card refused the management-key write, in its own terms.
+_SET_MGMT_KEY_SW_HINTS = {
+    0x6985: "slot 9B already holds a value (SW=6985); re-run with --replace.",
+    0x6A88: "there is no 9B key object for this mechanism (SW=6A88).",
+    0x6700: "the card rejected the value's length (SW=6700).",
+    0x6982: "the admin channel is not authorized to write the management key (SW=6982).",
+}
+
+
+@preperso.command("set-mgmt-key")
+@click.option(
+    "--default-keys",
+    is_flag=True,
+    help="Use the publicly known GlobalPlatform TEST keys for the admin channel, and "
+    "the same published value for the PIV management key (9B) itself "
+    "(fine for dev/eval, never for deployment).",
+)
+@click.option(
+    "--replace",
+    is_flag=True,
+    help="Replace a value that is already set (CLEAR then SET). Irreversible for the "
+    "current value.",
+)
+@click.pass_obj
+def set_mgmt_key(app: AppContext, default_keys: bool, replace: bool) -> None:
+    """Load the PIV management key (slot 9B) value over the admin channel.
+
+    The 9B key object itself comes from the pre-personalization profile; this command
+    refuses to create one. A value that is already set is replaced only with
+    ``--replace`` (CLEAR, then SET); if that is interrupted after the CLEAR, re-run
+    without ``--replace``.
+    """
+    material = resolve_mgmt_key(app.redactor, default_keys=default_keys)
+    keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
+    with app.open_session() as session:
+        adm = PivAdmin(session)
+        adm.select()
+        found = mgmt_auth.probe(adm.card.transmit, material.mechanisms())
+        if found.mechanism is None:
+            names = ", ".join(mgmt_auth.mechanism_name(m) for m in material.mechanisms())
+            raise mgmt_auth.MgmtKeyError(
+                f"this card has no AES key object in slot 9B (SW=6A86 for {names}). The "
+                "key object is laid down by pre-personalization; load a profile first.",
+                stage="missing",
+                sw=found.sw,
+            )
+        if found.sw == 0x6982:
+            raise mgmt_auth.MgmtKeyError(
+                "slot 9B is not accessible on this interface (SW=6982); the management key "
+                "is contact-only on this card.",
+                stage="access",
+                sw=found.sw,
+            )
+        name = mgmt_auth.mechanism_name(found.mechanism)
+        # The applet checks "has a value" before it checks the key's attributes, so
+        # anything but 6983 means a value is already there - 6985 included.
+        has_value = found.sw != 0x6983
+        if has_value and not replace:
+            raise mgmt_auth.MgmtKeyError(
+                f"slot 9B ({name}) already holds a value (SW={found.sw:04X}); pass "
+                "--replace to replace it.",
+                stage="set_value",
+                sw=found.sw,
+            )
+        value = material.key_for(found.mechanism)
+        if has_value:
+            app.out.warn(
+                "slot 9B already holds a PIV management key; replacing it invalidates "
+                "every credential that knows the current value."
+            )
+            adm.select()
+            adm.open(keys)
+            cleared = adm.send(
+                mgmt_auth.clear_value_apdu(found.mechanism), context="CLEAR management key"
+            )
+            if not cleared.ok:
+                raise StatusWordError(cleared.sw1, cleared.sw2, context="CLEAR management key")
+        adm.select()
+        adm.open(keys)
+        resp = adm.send(
+            mgmt_auth.set_value_apdu(found.mechanism, value), context="SET management key"
+        )
+    if not resp.ok:
+        hint = _SET_MGMT_KEY_SW_HINTS.get(resp.sw)
+        if hint is None:
+            raise StatusWordError(resp.sw1, resp.sw2, context="SET management key")
+        raise mgmt_auth.MgmtKeyError(hint, stage="set_value", sw=resp.sw)
+    action = "replaced" if has_value else "set"
+    payload = {
+        "slot": "9B",
+        "mechanism": name,
+        "source": material.source,
+        "action": action,
+        "sw": resp.sw_hex(),
+    }
+    app.out.result(
+        payload,
+        lambda con: con.print(
+            f"[green]PIV management key {action}[/green] in slot 9B ({name}, "
+            f"value from {material.source})."
+        ),
+    )
 
 
 @preperso.command("finalize")

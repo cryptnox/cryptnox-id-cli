@@ -32,9 +32,10 @@ def _wire(monkeypatch, *, cert_present: bool):
         piv_cmd, "_read_cert_der", lambda piv, name: b"\x30\x03" if cert_present else None
     )
 
-    def fake_generate(adm, keys, ref, mech, *, label):
+    def fake_generate(app, adm, keys, ref, mech, *, label, default_keys=False):
         calls["generated"] = True
-        return ec.generate_private_key(ec.SECP256R1()).public_key()
+        public_key = ec.generate_private_key(ec.SECP256R1()).public_key()
+        return piv_cmd.GeneratedKey(public_key, "admin-channel", None)
 
     monkeypatch.setattr(piv_cmd, "_generate_key_on_card", fake_generate)
     return calls
