@@ -105,6 +105,26 @@ The DESFire EV3 mechanism that embeds per-read authentication data (UID, counter
 MAC) into a file's NDEF content. EV3-only.
 _Avoid_: SUN (the message SDM produces, not the mechanism)
 
+### Remote service
+
+**Remote service**:
+The Cryptnox-operated service that performs PIV lifecycle operations needing keys
+that never leave Cryptnox, with the card in the holder's own reader. It drives; the
+tool relays.
+_Avoid_: cloud, backend, API (it is an operation partner, not a data source)
+
+**Relay**:
+The tool's role during a remote operation: transmit each command the service sends
+to the card and return the answer verbatim. The relay never sends a command of its
+own and never reassembles a chained response.
+_Avoid_: proxy, tunnel (both suggest transparency; the relay refuses)
+
+**Relay policy**:
+The fail-closed allow-list the relay applies to every command before it reaches the
+card: which applet may be selected, which instructions may pass, how many
+authentication attempts each security domain may see. A refusal ends the operation.
+_Avoid_: firewall, filter (a filter drops; the policy stops)
+
 ### Tool behavior
 
 **Dry run**:
