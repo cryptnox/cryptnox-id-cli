@@ -62,5 +62,12 @@ driven by one tool: |cli|.
    Guide <genuine/genuineness-guide>
    Commands <genuine/genuineness-commands>
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Remote service
+
+   Guide <remote/remote-guide>
+   Commands <remote/remote-commands>
+
 .. API Reference — RESERVED: autodoc of the Python package, if/when it is
    publicly pip-installable (see the internal documentation plan, decision D4).
