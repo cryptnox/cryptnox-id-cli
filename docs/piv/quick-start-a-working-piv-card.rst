@@ -12,12 +12,12 @@ Prerequisites
   interface on this card; contactless works for reading once personalized.
 * |cli| installed, and ``yubico-piv-tool`` if you want to run the verification
   step (any recent version).
-* The card's SCP03 administration keys. **Development/evaluation cards** use the
-  GlobalPlatform test keys — pass ``--default-keys``. **Provisioned cards** take
-  their keys from the ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK``
-  environment variables (hex). Keys never go on the command line, and the
-  default keys are for development cards only — see the warning in
-  :doc:`/getting-started`.
+* The card's SCP03 administration keys. As shipped, every card uses the
+  GlobalPlatform test keys — pass ``--default-keys``. Before a card goes into
+  production, replace them (:ref:`piv-admin-key-rotation`); from then on the
+  keys come from the ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK``
+  environment variables (hex). Keys never go on the command line — see the
+  warning in :doc:`/getting-started`.
 
 Check what you have:
 

@@ -3,10 +3,12 @@ Factory commands
 
 Manufacturing-stage commands. Pre-personalization lays down the PIV applet's
 *structure* — data containers, PIN/PUK verifiers, key objects — from a profile,
-over the SCP03 admin channel. Operators normally never need these; development
-and evaluation cards use them with ``--default-keys``. Production cards take
-their admin keys from environment variables; production key management is a
-manufacturing procedure outside this documentation.
+over the SCP03 admin channel. Operators normally never need these. As shipped,
+every card opens the admin channel with the GlobalPlatform test keys
+(``--default-keys``); replacing them before production is described in
+:ref:`piv-admin-key-rotation`, after which the commands take the keys from the
+``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment
+variables.
 
 .. code-block:: text
 
