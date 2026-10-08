@@ -1247,7 +1247,8 @@ def _create_key_object(
     if resp.sw == 0x6985:
         raise CryptnoxError(
             "the applet is finalized (SECURED): key objects can no longer be created. "
-            "Import into an existing object, or reinstall the applet."
+            "Import into an existing object. A full reset of the PIV applet is a Cryptnox "
+            "operation: contact Cryptnox support."
         )
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"CREATE KEY {slot}")

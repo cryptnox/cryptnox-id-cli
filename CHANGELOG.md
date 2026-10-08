@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `factory piv preperso load-config` warns that structural operations are
+  permanent (existing elements cannot be changed or removed; only new ones can
+  be added) instead of calling them reversible before finalize.
+- Error messages and docs no longer suggest reinstalling the applet as a
+  recovery step; a full reset of the PIV applet is a Cryptnox operation. The
+  `load-config` failure message points at adding missing key objects with
+  `--create-key-object`.
 - `PivPersonalized` no longer requires the optional Discovery Object; CHUID,
   CCC and a set PIN suffice. Discovery is still probed and listed.
 - `factory piv preperso status` reports `finalize_allowed` under the rule
