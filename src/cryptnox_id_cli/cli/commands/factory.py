@@ -247,8 +247,9 @@ def load_config(
 
     # Real write.
     app.out.warn(
-        f"This writes {len(ops)} structural operations to the card's data model "
-        "(reversible only before finalize)."
+        f"This writes {len(ops)} structural operations. They are permanent: existing "
+        "elements cannot be changed or removed later (only new ones can be added), and "
+        "finalize locks the structure completely."
     )
     if not app.yes and not click.confirm("Proceed with writing to the card?", default=False):
         raise click.Abort()
@@ -287,8 +288,10 @@ def load_config(
                 raise RuntimeError("stopped without a failing operation")
             con.print(f"\n[red]Stopped at[/red] {failed[0]} (SW={failed[1]}).")
             con.print(
-                "  Operations before it were applied. An existing object/verifier/key is "
-                "rejected; reinstall the PIV applet for a clean load, or edit the profile."
+                "  Operations before it were applied. An existing element cannot be changed "
+                "or removed; add missing key objects with `piv perso generate-key "
+                "--create-key-object` or `piv perso import-key --create-key-object`. A full "
+                "reset of the PIV applet is a Cryptnox operation: contact Cryptnox support."
             )
 
     app.out.result({"profile": profile.name, "applied": applied_ok, "operations": sent}, report)

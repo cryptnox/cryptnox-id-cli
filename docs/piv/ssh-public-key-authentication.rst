@@ -92,10 +92,12 @@ SIGN``); everything else is identical to ``cryptnox-default``. See
 This only applies at **pre-personalization** — it defines the key's role at
 the structural level, not something a later ``piv perso`` step can change.
 If your card already has a different profile applied (e.g. it already went
-through :doc:`/piv/quick-start-a-working-piv-card` on 9C), it needs a factory-level applet
-reinstall before this profile can be loaded — that's a manufacturing
-operation outside this guide's (and this CLI's) scope; a blank/pre-perso
-card needs no such step.
+through :doc:`/piv/quick-start-a-working-piv-card` on 9C), this profile
+cannot be loaded over it: existing key objects keep their role, and
+``--create-key-object`` creates new ones with the default profile's roles
+(AUTHENTICATE only on 9A). A full reset of the PIV applet is a Cryptnox
+operation: contact Cryptnox support. A blank/pre-perso card needs no such
+step.
 
 .. code-block:: console
 
