@@ -178,7 +178,8 @@ coexists on 9A — see the
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p><code class="docutils literal notranslate"><span class="pre">finalize</span></code> is <strong>irreversible</strong> — it locks the applet’s structure for the
-card’s lifetime (recovery means reinstalling the applet). It is gated by a
+card’s lifetime. A full reset of the PIV applet is a Cryptnox operation:
+contact Cryptnox support. It is gated by a
 typed confirmation token when run interactively, or the
 <code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code> flag when run non-interactively —
 either satisfies the gate. Never run it on a card you are still developing

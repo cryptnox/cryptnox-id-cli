@@ -195,8 +195,9 @@ prompts or the <code class="docutils literal notranslate"><span class="pre">CRYP
 <p>The PUK has its own retry counter, and every wrong PUK — entered through
 <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">unblock</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">puk</span> <span class="pre">change</span></code>, or any other tool — consumes one
 retry. Exhausting the PUK retries is <strong>permanent</strong>: a blocked PUK has no
-recovery path short of reinstalling the applet, which erases all keys and
-certificates. Check <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">status</span></code> (non-decrementing) before guessing.</p>
+recovery path. A full reset of the PIV applet, which erases all keys and
+certificates, is a Cryptnox operation (contact Cryptnox support). Check
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">status</span></code> (non-decrementing) before guessing.</p>
 </div>
 </section>
 <section id="admin-channel">

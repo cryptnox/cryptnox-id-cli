@@ -337,7 +337,8 @@ Finalizing is a manufacturing operation and is irreversible. See
 <a class="reference internal" href="../factory/factory-commands.html"><span class="doc">Factory commands</span></a>.</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">finalize</span></code> transitions the applet to its <code class="docutils literal notranslate"><span class="pre">SECURED</span></code> operational state. It
-is irreversible — recovery is a full applet reinstall. Interactively it asks
+is irreversible; a full reset of the PIV applet is a Cryptnox operation
+(contact Cryptnox support). Interactively it asks
 you to type the token <code class="docutils literal notranslate"><span class="pre">FINALIZE-PIV</span></code>; non-interactively it requires the
 <code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code> flag instead — either satisfies the
 gate.</p>

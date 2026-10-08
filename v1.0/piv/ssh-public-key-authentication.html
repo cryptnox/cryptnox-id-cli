@@ -232,10 +232,12 @@ profile changes only 9A’s <code class="docutils literal notranslate"><span cla
 <p>This only applies at <strong>pre-personalization</strong> — it defines the key’s role at
 the structural level, not something a later <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code> step can change.
 If your card already has a different profile applied (e.g. it already went
-through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> on 9C), it needs a factory-level applet
-reinstall before this profile can be loaded — that’s a manufacturing
-operation outside this guide’s (and this CLI’s) scope; a blank/pre-perso
-card needs no such step.</p>
+through <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> on 9C), this profile
+cannot be loaded over it: existing key objects keep their role, and
+<code class="docutils literal notranslate"><span class="pre">--create-key-object</span></code> creates new ones with the default profile’s roles
+(AUTHENTICATE only on 9A). A full reset of the PIV applet is a Cryptnox
+operation: contact Cryptnox support. A blank/pre-perso card needs no such
+step.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ssh<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-puk<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-pin<span class="w"> </span>--default-keys

@@ -271,10 +271,11 @@ object that must not be wrapped in a <code class="docutils literal notranslate">
 against OpenFIPS201 v2. A malformed (<code class="docutils literal notranslate"><span class="pre">53</span></code>-wrapped) Discovery Object is
 worse than an absent one: the Windows inbox PIV minidriver rejects the
 whole card. This tool never writes that form.</p>
-<p>The container also cannot be removed afterwards, because <code class="docutils literal notranslate"><span class="pre">load-config</span></code>
-stops at the first element that already exists. Recovering a card requires
-reinstalling the PIV applet, which erases its keys and certificates.
-Discovery is optional in PIV, and a card without it works normally.</p>
+<p>The container also cannot be removed afterwards: existing elements cannot
+be changed or removed, only new ones added, and <code class="docutils literal notranslate"><span class="pre">load-config</span></code> stops at
+the first element that already exists. A full reset of the PIV applet
+erases its keys and certificates and is a Cryptnox operation (contact
+Cryptnox support).</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">from_yaml</span></code> rejects unknown mode/role/mechanism names and validates the
 whole profile before anything is sent to a card:</p>
