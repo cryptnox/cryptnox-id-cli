@@ -67,6 +67,8 @@ def command(app: AppContext) -> None:
             if state.piv_pin and state.piv_pin.configured:
                 tries = state.piv_pin.retries
                 piv_detail += f", PIN {tries} tries" if tries is not None else ", PIN set"
+            if state.piv_secured:
+                piv_detail += ", finalized"
         table.add_row("PIV", state_style(state.piv.label), piv_detail or "-")
         # FIDO
         fido_detail = ", ".join(state.fido_versions) if state.fido_versions else ""

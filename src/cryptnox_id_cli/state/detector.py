@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 
 from cryptnox_id_cli.applets.genuine.genuine import GenuinenessApplet
+from cryptnox_id_cli.applets.piv import inventory
 from cryptnox_id_cli.applets.piv import objects as piv_obj
 from cryptnox_id_cli.applets.piv.constants import REF_PIV_PIN, REF_PUK
 from cryptnox_id_cli.applets.piv.piv import PivApplet
@@ -96,6 +97,14 @@ class StateDetector:
         st.piv_apt = apt
         st.piv = PivState.SELECTABLE
 
+        status = None
+        with contextlib.suppress(CryptnoxError):
+            status = inventory.read_status(piv)
+        if status is None:
+            st.notes.append("Finalized (SECURED) state not readable from this applet.")
+        else:
+            st.piv_secured = status.secured
+
         with contextlib.suppress(CryptnoxError):
             st.piv_pin = piv.pin_status(REF_PIV_PIN)
             st.piv_puk = piv.pin_status(REF_PUK)
@@ -123,11 +132,6 @@ class StateDetector:
             st.piv = PivState.PERSONALIZED
         else:
             st.piv = PivState.PARTIALLY_PERSONALIZED
-        if st.piv in (PivState.PRE_PERSONALIZED, PivState.PARTIALLY_PERSONALIZED):
-            st.notes.append(
-                "PIV SECURED (locked) state cannot be confirmed read-only; "
-                "it requires opening the admin channel (Phase 3.5)."
-            )
 
     # ----------------------------------------------------------------- FIDO #
     def _detect_fido(self, st: CardState) -> None:

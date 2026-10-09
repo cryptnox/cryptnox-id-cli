@@ -80,6 +80,7 @@ READ_ONLY = frozenset(
         "piv discover",
         "piv export-attestation",
         "piv info",
+        "piv inventory",
         "piv objects list",
         "piv objects read",
         "piv perso generate-ccc",

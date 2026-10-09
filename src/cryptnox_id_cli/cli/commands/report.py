@@ -61,6 +61,7 @@ def _piv_section(app: AppContext) -> dict[str, object]:
         "pin": st.piv_pin.to_dict() if st.piv_pin else None,
         "puk": st.piv_puk.to_dict() if st.piv_puk else None,
         "objects_present": st.piv_objects,
+        "secured": st.piv_secured,
         "notes": st.notes,
     }
 

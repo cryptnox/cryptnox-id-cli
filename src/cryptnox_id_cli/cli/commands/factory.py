@@ -19,6 +19,7 @@ from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
 from cryptnox_id_cli.applets.piv.admin import PivAdmin, scp_label
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
+from cryptnox_id_cli.applets.piv.ssd import SecurityDomainInfo, describe_security_domain
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.secrets.resolver import resolve_mgmt_key, resolve_scp03_keys
 from cryptnox_id_cli.state import StateDetector
@@ -87,31 +88,46 @@ def _mgmt_key_line(mgmt: dict[str, object] | None) -> str:
     return f"{name}, {'value set' if mgmt['value_set'] else 'no value'}"
 
 
+def _domain_line(domain: SecurityDomainInfo | None) -> str:
+    if domain is None:
+        return "not determined (no security domain selectable)"
+    if not domain.keys:
+        return f"{domain.aid_hex}, key table withheld (SW={domain.key_table_sw:04X})"
+    versions = ", ".join(
+        f"{v} ({len(keys)} x {keys[0].type_name} {keys[0].length} B)"
+        for v in domain.key_versions
+        for keys in [domain.keys_for(v)]
+    )
+    return f"{scp_label(domain.scp_version)} via {domain.aid_hex}; key version(s) {versions}"
+
+
+def _secured_word(secured: bool | None) -> str:
+    return "undetermined" if secured is None else ("yes" if secured else "no")
+
+
 # --------------------------------------------------------------------------- #
 @preperso.command("status")
 @click.pass_obj
 def status(app: AppContext) -> None:
-    """Show whether pre-personalization is still possible on this card."""
+    """Show whether pre-personalization is still possible on this card (no authentication)."""
     with app.open_session() as session:
         st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
-        scp_supported = False
-        scp_version = None
         try:
-            probe = PivAdmin(session).initialize_update_probe()
-            scp_supported = bool(probe.get("supported"))
-            scp_version = probe.get("scp_version")
+            domain = describe_security_domain(session)
         except CryptnoxError:
-            scp_supported = False
+            domain = None
         mgmt = _probe_mgmt_key(session)
+    selectable = st.piv not in (PivState.NOT_PRESENT, PivState.UNKNOWN)
     # Same gate as the finalize command: selectable and not yet SECURED.
-    finalize_allowed = st.piv not in (PivState.NOT_PRESENT, PivState.UNKNOWN, PivState.SECURED)
-    load_config_allowed = st.piv == PivState.PRE_PERSONALIZED
-    scp_ver_label = scp_label(scp_version)
+    finalize_allowed = selectable and not st.piv_secured
+    load_config_allowed = st.piv == PivState.PRE_PERSONALIZED and not st.piv_secured
+    scp_version = scp_label(domain.scp_version) if domain and domain.scp_version else None
     payload = {
         "state": st.piv.label,
-        "scp03_available": scp_supported,  # kept for back-compat; covers SCP02/SCP03
-        "scp_version": scp_ver_label if scp_supported else None,
-        "secured": st.piv == PivState.SECURED,
+        "scp03_available": domain is not None,  # kept for back-compat; covers SCP02/SCP03
+        "scp_version": scp_version,
+        "security_domain": domain.to_dict() if domain else None,
+        "secured": st.piv_secured,
         "finalize_allowed": finalize_allowed,
         "load_config_allowed": load_config_allowed,
         "management_key": mgmt,
@@ -119,12 +135,15 @@ def status(app: AppContext) -> None:
 
     def human(con: Console) -> None:
         con.print(f"PIV lifecycle state: [bold]{st.piv.label}[/bold]")
-        avail = f"yes ({scp_ver_label})" if scp_supported else "no"
-        con.print(f"  Admin secure channel available: {avail}")
-        con.print(f"  Finalized (SECURED): {'yes' if payload['secured'] else 'no/undetermined'}")
+        con.print(f"  Admin secure channel: {_domain_line(domain)}")
+        con.print(f"  Finalized (SECURED): {_secured_word(st.piv_secured)}")
         con.print(f"  Management key (9B): {_mgmt_key_line(mgmt)}")
         if load_config_allowed:
             con.print("  Pre-perso load-config: [green]allowed[/green] (no structure yet)")
+        elif st.piv_secured:
+            con.print(
+                "  Pre-perso load-config: [yellow]not allowed[/yellow], structure is finalized"
+            )
         else:
             con.print(
                 "  Pre-perso load-config: structure present; it can only add elements, "
@@ -132,6 +151,8 @@ def status(app: AppContext) -> None:
             )
         if finalize_allowed:
             con.print("  Finalize: [green]allowed[/green]")
+        elif st.piv_secured:
+            con.print("  Finalize: [yellow]not allowed[/yellow], already finalized")
         else:
             con.print(f"  Finalize: [yellow]not allowed[/yellow] in state {st.piv.label}")
 
@@ -428,7 +449,7 @@ def finalize(app: AppContext, understood: bool, default_keys: bool) -> None:
         raise CryptnoxError(
             f"Refusing to finalize: PIV applet is not selectable (state {st.piv.label})."
         )
-    if st.piv == PivState.SECURED:
+    if st.piv_secured:
         raise CryptnoxError("Applet is already SECURED (finalized) - nothing to do.")
 
     if app.dry_run:
@@ -462,10 +483,16 @@ def finalize(app: AppContext, understood: bool, default_keys: bool) -> None:
             # Surface as a non-zero exit so manufacturing automation detects the failure.
             raise StatusWordError(resp.sw1, resp.sw2, context="SECURE APPLET (finalize)")
         post = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
+    confirmed = "confirmed" if post.piv_secured else "not confirmed by the applet"
     app.out.result(
-        {"finalized": True, "sw": resp.sw_hex(), "state": post.piv.label},
+        {
+            "finalized": True,
+            "sw": resp.sw_hex(),
+            "state": post.piv.label,
+            "secured": post.piv_secured,
+        },
         lambda con: con.print(
-            f"[green]Applet finalized[/green] (SW={resp.sw_hex()}); state now {post.piv.label}. "
-            "Pre-personalization commands are no longer available."
+            f"[green]Applet finalized[/green] (SW={resp.sw_hex()}); state {post.piv.label}, "
+            f"SECURED {confirmed}. Pre-personalization commands are no longer available."
         ),
     )

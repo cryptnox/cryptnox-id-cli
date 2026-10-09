@@ -31,7 +31,6 @@ class PivState(str, Enum):
     PRE_PERSONALIZED = "pre_personalized"
     PARTIALLY_PERSONALIZED = "partially_personalized"
     PERSONALIZED = "personalized"
-    SECURED = "secured"
 
     @property
     def label(self) -> str:
@@ -42,7 +41,6 @@ class PivState(str, Enum):
             "pre_personalized": "PivPrePersonalized",
             "partially_personalized": "PivPartiallyPersonalized",
             "personalized": "PivPersonalized",
-            "secured": "PivSecured",
         }[self.value]
 
 
@@ -115,6 +113,8 @@ class CardState:
     piv_pin: PinStatus | None = None
     piv_puk: PinStatus | None = None
     piv_objects: dict[str, bool] = field(default_factory=dict)
+    #: finalized (SECURED) per the applet's own status object; None when not readable.
+    piv_secured: bool | None = None
     fido_versions: list[str] | None = None
     desfire_version: dict[str, object] | None = None
     genuine_leaf_subject: str | None = None
@@ -135,6 +135,7 @@ class CardState:
                 "pin": self.piv_pin.to_dict() if self.piv_pin else None,
                 "puk": self.piv_puk.to_dict() if self.piv_puk else None,
                 "objects_present": self.piv_objects,
+                "secured": self.piv_secured,
             },
             "fido": {"state": self.fido.label, "versions": self.fido_versions},
             "desfire": {"state": self.desfire.label, "version": self.desfire_version},

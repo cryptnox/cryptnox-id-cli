@@ -35,9 +35,16 @@ data objects. It decides what _does_ exist.
 _Avoid_: provisioning, enrollment
 
 **Personalization state**:
-A ladder, never a boolean: pre-personalized, partially personalized, personalized,
-secured (locked). Output state labels follow the ladder.
+A ladder, never a boolean: pre-personalized, partially personalized, personalized.
+Output state labels follow the ladder. Finalized (SECURED) is reported beside the
+ladder, not as a rung: finalize locks the structure only, so a secured applet can
+sit at any rung.
 _Avoid_: initialized, blank, done
+
+**Inventory**:
+The applet's own listing of its structure - key objects, verifiers, containers and
+config flags with their access rules - read without authentication.
+_Avoid_: dump, snapshot (export-config is a different, observed-state file)
 
 **Profile**:
 A named pre-personalization configuration, such as `cryptnox-default` or `ms-logon`.

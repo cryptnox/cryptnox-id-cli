@@ -19,6 +19,7 @@ from rich.console import Console
 
 from cryptnox_id_cli import CLI_NAME, trust
 from cryptnox_id_cli.applets.piv import constants as pivc
+from cryptnox_id_cli.applets.piv import inventory as inventory_mod
 from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as preperso_mod
@@ -32,6 +33,7 @@ from cryptnox_id_cli.applets.piv.objects import (
 )
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
+from cryptnox_id_cli.applets.piv.ssd import PIV_SSD_AID, describe_security_domain
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.crypto import csr as csr_mod
 from cryptnox_id_cli.crypto import piv_objects, x509util
@@ -115,11 +117,18 @@ def status(app: AppContext) -> None:
         "pin": st.piv_pin.to_dict() if st.piv_pin else None,
         "puk": st.piv_puk.to_dict() if st.piv_puk else None,
         "objects_present": st.piv_objects,
+        "secured": st.piv_secured,
         "notes": st.notes,
     }
 
     def human(c: Console) -> None:
         c.print(f"[bold]PIV state:[/bold] {state_style(st.piv.label)}")
+        if st.piv_secured is None:
+            c.print("  Structure: finalize state not readable")
+        elif st.piv_secured:
+            c.print("  Structure: finalized (SECURED), no further pre-personalization")
+        else:
+            c.print("  Structure: not finalized")
         if st.piv_pin:
             extra = f", {st.piv_pin.retries} tries left" if st.piv_pin.retries is not None else ""
             blocked = " [red](blocked)[/red]" if st.piv_pin.blocked else ""
@@ -198,6 +207,114 @@ def slots(app: AppContext) -> None:
         c.print(table)
 
     app.out.result({"slots": rows}, human)
+
+
+def _mode_cell(mode: int) -> str:
+    return f"{inventory_mod.describe_mode(mode)} ({mode:02X})"
+
+
+@command.command("inventory")
+@click.pass_obj
+def inventory(app: AppContext) -> None:
+    """List the applet's structure with its access rules (no authentication).
+
+    Key objects, verifiers and containers as the applet itself reports them, plus
+    its version, state and config flags.
+    """
+    with app.open_session() as session:
+        inv = inventory_mod.read_inventory(_select(session))
+
+    def human(c: Console) -> None:
+        ver = inv.version
+        c.print(f"[bold]{ver.label} {ver.version}[/bold]" if ver else "[bold]PIV applet[/bold]")
+        if inv.status:
+            s = inv.status
+            finalized = "finalized (SECURED)" if s.secured else "not finalized"
+            c.print(f"  State:     {inventory_mod.describe_state(s.state)}, {finalized}")
+            interface = "contactless" if s.contactless else "contact"
+            c.print(f"  Interface: {interface}; FIPS mode {'on' if s.fips_mode else 'off'}")
+        if inv.config:
+            flags = ", ".join(
+                f"{name.replace('_', '-')}={'on' if on else 'off'}"
+                for name, on in inv.config.to_dict().items()
+            )
+            c.print(f"  Config:    {flags}")
+        if inv.restricted:
+            c.print(
+                "\n[yellow]The applet withholds its structure (restrict-enumeration is "
+                "set); listing key objects, verifiers and containers needs the admin "
+                "channel.[/yellow]"
+            )
+        if inv.keys is not None:
+            table = app.out.table(
+                "Slot",
+                "Name",
+                "Mechanism",
+                "Roles",
+                "Attributes",
+                "Contact",
+                "Contactless",
+                "Admin",
+                title=f"Key objects ({len(inv.keys)})",
+            )
+            for k in inv.keys:
+                table.add_row(
+                    f"{k.ref:02X}",
+                    k.slot_name,
+                    k.mechanism_name,
+                    "+".join(inventory_mod.role_names(k.role)) or "none",
+                    "+".join(inventory_mod.attribute_names(k.attributes)) or "none",
+                    _mode_cell(k.mode_contact),
+                    _mode_cell(k.mode_contactless),
+                    f"{k.admin_key:02X}",
+                )
+            c.print(table)
+        if inv.verifiers is not None:
+            table = app.out.table(
+                "Ref",
+                "Name",
+                "Contact",
+                "Contactless",
+                "Length",
+                "Retries",
+                "Rules",
+                title=f"Verifiers ({len(inv.verifiers)})",
+            )
+            for v in inv.verifiers:
+                rules = (
+                    f"charset={v.charset:02X} history={v.history} sequence={v.sequence} "
+                    f"repeat={v.repeat} restrict-update={'yes' if v.restrict_update else 'no'}"
+                )
+                table.add_row(
+                    f"{v.ref:02X}",
+                    v.name,
+                    _mode_cell(v.mode_contact),
+                    _mode_cell(v.mode_contactless),
+                    f"{v.min_length}-{v.max_length}",
+                    f"{v.retries_contact}/{v.retries_contactless}",
+                    rules,
+                )
+            c.print(table)
+        if inv.containers is not None:
+            table = app.out.table(
+                "OID",
+                "Name",
+                "Contact",
+                "Contactless",
+                "Admin",
+                title=f"Containers ({len(inv.containers)})",
+            )
+            for o in inv.containers:
+                table.add_row(
+                    o.oid_hex,
+                    o.name,
+                    _mode_cell(o.mode_contact),
+                    _mode_cell(o.mode_contactless),
+                    f"{o.admin_key:02X}",
+                )
+            c.print(table)
+
+    app.out.result(inv.to_dict(), human)
 
 
 # ------------------------------------------------------------------ certs --- #
@@ -724,28 +841,32 @@ def admin() -> None:
 
 
 @admin.command("status")
-@click.option("--key-version", default=0, type=int, help="SCP03 key version (default 0).")
 @click.pass_obj
-def admin_status(app: AppContext, key_version: int) -> None:
-    """Probe the SCP03 admin channel (read-only INITIALIZE UPDATE, no auth)."""
+def admin_status(app: AppContext) -> None:
+    """Show the admin security domain's SCP version and key versions (no authentication)."""
     with app.open_session() as session:
-        adm = PivAdmin(session)
-        adm.select()
-        info = adm.initialize_update_probe(key_version=key_version)
+        domain = describe_security_domain(session)
+    if domain is None:
+        raise CryptnoxError(
+            "No security domain answered: neither the PIV security domain "
+            f"({PIV_SSD_AID.hex().upper()}) nor the ISD is selectable on this interface."
+        )
 
     def human(c: Console) -> None:
-        scp_id = info.get("scp_id")
-        label = scp_label(scp_id)
-        c.print(f"PIV admin secure channel ({label}):")
-        if isinstance(scp_id, int):
-            c.print(f"  SCP ID:      {scp_id:#04x} ({label})")
-        c.print(f"  key version: {info.get('key_version')}")
-        i_param = info.get("scp_i")
-        if isinstance(i_param, int):
-            c.print(f"  i-param:     {i_param:#04x}")
-        c.print("  INITIALIZE UPDATE supported - run `piv admin authenticate` to open it.")
+        c.print(f"PIV admin security domain {domain.aid_hex} ({scp_label(domain.scp_version)}):")
+        if not domain.keys:
+            c.print(f"  key table withheld (SW={domain.key_table_sw:04X})")
+        else:
+            table = app.out.table("Key version", "Key ID", "Type", "Length")
+            for k in domain.keys:
+                table.add_row(str(k.key_version), str(k.key_id), k.type_name, f"{k.length} B")
+            c.print(table)
+        c.print(
+            "  Read without authenticating; nothing counted against the card's "
+            "failed-authentication limit. Run `piv admin authenticate` to open the channel."
+        )
 
-    app.out.result(info, human)
+    app.out.result(domain.to_dict(), human)
 
 
 @admin.command("authenticate")

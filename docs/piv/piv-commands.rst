@@ -23,8 +23,16 @@ Inspection
    piv status          lifecycle state, PIN/PUK status, object presence
    piv discover        the Discovery object (PIN usage policy)
    piv slots           key slots and which hold a certificate
+   piv inventory       key objects, verifiers, containers and config, with access rules
    piv validate        consistency check (NOT a NIST/FIPS validation)
    piv quickstart      one-shot personalization (see the PIV quick start)
+
+``piv inventory`` is the applet's own listing of its structure, read without
+authentication: every key object with its mechanism, roles, attributes and access
+modes, every verifier with its length and retry limits, every container with its
+access modes, plus the applet version, its finalize state and its config flags.
+An applet whose ``restrict-enumeration`` flag is set withholds the structure
+(``6986``) and the command says so; version, state and config still answer.
 
 PIN
 ---
@@ -65,8 +73,13 @@ Admin channel
 
 .. code-block:: text
 
-   piv admin status        probe the SCP03 channel (read-only)
+   piv admin status        the admin security domain: SCP version, key versions (no auth)
    piv admin authenticate  open the channel (mutual auth) + harmless self-test
+
+``piv admin status`` selects the PIV security domain and reads its key information
+template. It never sends INITIALIZE UPDATE: on this chip an INITIALIZE UPDATE that is
+not followed by a successful EXTERNAL AUTHENTICATE counts as a failed authentication,
+and a status read must not spend one.
 
 Certificates and objects
 ------------------------
