@@ -78,6 +78,10 @@ The slot's key has the wrong role. Signing needs a **SIGN-role** slot such as
 default-profile 9A is AUTHENTICATE-only and refuses ``GENERAL AUTHENTICATE``
 signing. See :doc:`/factory/pre-personalization-profiles`.
 
+**``6986`` on ``piv inventory``.**
+The applet's ``restrict-enumeration`` config flag is set, so the structure
+listing needs the admin role. Version, state and config are still readable.
+
 **``0xAE AUTHENTICATION_ERROR`` on ``mifare app delete``.**
 Deleting an application requires authentication. Pass ``--zero-key`` (factory
 default) or ``--key-env NAME``; the CLI then authenticates and sends a MACed

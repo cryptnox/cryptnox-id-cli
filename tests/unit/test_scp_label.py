@@ -1,6 +1,6 @@
 """`scp_label` is the single place that turns an SCP version byte into a display
 name. Its callers hand it loosely-typed values -- `PivAdmin.scp_version` (None until a
-channel is open) and entries out of an `initialize_update_probe` payload -- so the
+channel is open) and the version a security domain's key table implies -- so the
 "not a known version byte" paths matter as much as the two happy ones."""
 
 import pytest

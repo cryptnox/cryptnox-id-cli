@@ -36,8 +36,8 @@ _SCP_LABELS = {SCP02: "SCP02", SCP03: "SCP03"}
 
 def scp_label(value: object) -> str:
     """Human-readable SCP version label. ``value`` is untyped at the call sites
-    (loosely-typed probe dicts, optional session attributes), so narrow here
-    instead of duplicating the isinstance check at every caller."""
+    (optional session attributes, inferred versions), so narrow here instead of
+    duplicating the isinstance check at every caller."""
     return _SCP_LABELS.get(value, "unknown") if isinstance(value, int) else "unknown"
 
 
@@ -62,30 +62,6 @@ class PivAdmin:
         )
         if not resp.ok:
             raise Scp03Error(f"SELECT PIV failed (SW={resp.sw_hex()}).")
-
-    def initialize_update_probe(self, key_version: int = 0) -> dict[str, object]:
-        """Read-only probe: INITIALIZE UPDATE only (auth not completed).
-
-        Reports the SCP version from ``keyInfo[1]`` so the caller can tell an SCP02 card
-        (28-byte body) from an SCP03 one (29/32-byte body)."""
-        resp = self.card.transmit(
-            APDU(0x80, 0x50, key_version, 0x00, data=bytes(8), le=256),
-            context="INITIALIZE UPDATE (probe)",
-        )
-        if not resp.ok:
-            raise Scp03Error(f"INITIALIZE UPDATE not supported / failed (SW={resp.sw_hex()}).")
-        b = resp.data
-        scp_id = b[11] if len(b) > 11 else None
-        # SCP03 puts the i-param at body[12]; SCP02 body[12:14] is the sequence counter.
-        scp_i = b[12] if (scp_id == SCP03 and len(b) > 12) else None
-        return {
-            "supported": (scp_id == SCP03 and len(b) >= 29) or (scp_id == SCP02 and len(b) >= 28),
-            "scp_version": scp_id,
-            "key_version": b[10] if len(b) > 10 else None,
-            "scp_id": scp_id,
-            "scp_i": scp_i,
-            "key_diversification": b[0:10].hex().upper(),
-        }
 
     def open(
         self,

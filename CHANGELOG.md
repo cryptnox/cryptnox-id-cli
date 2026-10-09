@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `piv inventory`: the applet's key objects, verifiers, containers and config
+  flags with their access rules, read without authentication.
+- The finalized (SECURED) state, read from the applet's status object, in
+  `piv status`, `info`, `report` and `factory piv preperso status`.
 - `RSA4096` in `perso generate-key`, `perso import-key`, CSR and
   self-signed-cert signing, and profile key mechanisms.
 - `perso generate-key --create-key-object`, the dev/eval fallback
@@ -21,12 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `factory piv preperso status` reports whether 9B holds a value.
 - `PIV_MGMT_KEY` (hex) for the PIV management key, next to `PIV_SCP03_*`.
 
+### Changed
+
+- `piv admin status` and `factory piv preperso status` read the admin security
+  domain's SCP version and key versions from its key information template
+  instead of sending INITIALIZE UPDATE, which this chip counts as a failed
+  authentication. `piv admin status --key-version` is gone.
+
 ### Removed
 
 - `transport.pcsc.list_reader_names()`; `reader_states()` returns the same
   names with card presence and ATR.
 
 ### Fixed
+
+- `factory piv preperso status` reported the SCP version of whatever applet was
+  selected last, not the PIV security domain's.
 
 - `factory piv preperso load-config` warns that structural operations are
   permanent (existing elements cannot be changed or removed; only new ones can

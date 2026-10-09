@@ -67,9 +67,6 @@ class FakeAdmin:
     def select(self) -> None:
         self.events.append("select")
 
-    def initialize_update_probe(self, key_version: int = 0) -> dict[str, object]:
-        return {"supported": True, "scp_version": 0x03}
-
     def open(self, keys) -> None:
         self.events.append("open")
 
@@ -210,9 +207,11 @@ def test_status_reports_whether_9b_holds_a_value(monkeypatch):
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
     monkeypatch.setattr(factory_cmd, "PivAdmin", lambda s: adm)
+    monkeypatch.setattr(factory_cmd, "describe_security_domain", lambda s: None)
 
     class _State:
         piv = factory_cmd.PivState.PRE_PERSONALIZED
+        piv_secured = None
 
     monkeypatch.setattr(
         factory_cmd, "StateDetector", lambda *a, **kw: type("D", (), {"detect": lambda s: _State})()

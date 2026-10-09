@@ -86,6 +86,15 @@ def get_data_apdu(oid: bytes) -> APDU:
     return APDU(0x00, c.INS_GET_DATA, 0x3F, 0xFF, data=tag_list, le=256)
 
 
+def get_data_extended_apdu(ident: int, index: int = 0) -> APDU:
+    """GET DATA for a vendor ``2F47xx`` identifier. ``index`` (P2) picks the entry of
+    a structure listing; P2 = FF would address a standard object instead."""
+    if not 0 <= index < 0xFF:
+        raise ValueError("index must be 0..254")
+    tag_list = bytes([0x5C, 0x03, 0x2F, (ident >> 8) & 0xFF, ident & 0xFF])
+    return APDU(0x00, c.INS_GET_DATA, 0x3F, index, data=tag_list, le=256)
+
+
 def unwrap(oid: bytes, data: bytes) -> bytes:
     """Strip the outer tag-0x53 wrapper for standard objects; pass discovery through."""
     if oid == bytes([TAG_DISCOVERY]):

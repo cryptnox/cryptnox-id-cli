@@ -18,6 +18,13 @@ manufacturing procedure outside this documentation.
    factory piv preperso set-mgmt-key      load the PIV management key (9B) value
    factory piv preperso finalize          IRREVERSIBLY lock the applet structure
 
+``status`` never authenticates: the finalize (SECURED) state comes from the
+applet's own status object, and the admin security domain's SCP version and key
+versions from its key information template. On this chip an INITIALIZE UPDATE
+that is not followed by a successful EXTERNAL AUTHENTICATE counts as a failed
+authentication, so a read-only status must not send one. ``piv inventory`` lists
+the structure itself.
+
 ``load-config`` sends one structural operation per SCP03 session (a platform
 requirement of this card), so a profile load is a sequence of short commands;
 it stops at the first rejection and reports exactly what was applied.
