@@ -212,6 +212,9 @@ certificates, is a Cryptnox operation (contact Cryptnox support). Check
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv admin status        the admin security domain: SCP version, key versions (no auth)
 piv admin keys          its key table; --check-default tests key version 1 (one attempt)
 piv admin authenticate  open the channel (mutual auth) + harmless self-test
+piv admin rotate-keys   replace key version 1 in place (new keys from PIV_SCP03_NEW_*)
+piv admin delete-factory-keyset
+                        IRREVERSIBLY delete key version 2, Cryptnox's keyset
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">status</span></code> selects the PIV security domain and reads its key information
@@ -224,6 +227,27 @@ means anyone can administer the PIV applet, and leaves the card’s
 failed-authentication count clear; a wrong key costs one failed authentication,
 which the next successful <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">authenticate</span></code> clears. It never tries more
 than that one key, and skips the check when the table has no key version 1.</p>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">rotate-keys</span></code> replaces key version 1 of the PIV security domain in
+place: one PUT KEY carrying ENC, MAC and DEK, encrypted under the current DEK,
+with the key version byte left at 1. The current keys come from <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>
+or <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code>; the new ones from
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_NEW_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_NEW_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_NEW_DEK</span></code> (hex, 16
+bytes each), never the command line. The command reads the key table first,
+refuses to write anything but key version 1, compares the key check values the
+card echoes with its own, authenticates once with the new keys, and re-reads the
+table to confirm key version 2 is as it was. Key version 2 is Cryptnox’s keyset
+for remote reset and attestation; the command never addresses it. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code>
+prints the plan with the new keys’ check values and sends nothing. A refused PUT
+KEY writes nothing, so the current keys still work. The new keys take the type the
+domain speaks, DES on SCP02 and AES on SCP03: a domain is bound to one of the two
+when it is created, and a keyset of the other type is accepted by the card yet can
+never open a session afterwards.</p>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">delete-factory-keyset</span></code> deletes key version 2 (DELETE KEY by key
+version), authenticated with key version 1 from the <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_*</span></code> variables.
+It refuses while those are the publicly known test keys, and needs the typed
+confirmation <code class="docutils literal notranslate"><span class="pre">DELETE-FACTORY-KEYSET</span></code> or <code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code>.
+Afterwards Cryptnox’s remote reset and attestation cannot reach the card; key
+version 1 is the only way left to administer the PIV applet.</p>
 </section>
 <section id="certificates-and-objects">
 <h2>Certificates and objects<a class="headerlink" href="#certificates-and-objects" title="Link to this heading"></a></h2>
