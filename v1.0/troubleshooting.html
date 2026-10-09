@@ -209,6 +209,9 @@ The slot’s key has the wrong role. Signing needs a <strong>SIGN-role</strong> 
 <strong>9C</strong> (or a 9A provisioned with the <code class="docutils literal notranslate"><span class="pre">ssh</span></code> / <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile); a
 default-profile 9A is AUTHENTICATE-only and refuses <code class="docutils literal notranslate"><span class="pre">GENERAL</span> <span class="pre">AUTHENTICATE</span></code>
 signing. See <a class="reference internal" href="factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p>
+<p><strong>``6986`` on ``piv inventory``.</strong>
+The applet’s <code class="docutils literal notranslate"><span class="pre">restrict-enumeration</span></code> config flag is set, so the structure
+listing needs the admin role. Version, state and config are still readable.</p>
 <p><strong>``0xAE AUTHENTICATION_ERROR`` on ``mifare app delete``.</strong>
 Deleting an application requires authentication. Pass <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (factory
 default) or <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code>; the CLI then authenticates and sends a MACed
