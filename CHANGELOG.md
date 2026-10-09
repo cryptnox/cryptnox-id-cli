@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `piv status`, `info`, `report` and `factory piv preperso status`.
 - `piv admin keys`: the admin security domain's key table; `--check-default`
   authenticates once to key version 1 with the GlobalPlatform default key.
+- `piv admin rotate-keys`: replace key version 1 of the PIV security domain in
+  place; new keys from `PIV_SCP03_NEW_ENC` / `_MAC` / `_DEK`, key version 2
+  never addressed, key check values and a fresh authentication verified after.
+- `piv admin delete-factory-keyset`: delete key version 2 after a typed
+  confirmation; refuses while key version 1 is still the test key.
 - `RSA4096` in `perso generate-key`, `perso import-key`, CSR and
   self-signed-cert signing, and profile key mechanisms.
 - `perso generate-key --create-key-object`, the dev/eval fallback
@@ -43,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `factory piv preperso status` reported the SCP version of whatever applet was
   selected last, not the PIV security domain's.
+- `cryptography>=43` is now required: the SCP02 code imports its `decrepit`
+  3DES module, which older releases do not have, so an install on a system
+  with cryptography 41 failed at start-up.
 
 - `factory piv preperso load-config` warns that structural operations are
   permanent (existing elements cannot be changed or removed; only new ones can

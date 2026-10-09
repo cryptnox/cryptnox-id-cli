@@ -76,6 +76,9 @@ Admin channel
    piv admin status        the admin security domain: SCP version, key versions (no auth)
    piv admin keys          its key table; --check-default tests key version 1 (one attempt)
    piv admin authenticate  open the channel (mutual auth) + harmless self-test
+   piv admin rotate-keys   replace key version 1 in place (new keys from PIV_SCP03_NEW_*)
+   piv admin delete-factory-keyset
+                           IRREVERSIBLY delete key version 2, Cryptnox's keyset
 
 ``piv admin status`` selects the PIV security domain and reads its key information
 template. It never sends INITIALIZE UPDATE: on this chip an INITIALIZE UPDATE that is
@@ -88,6 +91,29 @@ means anyone can administer the PIV applet, and leaves the card's
 failed-authentication count clear; a wrong key costs one failed authentication,
 which the next successful ``piv admin authenticate`` clears. It never tries more
 than that one key, and skips the check when the table has no key version 1.
+
+``piv admin rotate-keys`` replaces key version 1 of the PIV security domain in
+place: one PUT KEY carrying ENC, MAC and DEK, encrypted under the current DEK,
+with the key version byte left at 1. The current keys come from ``--default-keys``
+or ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK``; the new ones from
+``PIV_SCP03_NEW_ENC`` / ``PIV_SCP03_NEW_MAC`` / ``PIV_SCP03_NEW_DEK`` (hex, 16
+bytes each), never the command line. The command reads the key table first,
+refuses to write anything but key version 1, compares the key check values the
+card echoes with its own, authenticates once with the new keys, and re-reads the
+table to confirm key version 2 is as it was. Key version 2 is Cryptnox's keyset
+for remote reset and attestation; the command never addresses it. ``--dry-run``
+prints the plan with the new keys' check values and sends nothing. A refused PUT
+KEY writes nothing, so the current keys still work. The new keys take the type the
+domain speaks, DES on SCP02 and AES on SCP03: a domain is bound to one of the two
+when it is created, and a keyset of the other type is accepted by the card yet can
+never open a session afterwards.
+
+``piv admin delete-factory-keyset`` deletes key version 2 (DELETE KEY by key
+version), authenticated with key version 1 from the ``PIV_SCP03_*`` variables.
+It refuses while those are the publicly known test keys, and needs the typed
+confirmation ``DELETE-FACTORY-KEYSET`` or ``--i-understand-this-is-irreversible``.
+Afterwards Cryptnox's remote reset and attestation cannot reach the card; key
+version 1 is the only way left to administer the PIV applet.
 
 Certificates and objects
 ------------------------
