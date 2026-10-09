@@ -119,7 +119,9 @@ throwaway dev root: ``genuine verify --anchors <dev-ca-dir>``.
 **Genuineness is not the ISD / PIV-SSD check.**
 ``genuine verify`` proves the attestation applet's device key and certificate
 chain. It does **not** verify the per-card ISD or PIV-SSD keys (KDF/HSM-derived)
-— this tool has no access to those secrets, and the output says so.
+— this tool has no access to those secrets, and the output says so. The
+per-card PIV-SSD key set is key version 2 of the PIV security domain; see
+:ref:`piv-admin-key-rotation` for what it is and why to leave it in place.
 
 yubico-piv-tool interop
 -------------------------
