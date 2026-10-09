@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flags with their access rules, read without authentication.
 - The finalized (SECURED) state, read from the applet's status object, in
   `piv status`, `info`, `report` and `factory piv preperso status`.
+- `piv admin keys`: the admin security domain's key table; `--check-default`
+  authenticates once to key version 1 with the GlobalPlatform default key.
 - `RSA4096` in `perso generate-key`, `perso import-key`, CSR and
   self-signed-cert signing, and profile key mechanisms.
 - `perso generate-key --create-key-object`, the dev/eval fallback

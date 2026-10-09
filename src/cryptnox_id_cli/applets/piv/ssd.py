@@ -17,6 +17,11 @@ from cryptnox_id_cli.util import tlv
 PIV_SSD_AID = bytes.fromhex("A00000015153504101")
 ISD_AID = bytes.fromhex("A000000151000000")
 
+#: Key version the card ships with on the public GlobalPlatform test key; the one a
+#: customer replaces. Version 2 is Cryptnox's own keyset and is left alone.
+CUSTOMER_KEY_VERSION = 1
+CRYPTNOX_KEY_VERSION = 2
+
 TAG_KEY_INFO_TEMPLATE = 0xE0
 TAG_KEY_INFO = 0xC0
 

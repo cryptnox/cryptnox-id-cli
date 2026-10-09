@@ -36,6 +36,7 @@ PLANS_OWN = frozenset(
         "apdu transcript",
         "factory piv preperso finalize",
         "factory piv preperso load-config",
+        "piv admin keys",
         "piv perso import-key",
         "piv perso import-p12",
         "piv quickstart",
