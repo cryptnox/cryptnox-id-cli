@@ -1,17 +1,22 @@
-"""Keyless facts about the GlobalPlatform security domain that administers the PIV
-applet: which SCP it speaks and which key versions it holds.
+"""The GlobalPlatform security domain that administers the PIV applet: keyless facts
+(which SCP it speaks, which key versions it holds) and the key-management commands
+(PUT KEY, DELETE KEY) that a holder of its keys sends it.
 
-Both reads are plain GET DATA on the selected domain. No INITIALIZE UPDATE is sent,
-so nothing here counts against the card's failed-authentication limit.
+The facts are plain GET DATA on the selected domain. No INITIALIZE UPDATE is sent for
+them, so nothing there counts against the card's failed-authentication limit.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
 from cryptnox_id_cli.applets.piv.admin import SCP02, SCP03, scp_label
 from cryptnox_id_cli.transport.apdu import APDU, Response
 from cryptnox_id_cli.transport.pcsc import CardSession
+from cryptnox_id_cli.transport.scp03 import Scp03Keys
 from cryptnox_id_cli.util import tlv
 
 PIV_SSD_AID = bytes.fromhex("A00000015153504101")
@@ -26,6 +31,7 @@ TAG_KEY_INFO_TEMPLATE = 0xE0
 TAG_KEY_INFO = 0xC0
 
 # GlobalPlatform key type coding (GPCS 2.3, table 11-16).
+KEY_TYPE_DES = 0x80
 KEY_TYPE_AES = 0x88
 _DES_TYPES = frozenset({0x80, 0x81, 0x82, 0x83, 0x84})
 _KEY_TYPES = {
@@ -135,6 +141,67 @@ def read_key_information(session: CardSession) -> Response:
     return session.transmit(
         APDU(0x80, 0xCA, 0x00, TAG_KEY_INFO_TEMPLATE, le=256), context="GET DATA (key info)"
     )
+
+
+def kcv_des(key: bytes) -> bytes:
+    """GP key check value for a 2-key 3DES key: 3DES-ECB of eight zero bytes, first 3 bytes."""
+    enc = Cipher(TripleDES(key + key[:8]), modes.ECB()).encryptor()  # noqa: S304 - KCV
+    return (enc.update(bytes(8)) + enc.finalize())[:3]
+
+
+def kcv_aes(key: bytes) -> bytes:
+    """GP key check value for an AES key: AES-ECB of sixteen 0x01 bytes, first 3 bytes."""
+    enc = Cipher(algorithms.AES(key), modes.ECB()).encryptor()  # noqa: S305 - KCV
+    return (enc.update(b"\x01" * 16) + enc.finalize())[:3]
+
+
+def kcv(scp_version: int, key: bytes) -> bytes:
+    return kcv_aes(key) if scp_version == SCP03 else kcv_des(key)
+
+
+def encrypt_key_des(session_dek: bytes, key: bytes) -> bytes:
+    """SCP02 key data: 3DES-ECB under the session DEK."""
+    enc = Cipher(TripleDES(session_dek + session_dek[:8]), modes.ECB()).encryptor()  # noqa: S304
+    return enc.update(key) + enc.finalize()
+
+
+def encrypt_key_aes(dek: bytes, key: bytes) -> bytes:
+    """SCP03 key data: AES-CBC with a zero ICV under the static DEK."""
+    enc = Cipher(algorithms.AES(dek), modes.CBC(bytes(16))).encryptor()
+    return enc.update(key) + enc.finalize()
+
+
+def put_key_apdu(
+    scp_version: int,
+    dek: bytes,
+    new_keys: Scp03Keys,
+    *,
+    replace_version: int,
+    new_version: int,
+) -> tuple[APDU, list[bytes]]:
+    """PUT KEY writing ENC, MAC and DEK (key IDs 1-3) as ``new_version``.
+
+    ``replace_version`` is the version being replaced; 0 adds a new one. ``dek`` is the
+    key the new values travel under: the session DEK on SCP02, the static DEK on SCP03.
+    Returns the APDU and the three key check values the card echoes on success.
+    """
+    blocks = b""
+    kcvs: list[bytes] = []
+    for key in (new_keys.enc, new_keys.mac, new_keys.dek):
+        check = kcv(scp_version, key)
+        if scp_version == SCP03:
+            block = bytes([KEY_TYPE_AES, 0x11, 0x10]) + encrypt_key_aes(dek, key)
+        else:
+            block = bytes([KEY_TYPE_DES, 0x10]) + encrypt_key_des(dek, key)
+        blocks += block + bytes([0x03]) + check
+        kcvs.append(check)
+    # P2: bit 8 set = several keys follow, low bits = first key ID.
+    return APDU(0x80, 0xD8, replace_version, 0x81, data=bytes([new_version]) + blocks), kcvs
+
+
+def delete_key_version_apdu(version: int) -> APDU:
+    """DELETE every key of one key version (tag D2)."""
+    return APDU(0x80, 0xE4, 0x00, 0x00, data=bytes([0xD2, 0x01, version]))
 
 
 def describe_security_domain(

@@ -120,6 +120,29 @@ def resolve_scp03_keys(
     )
 
 
+#: The replacement admin keys for a rotation, hex, 16 bytes each.
+NEW_SCP03_KEY_ENVS = ("PIV_SCP03_NEW_ENC", "PIV_SCP03_NEW_MAC", "PIV_SCP03_NEW_DEK")
+
+
+def resolve_new_scp03_keys(redactor: Redactor) -> Scp03Keys:
+    """The keys a rotation writes: the three ``PIV_SCP03_NEW_*`` variables, never the
+    command line and never a default value."""
+    names = " / ".join(f"${v}" for v in NEW_SCP03_KEY_ENVS)
+    values: list[bytes] = []
+    for name in NEW_SCP03_KEY_ENVS:
+        raw = os.environ.get(name)
+        if not raw:
+            raise SecretInputError(
+                f"The new admin keys come from {names} (hex, 16 bytes each); set all three."
+            )
+        value = _hex_from_env(raw, f"${name}")
+        if len(value) != 16:
+            raise SecretInputError(f"${name} is {len(value)} bytes; each admin key is 16 bytes.")
+        redactor.register(value)
+        values.append(value)
+    return Scp03Keys(*values)
+
+
 def resolve_mgmt_key(
     redactor: Redactor,
     *,
