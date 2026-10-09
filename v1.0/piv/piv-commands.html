@@ -210,6 +210,7 @@ certificates, is a Cryptnox operation (contact Cryptnox support). Check
 <section id="admin-channel">
 <h2>Admin channel<a class="headerlink" href="#admin-channel" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv admin status        the admin security domain: SCP version, key versions (no auth)
+piv admin keys          its key table; --check-default tests key version 1 (one attempt)
 piv admin authenticate  open the channel (mutual auth) + harmless self-test
 </pre></div>
 </div>
@@ -217,6 +218,12 @@ piv admin authenticate  open the channel (mutual auth) + harmless self-test
 template. It never sends INITIALIZE UPDATE: on this chip an INITIALIZE UPDATE that is
 not followed by a successful EXTERNAL AUTHENTICATE counts as a failed authentication,
 and a status read must not spend one.</p>
+<p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">keys</span></code> lists the same table. With <code class="docutils literal notranslate"><span class="pre">--check-default</span></code> it authenticates
+once to key version 1 with the publicly known GlobalPlatform test key: a success
+means anyone can administer the PIV applet, and leaves the card’s
+failed-authentication count clear; a wrong key costs one failed authentication,
+which the next successful <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">authenticate</span></code> clears. It never tries more
+than that one key, and skips the check when the table has no key version 1.</p>
 </section>
 <section id="certificates-and-objects">
 <h2>Certificates and objects<a class="headerlink" href="#certificates-and-objects" title="Link to this heading"></a></h2>
