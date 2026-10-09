@@ -41,6 +41,11 @@ def scp_label(value: object) -> str:
     return _SCP_LABELS.get(value, "unknown") if isinstance(value, int) else "unknown"
 
 
+class InitializeUpdateRejected(Scp03Error):
+    """The security domain refused INITIALIZE UPDATE itself, before any cryptogram
+    was exchanged (for example an unknown key version)."""
+
+
 def _as_scp02_keys(keys: Scp03Keys | Scp02Keys) -> Scp02Keys:
     return keys if isinstance(keys, Scp02Keys) else Scp02Keys(keys.enc, keys.mac, keys.dek)
 
@@ -83,7 +88,7 @@ class PivAdmin:
             context="INITIALIZE UPDATE",
         )
         if not resp.ok:
-            raise Scp03Error(f"INITIALIZE UPDATE rejected (SW={resp.sw_hex()}).")
+            raise InitializeUpdateRejected(f"INITIALIZE UPDATE rejected (SW={resp.sw_hex()}).")
         body = resp.data
         if len(body) < 12:
             raise Scp03Error(f"INITIALIZE UPDATE response too short ({len(body)} bytes).")

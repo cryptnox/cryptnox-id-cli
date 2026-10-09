@@ -74,12 +74,20 @@ Admin channel
 .. code-block:: text
 
    piv admin status        the admin security domain: SCP version, key versions (no auth)
+   piv admin keys          its key table; --check-default tests key version 1 (one attempt)
    piv admin authenticate  open the channel (mutual auth) + harmless self-test
 
 ``piv admin status`` selects the PIV security domain and reads its key information
 template. It never sends INITIALIZE UPDATE: on this chip an INITIALIZE UPDATE that is
 not followed by a successful EXTERNAL AUTHENTICATE counts as a failed authentication,
 and a status read must not spend one.
+
+``piv admin keys`` lists the same table. With ``--check-default`` it authenticates
+once to key version 1 with the publicly known GlobalPlatform test key: a success
+means anyone can administer the PIV applet, and leaves the card's
+failed-authentication count clear; a wrong key costs one failed authentication,
+which the next successful ``piv admin authenticate`` clears. It never tries more
+than that one key, and skips the check when the table has no key version 1.
 
 Certificates and objects
 ------------------------

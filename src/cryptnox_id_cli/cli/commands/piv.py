@@ -24,7 +24,7 @@ from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as preperso_mod
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
-from cryptnox_id_cli.applets.piv.admin import PivAdmin, scp_label
+from cryptnox_id_cli.applets.piv.admin import InitializeUpdateRejected, PivAdmin, scp_label
 from cryptnox_id_cli.applets.piv.objects import (
     PIV_OBJECTS,
     extract_certificate,
@@ -33,7 +33,12 @@ from cryptnox_id_cli.applets.piv.objects import (
 )
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
-from cryptnox_id_cli.applets.piv.ssd import PIV_SSD_AID, describe_security_domain
+from cryptnox_id_cli.applets.piv.ssd import (
+    CUSTOMER_KEY_VERSION,
+    PIV_SSD_AID,
+    SecurityDomainInfo,
+    describe_security_domain,
+)
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.crypto import csr as csr_mod
 from cryptnox_id_cli.crypto import piv_objects, x509util
@@ -46,7 +51,13 @@ from cryptnox_id_cli.secrets.resolver import (
     resolve_secret,
 )
 from cryptnox_id_cli.state import StateDetector
-from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError, describe_sw
+from cryptnox_id_cli.transport.errors import (
+    CryptnoxError,
+    Scp02Error,
+    Scp03Error,
+    StatusWordError,
+    describe_sw,
+)
 from cryptnox_id_cli.transport.pcsc import is_contactless_interface
 from cryptnox_id_cli.util import tlv
 from cryptnox_id_cli.util.hexutil import to_hex
@@ -840,33 +851,131 @@ def admin() -> None:
     """PIV administrative operations over SCP03 (vendor: OpenFIPS201)."""
 
 
-@admin.command("status")
-@click.pass_obj
-def admin_status(app: AppContext) -> None:
-    """Show the admin security domain's SCP version and key versions (no authentication)."""
-    with app.open_session() as session:
-        domain = describe_security_domain(session)
+def _require_security_domain(session) -> SecurityDomainInfo:  # noqa: ANN001
+    domain = describe_security_domain(session)
     if domain is None:
         raise CryptnoxError(
             "No security domain answered: neither the PIV security domain "
             f"({PIV_SSD_AID.hex().upper()}) nor the ISD is selectable on this interface."
         )
+    return domain
+
+
+def _print_key_table(app: AppContext, c: Console, domain: SecurityDomainInfo) -> None:
+    c.print(f"PIV admin security domain {domain.aid_hex} ({scp_label(domain.scp_version)}):")
+    if not domain.keys:
+        c.print(f"  key table withheld (SW={domain.key_table_sw:04X})")
+        return
+    table = app.out.table("Key version", "Key ID", "Type", "Length")
+    for k in domain.keys:
+        table.add_row(str(k.key_version), str(k.key_id), k.type_name, f"{k.length} B")
+    c.print(table)
+
+
+@admin.command("status")
+@click.pass_obj
+def admin_status(app: AppContext) -> None:
+    """Show the admin security domain's SCP version and key versions (no authentication)."""
+    with app.open_session() as session:
+        domain = _require_security_domain(session)
 
     def human(c: Console) -> None:
-        c.print(f"PIV admin security domain {domain.aid_hex} ({scp_label(domain.scp_version)}):")
-        if not domain.keys:
-            c.print(f"  key table withheld (SW={domain.key_table_sw:04X})")
-        else:
-            table = app.out.table("Key version", "Key ID", "Type", "Length")
-            for k in domain.keys:
-                table.add_row(str(k.key_version), str(k.key_id), k.type_name, f"{k.length} B")
-            c.print(table)
+        _print_key_table(app, c, domain)
         c.print(
             "  Read without authenticating; nothing counted against the card's "
             "failed-authentication limit. Run `piv admin authenticate` to open the channel."
         )
 
     app.out.result(domain.to_dict(), human)
+
+
+def _check_default_key(app: AppContext, session) -> dict[str, object]:  # noqa: ANN001
+    """One authentication to the customer key version with the GlobalPlatform default
+    key. Success is a completed authentication, so it leaves the card's
+    failed-authentication count clear; a wrong key costs one."""
+    keys = resolve_scp03_keys(app.redactor, default_keys=True)
+    adm = PivAdmin(session)
+    adm.select()
+    result: dict[str, object] = {"performed": True, "key_version": CUSTOMER_KEY_VERSION}
+    try:
+        adm.open(keys, key_version=CUSTOMER_KEY_VERSION)
+    except InitializeUpdateRejected as exc:
+        return {**result, "answers_to_default": None, "detail": str(exc)}
+    except (Scp02Error, Scp03Error) as exc:
+        return {
+            **result,
+            "answers_to_default": False,
+            "detail": str(exc),
+            "failed_authentication_counted": True,
+        }
+    return {
+        **result,
+        "answers_to_default": True,
+        "scp_version": scp_label(adm.scp_version),
+        "failed_authentication_counted": False,
+    }
+
+
+def _default_key_verdict(check: dict[str, object] | None) -> str:
+    if check is None:
+        return "not checked (pass --check-default)"
+    if not check["performed"]:
+        return f"not checked ({check['reason']})"
+    answers = check["answers_to_default"]
+    if answers is True:
+        return (
+            "[red]YES[/red]. Anyone can administer this card's PIV applet; replace the "
+            "key before deployment."
+        )
+    if answers is False:
+        return (
+            f"no ({check['detail']}). One failed authentication is now counted on the "
+            "card; a successful `piv admin authenticate` clears it."
+        )
+    return f"undetermined ({check['detail']})"
+
+
+@admin.command("keys")
+@click.option(
+    "--check-default",
+    is_flag=True,
+    help=f"Authenticate once to key version {CUSTOMER_KEY_VERSION} with the publicly known "
+    "GlobalPlatform test key. A wrong key counts as one failed authentication on the card.",
+)
+@click.pass_obj
+def admin_keys(app: AppContext, check_default: bool) -> None:
+    """List the admin security domain's key table (no authentication).
+
+    With --check-default, also test whether the customer key version still answers
+    to the GlobalPlatform default key. That is one authentication attempt, never a
+    search over candidate keys.
+    """
+    with app.open_session() as session:
+        domain = _require_security_domain(session)
+        check: dict[str, object] | None = None
+        if check_default:
+            if app.dry_run:
+                check = {"performed": False, "reason": "dry-run"}
+            elif CUSTOMER_KEY_VERSION not in domain.key_versions:
+                check = {
+                    "performed": False,
+                    "reason": f"key version {CUSTOMER_KEY_VERSION} is not in the key table",
+                }
+            else:
+                app.out.warn(
+                    "a wrong key counts as one failed authentication on the card; five in a "
+                    "row slow every later authentication down until one succeeds."
+                )
+                check = _check_default_key(app, session)
+
+    def human(c: Console) -> None:
+        _print_key_table(app, c, domain)
+        c.print(
+            f"  Key version {CUSTOMER_KEY_VERSION} answers to the GlobalPlatform default key: "
+            f"{_default_key_verdict(check)}"
+        )
+
+    app.out.result({**domain.to_dict(), "default_key_check": check}, human)
 
 
 @admin.command("authenticate")
