@@ -99,11 +99,14 @@ Development keys
 
 .. warning::
 
-   Development and evaluation cards use well-known **default** keys, and the
-   examples in this documentation use them too:
+   Cards ship with well-known **default** keys so that the first
+   personalization works out of the box, and the examples in this
+   documentation use them too:
 
-   * **SCP03 / GlobalPlatform ISD** — the published GlobalPlatform test key
-     ``40 41 42 … 4F`` (``--default-keys``);
+   * **PIV admin channel (SCP03)** — key version 1 of the card's PIV security
+     domain (``A00000015153504101``) holds the published GlobalPlatform test
+     key ``40 41 42 … 4F`` (``--default-keys``). The card manager (ISD) is a
+     separate domain with per-card keys that the CLI never uses;
    * **PIV management key (9B)** — the same published GlobalPlatform test
      value, doubled for an AES-256 key object (``--default-keys``);
    * **DESFire** application keys after ``app create`` — all-zero AES
@@ -111,12 +114,13 @@ Development keys
    * **PIV PIN / PUK** in the examples — ``123456`` / ``12345678``.
 
    These are **not secrets** — they are public, published values. A production
-   deployment must rotate all of them, which is exactly what the
-   environment-variable key input is for: ``PIV_SCP03_ENC`` /
-   ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` for the admin channel,
-   ``PIV_MGMT_KEY`` for the PIV management key,
+   deployment must replace them. The environment variables only
+   *authenticate* with keys that are already on the card; putting new admin
+   keys on the card is a separate step, see :ref:`piv-admin-key-rotation`.
+   After it, the admin channel takes ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` /
+   ``PIV_SCP03_DEK``; ``PIV_MGMT_KEY`` carries the PIV management key,
    ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_NEW_PUK``
-   for PINs and PUKs, and the DESFire ``--key-env NAME`` form.
+   the PINs and PUKs, and DESFire keys use the ``--key-env NAME`` form.
 
 Next
 ------

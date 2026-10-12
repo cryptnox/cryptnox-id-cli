@@ -3,10 +3,11 @@ PIV commands
 
 Operator and personalization commands for the PIV function (SP 800-73).
 Administration runs over an SCP03 secure channel and is **contact-only**;
-admin keys come from ``--default-keys`` (development cards) or the
-``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment
-variables. PIN values come from masked prompts or ``CRYPTNOX_PIV_PIN`` /
-``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_NEW_PUK`` — never the command line.
+admin keys come from ``--default-keys`` (the test keys every card ships with)
+or, once replaced (:ref:`piv-admin-key-rotation`), the ``PIV_SCP03_ENC`` /
+``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment variables. PIN values come
+from masked prompts or ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` /
+``CRYPTNOX_PIV_NEW_PUK`` — never the command line.
 
 On-card generation of a large public key can also use the card's **PIV
 management key** (key reference ``9B``), whose value comes from

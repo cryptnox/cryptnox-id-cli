@@ -15,9 +15,9 @@ For the condensed version, see the :doc:`/piv/quick-start-a-working-piv-card`.
    application's PIN has its own retry counter and is managed separately.
 
 Operator commands live under ``piv``; factory pre-personalization lives under
-``factory piv preperso``. The SCP03 admin channel uses the card's GlobalPlatform
-keys — development/evaluation cards use the GlobalPlatform test keys
-(``--default-keys``); provisioned cards take theirs from the
+``factory piv preperso``. The SCP03 admin channel uses the keys of the card's
+PIV security domain — as shipped, the GlobalPlatform test keys
+(``--default-keys``); after :ref:`piv-admin-key-rotation`, the
 ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment variables.
 ``PIV_MGMT_KEY`` carries the PIV management key (``9B``) for cards that need it
 (see Step 2).
@@ -223,11 +223,119 @@ you to type the token ``FINALIZE-PIV``; non-interactively it requires the
 ``--i-understand-this-is-irreversible`` flag instead — either satisfies the
 gate.
 
+``finalize`` locks the **structure** only: which containers, verifiers and
+key objects exist, and their access rules. Administration with the security
+domain keys continues afterwards — key generation and import, certificate
+import, setting a new PIN or PUK, and rotating the admin keys themselves.
+Rotate the admin keys *before* finalizing a production card
+(:ref:`piv-admin-key-rotation`), so that finalize already runs with your
+production keys.
+
 .. code-block:: console
 
    $ cryptnox-id factory piv preperso finalize --default-keys
    # at the prompt: Type FINALIZE-PIV to continue
    # (scripted/non-interactive: add --i-understand-this-is-irreversible)
+
+.. _piv-admin-key-rotation:
+
+Rotating the PIV admin keys
+---------------------------
+
+Every card ships with the published GlobalPlatform test key on **key version
+1** of its PIV security domain (AID ``A00000015153504101``), so that the first
+personalization works out of the box. Replace it before a card goes into
+production. The key set is three AES-128 keys, key identifiers 1 = ENC,
+2 = MAC, 3 = DEK.
+
+**Key version 2** of the same domain holds a per-card Cryptnox key set. It
+gives the same PIV administration rights and is the recovery path if your own
+keys are lost. Leave it in place (see *Deleting key version 2* below). The
+card manager (ISD) is a separate domain and is not involved.
+
+The security domain keys *are* PIV administration: whoever holds them can
+generate or replace keys, import certificates and set a new PIN or PUK
+without knowing the current one, before and after ``finalize``. Protect them
+like CA issuing keys, and use one key set per card.
+
+The CLI has no rotation command. The rotation is a single GlobalPlatform
+PUT KEY that replaces key version 1 in place; the steps below run it with
+GlobalPlatformPro (``gp``, v25.10.20 or later), card on a contact reader.
+The CLI keeps finding your keys afterwards without any configuration beyond
+the environment variables.
+
+1. Read the key table. No key is needed:
+
+   .. code-block:: text
+
+      SELECT    00 A4 04 00 09 A0 00 00 01 51 53 50 41 01
+      GET DATA  80 CA 00 E0 00
+
+   Expect key versions 1 and 2, three AES-128 keys each (key type ``88``,
+   length 16). The replacement key set must be AES-128 as well; a DES key set
+   is refused, and some tools send DES keys unless told otherwise.
+
+2. Replace key version 1 in place, keeping version number 1. Generate three
+   independent random 16-byte keys first (in an HSM or key vault):
+
+   .. code-block:: console
+
+      $ gp -c A00000015153504101 --key 404142434445464748494A4B4C4D4E4F --key-ver 1 \
+            --lock-enc <ENC> --lock-mac <MAC> --lock-dek <DEK> --new-keyver 1
+
+   The card answers with the key version and the key check values of the
+   three new keys.
+
+   .. warning::
+
+      Never pass ``--new-keyver 2``. The card accepts it and silently
+      overwrites the Cryptnox key set in version 2, while version 1 stays on
+      the test key; the key table looks the same afterwards. Omitting
+      ``--new-keyver`` is also correct — ``gp`` then replaces version 1.
+
+3. Verify in a **new** session, with the new keys. The key table must still
+   list versions 1 and 2:
+
+   .. code-block:: console
+
+      $ gp -c A00000015153504101 --key-enc <ENC> --key-mac <MAC> --key-dek <DEK> --key-ver 1 -i
+
+4. Switch the CLI to the new keys and stop passing ``--default-keys``:
+
+   .. code-block:: console
+
+      $ export PIV_SCP03_ENC=<ENC> PIV_SCP03_MAC=<MAC> PIV_SCP03_DEK=<DEK>
+      $ cryptnox-id piv admin authenticate
+
+Do not try the old keys to confirm the rotation; the key table and the
+successful authentication are the proof. The card counts every
+authentication that does not end in a successful EXTERNAL AUTHENTICATE,
+including attempts a host abandons after a card-cryptogram mismatch. After
+five consecutive ones, every INITIALIZE UPDATE on the card, in any security
+domain, is delayed by about 24 seconds until the next successful
+authentication. There is no lockout, only the delay.
+
+A PUT KEY with a malformed key block, a wrong key check value or keys wrapped
+with the wrong DEK is refused (``6982``) and the key table is unchanged. If a
+rotation is interrupted, read the key table, find out which MAC key the card
+holds (INITIALIZE UPDATE with key version 1, then check the card cryptogram on
+the host with the new MAC key and with the old one), and re-run step 2
+authenticated with that key set.
+
+Deleting key version 2
+~~~~~~~~~~~~~~~~~~~~~~
+
+If your policy requires sole custody, delete the Cryptnox key set after
+rotating version 1, authenticated with your new keys:
+
+.. code-block:: console
+
+   $ gp -c A00000015153504101 --key-enc <ENC> --key-mac <MAC> --key-dek <DEK> --key-ver 1 --delete-key 2
+
+This cannot be undone. Afterwards Cryptnox cannot recover PIV administration
+on that card if your keys are lost; the only remaining path is a full reset
+of the PIV applet, which erases its contents (a Cryptnox operation — contact
+Cryptnox support).
 
 Next steps
 ------------
