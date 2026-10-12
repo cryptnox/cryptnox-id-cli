@@ -258,57 +258,77 @@ generate or replace keys, import certificates and set a new PIN or PUK
 without knowing the current one, before and after ``finalize``. Protect them
 like CA issuing keys, and use one key set per card.
 
-The CLI has no rotation command. The rotation is a single GlobalPlatform
-PUT KEY that replaces key version 1 in place; the steps below run it with
-GlobalPlatformPro (``gp``, v25.10.20 or later), card on a contact reader.
-The CLI keeps finding your keys afterwards without any configuration beyond
-the environment variables.
+The rotation is a single GlobalPlatform PUT KEY that replaces key version 1
+in place. ``piv admin rotate-keys`` sends it; the equivalent GlobalPlatformPro
+(``gp``, v25.10.20 or later) lines are given for sites that script with it.
+Card on a contact reader. The CLI keeps finding your keys afterwards without
+any configuration beyond the environment variables.
 
-1. Read the key table. No key is needed:
+1. Read the key table. No key is needed and nothing is counted against the
+   card:
+
+   .. code-block:: console
+
+      $ cryptnox-id piv admin status
+
+   Expect key versions 1 and 2, three AES-128 keys each. The replacement key
+   set takes the type the domain speaks, AES here: a domain is bound to SCP02
+   or SCP03 when it is created, and a key set of the other type is accepted by
+   the card yet can never open a session afterwards, which only the card
+   manager can undo by deleting and re-creating the domain. ``rotate-keys``
+   writes the matching type; some other tools send DES keys unless told
+   otherwise. ``piv admin keys --check-default`` tells, with one authentication
+   attempt, whether version 1 still answers to the test key.
+
+   The same read with raw commands, for other tools:
 
    .. code-block:: text
 
       SELECT    00 A4 04 00 09 A0 00 00 01 51 53 50 41 01
       GET DATA  80 CA 00 E0 00
 
-   Expect key versions 1 and 2, three AES-128 keys each (key type ``88``,
-   length 16). The replacement key set must be AES-128 as well; a DES key set
-   is refused, and some tools send DES keys unless told otherwise.
-
 2. Replace key version 1 in place, keeping version number 1. Generate three
-   independent random 16-byte keys first (in an HSM or key vault):
+   independent random 16-byte keys first (in an HSM or key vault); the CLI
+   takes them from the environment, never from the command line:
+
+   .. code-block:: console
+
+      $ export PIV_SCP03_NEW_ENC=<ENC> PIV_SCP03_NEW_MAC=<MAC> PIV_SCP03_NEW_DEK=<DEK>
+      $ cryptnox-id piv admin rotate-keys --default-keys --dry-run
+      $ cryptnox-id piv admin rotate-keys --default-keys
+
+   The command reads the key table, writes only version 1, compares the key
+   check values the card echoes with its own, authenticates once with the new
+   keys and re-reads the table to confirm version 2 is as it was. With
+   GlobalPlatformPro instead:
 
    .. code-block:: console
 
       $ gp -c A00000015153504101 --key 404142434445464748494A4B4C4D4E4F --key-ver 1 \
             --lock-enc <ENC> --lock-mac <MAC> --lock-dek <DEK> --new-keyver 1
 
-   The card answers with the key version and the key check values of the
-   three new keys.
-
    .. warning::
 
-      Never pass ``--new-keyver 2``. The card accepts it and silently
+      Never pass ``--new-keyver 2`` to ``gp``. The card accepts it and silently
       overwrites the Cryptnox key set in version 2, while version 1 stays on
       the test key; the key table looks the same afterwards. Omitting
-      ``--new-keyver`` is also correct — ``gp`` then replaces version 1.
+      ``--new-keyver`` is also correct, ``gp`` then replaces version 1.
+      ``rotate-keys`` never addresses version 2.
 
-3. Verify in a **new** session, with the new keys. The key table must still
-   list versions 1 and 2:
-
-   .. code-block:: console
-
-      $ gp -c A00000015153504101 --key-enc <ENC> --key-mac <MAC> --key-dek <DEK> --key-ver 1 -i
-
-4. Switch the CLI to the new keys and stop passing ``--default-keys``:
+3. Switch the CLI to the new keys and stop passing ``--default-keys``. The
+   successful authentication and the key table are the proof of the rotation:
 
    .. code-block:: console
 
       $ export PIV_SCP03_ENC=<ENC> PIV_SCP03_MAC=<MAC> PIV_SCP03_DEK=<DEK>
       $ cryptnox-id piv admin authenticate
+      $ cryptnox-id piv admin keys
 
-Do not try the old keys to confirm the rotation; the key table and the
-successful authentication are the proof. The card counts every
+   With GlobalPlatformPro, ``gp -c A00000015153504101 --key-enc <ENC>
+   --key-mac <MAC> --key-dek <DEK> --key-ver 1 -i`` does the same in a new
+   session.
+
+Do not try the old keys to confirm the rotation. The card counts every
 authentication that does not end in a successful EXTERNAL AUTHENTICATE,
 including attempts a host abandons after a card-cryptogram mismatch. After
 five consecutive ones, every INITIALIZE UPDATE on the card, in any security
@@ -316,10 +336,13 @@ domain, is delayed by about 24 seconds until the next successful
 authentication. There is no lockout, only the delay.
 
 A PUT KEY with a malformed key block, a wrong key check value or keys wrapped
-with the wrong DEK is refused (``6982``) and the key table is unchanged. If a
-rotation is interrupted, read the key table, find out which MAC key the card
-holds (INITIALIZE UPDATE with key version 1, then check the card cryptogram on
-the host with the new MAC key and with the old one), and re-run step 2
+with the wrong DEK is refused (``6982``) and the key table is unchanged;
+``rotate-keys`` stops there and the current keys still work. If a rotation is
+interrupted after the card accepted the PUT KEY, the card expects the new
+keys: run ``piv admin authenticate`` with the new values as ``PIV_SCP03_*``.
+Should neither key set authenticate, find out which MAC key the card holds
+(INITIALIZE UPDATE with key version 1, then check the card cryptogram on the
+host with the new MAC key and with the old one), and re-run step 2
 authenticated with that key set.
 
 Deleting key version 2
@@ -330,7 +353,14 @@ rotating version 1, authenticated with your new keys:
 
 .. code-block:: console
 
-   $ gp -c A00000015153504101 --key-enc <ENC> --key-mac <MAC> --key-dek <DEK> --key-ver 1 --delete-key 2
+   $ cryptnox-id piv admin delete-factory-keyset
+   # at the prompt: Type DELETE-FACTORY-KEYSET to continue
+   # (scripted/non-interactive: add --i-understand-this-is-irreversible)
+
+The command refuses while the ``PIV_SCP03_*`` variables still hold the test
+key, and re-reads the key table afterwards. With GlobalPlatformPro:
+``gp -c A00000015153504101 --key-enc <ENC> --key-mac <MAC> --key-dek <DEK>
+--key-ver 1 --delete-key 2``.
 
 This cannot be undone. Afterwards Cryptnox cannot recover PIV administration
 on that card if your keys are lost; the only remaining path is a full reset
