@@ -234,7 +234,12 @@ data is never logged).</p></td>
 <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">genuine</span></code> / <code class="docutils literal notranslate"><span class="pre">report</span> <span class="pre">full</span></code></p></td>
 <td><p>Secret-safe JSON reports (<code class="docutils literal notranslate"><span class="pre">--out</span> <span class="pre">FILE</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">shell</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">authenticate</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">inspect</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">attest</span></code> /
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code></p></td>
+<td><p>Operations run through the Cryptnox remote PIV service, with the card
+in the local reader.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">shell</span></code></p></td>
 <td><p>Interactive prompt: run subcommands without the <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> prefix
 (type <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">info</span></code>); global options passed when launching carry into every
 command. <code class="docutils literal notranslate"><span class="pre">help</span></code> / <code class="docutils literal notranslate"><span class="pre">clear</span></code> / <code class="docutils literal notranslate"><span class="pre">exit</span></code> — see <a class="reference internal" href="interactive-shell.html"><span class="doc">Interactive shell</span></a>.</p></td>
