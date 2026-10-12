@@ -116,7 +116,7 @@ def test_authenticate_end_to_end(mock_connection):
     assert channel.sent[2] == {"type": "atr_resp", "atr": ATR}
     assert channel.sent[3] == {"type": "apdu_resp", "data": CPLC_RESP, "sw1": 0x90, "sw2": 0x00}
 
-    assert lines == ["> " + CPLC_CMD, "< " + CPLC_RESP + "9000"]
+    assert lines == ["relay > " + CPLC_CMD, "relay < " + CPLC_RESP + "9000"]
 
 
 def test_hello_carries_params(mock_connection):
@@ -329,4 +329,4 @@ def test_relayed_transcript_masks_by_default(mock_connection):
     conn = card(mock_connection, {generate: "7F49AABB|9000"})
     lines: list[str] = []
     relay.run_operation(channel, conn, "inspect", policy=policy, transcript=lines.append)
-    assert lines == ["> 0047009C<REDACTED:6B>", "< <REDACTED:4B>9000"]
+    assert lines == ["relay > 0047009C<REDACTED:6B>", "relay < <REDACTED:4B>9000"]

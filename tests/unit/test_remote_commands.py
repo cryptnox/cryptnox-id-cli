@@ -206,8 +206,10 @@ def test_relayed_commands_reach_the_apdu_log(wired, tmp_path):
     result = run(["--apdu-log", str(log), "remote", "inspect"])
     assert result.exit_code == 0, result.output
     text = log.read_text()
-    assert "> " + CPLC_CMD in text
-    assert "< " + CPLC_RESP + "9000" in text
+    assert "relay > " + CPLC_CMD in text
+    assert "relay < " + CPLC_RESP + "9000" in text
+    # The tool's own pre-flight reads carry no prefix, so a capture tells them apart.
+    assert "\n> " + SELECT_ISD in text
 
 
 def test_app_context_apdu_trace_writes_and_traces(tmp_path):
