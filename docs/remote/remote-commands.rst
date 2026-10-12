@@ -35,8 +35,10 @@ Identification and inspection
 
    remote inspect        probe the PIV function through the service: whether
                          the PIV applet and its security domain are present
-                         and which key versions they carry; key-free, the
-                         relay refuses any authentication attempt
+                         and which key versions they carry; key-free but not
+                         free: each key version enumerated costs one
+                         INITIALIZE UPDATE the card counts as a failed
+                         authentication (see the guide)
 
 Both commands report the card as read locally (reader, ATR, CPLC UID), the
 service's result as the service asserted it, and a cross-check of the fields
@@ -99,8 +101,8 @@ Reset
      --default-keys      development cards only: the service authenticates
                          with the publicly known GlobalPlatform default key
                          instead of deriving this card's own. A production
-                         card refuses it, and the failed authentication costs
-                         a card-management retry.
+                         card refuses it, and the card counts one failed
+                         authentication.
 
 Before asking for consent, both commands read and show what the card holds:
 the PIV personalization state and data objects, the PIV security domain and

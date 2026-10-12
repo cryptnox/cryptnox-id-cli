@@ -47,8 +47,12 @@ Operations
 
 ``inspect``
    Probes whether the PIV applet and its security domain are present and which
-   key versions they carry. Key-free: an authentication attempt from the
-   service is refused before it reaches the card.
+   key versions they carry. Key-free: the relay refuses every EXTERNAL
+   AUTHENTICATE, so the service never completes an authentication. Not free:
+   the service enumerates key versions with one INITIALIZE UPDATE each, two on
+   a card as shipped, and the card counts each of them as a failed
+   authentication (see below). Two or three runs in a row reach the delay. The
+   relay admits at most four INITIALIZE UPDATEs per run.
 
 ``attest``
    Generates a key in one slot and returns a key-attestation certificate for
@@ -78,7 +82,7 @@ Operations
    package and its security domain, refuses a DELETE it cannot read unless the
    channel encrypts commands, caps authentication attempts per security
    domain, and stops at the first failed authentication so no further attempt
-   can spend a card-management retry. Inside an encrypted channel the policy
+   adds to the card's count. Inside an encrypted channel the policy
    sees instructions, not targets; that limit is real and is why the FIDO2 and
    genuineness state is read before and after.
 
@@ -90,6 +94,17 @@ Operations
    genuine until it is reset through the service again. The development access
    credential comes from ``CRYPTNOX_REMOTE_DEV_TOKEN`` only.
 
+What a failed authentication costs
+----------------------------------
+
+The card counts every INITIALIZE UPDATE that is not followed by a successful
+EXTERNAL AUTHENTICATE, whichever security domain it was sent to. After five in
+a row, every INITIALIZE UPDATE on the card, in any security domain, is delayed
+by about 24 seconds until the next successful authentication clears the count.
+There is no lockout, only the delay. This is why the relay caps authentication
+attempts per operation. ``piv admin authenticate`` with the card's own keys is
+one way to clear the count.
+
 The ``--default-keys`` flag
 ---------------------------
 
@@ -98,8 +113,8 @@ key, derived per card from its identity. That is the state a card leaves the
 factory in. A development card, or one deliberately put on the published
 GlobalPlatform default key, needs ``--default-keys`` instead; without it the
 service presents a derived key the card does not hold, the authentication
-fails, and one of the card's bounded card-management retries is spent. The
-flag is the caller's statement about the card, so the default is the safe one:
+fails, and the card counts one failed authentication (see above). The flag is
+the caller's statement about the card, so the default is the safe one:
 forgetting it on a development card costs a failed authentication and nothing
 else, while the reverse mistake on a production card would present a published
 key to a card that should only ever answer to its own.
