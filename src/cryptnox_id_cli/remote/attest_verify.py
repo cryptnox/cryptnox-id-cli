@@ -57,7 +57,7 @@ class AttestVerification:
 
     @property
     def verified(self) -> bool:
-        """True only when the chain holds and every binding that could be checked holds."""
+        """True only when the chain holds and all four bindings were checked and hold."""
         bindings = (
             self.serial_number_matches_card,
             self.slot_matches,

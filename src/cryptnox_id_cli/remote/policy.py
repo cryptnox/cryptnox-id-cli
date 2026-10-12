@@ -14,7 +14,11 @@ bytes stay in the clear. The policy is honest about that: it fences which
 security domain the channel was opened to and which instructions pass through
 it, and it cannot see what an encrypted command carries. Where a command's data
 does travel in the clear, the policy reads it: a DELETE may only name the PIV
-instance, the PIV package or the PIV security domain.
+instance, the PIV package or the PIV security domain, and a DELETE whose target
+cannot be read is refused unless the channel is known to encrypt command data.
+The selected applet is tracked from the card's answers, not the service's
+requests; an answer that leaves the selection uncertain admits nothing but
+another SELECT.
 
 Counters guard the other way a command can do harm without being forbidden:
 a failed GlobalPlatform authentication decrements a bounded retry counter, so
@@ -40,8 +44,18 @@ PIV_PACKAGE_AID = bytes.fromhex("A0000003084F46323031")
 ISD = "isd"
 PIV_SSD = "piv-ssd"
 PIV = "piv"
+#: After a SELECT the card answered with neither success nor a plain failure.
+UNKNOWN = "unknown"
 
 _CONTEXT_BY_AID: dict[bytes, str] = {ISD_AID: ISD, PIV_SSD_AID: PIV_SSD, PIV_AID: PIV}
+
+#: SW1 values after which the selection may or may not have taken effect:
+#: warnings (the command ran, with a caveat) and a wrong Le the card wants
+#: corrected and re-sent.
+_UNCERTAIN_SW1: frozenset[int] = frozenset({0x62, 0x63, 0x6C})
+
+#: EXTERNAL AUTHENTICATE P1 bit requesting command encryption (C-DECRYPTION).
+_SECURITY_LEVEL_C_DEC = 0x02
 
 #: Operations grouped by what they may do to the card.
 READ_ONLY_OPS = ("authenticate", "inspect")
@@ -249,12 +263,42 @@ def parse_header(apdu: bytes) -> Header:
     return Header(apdu[0], apdu[1], apdu[2], apdu[3])
 
 
+def command_data(apdu: bytes) -> bytes:
+    """The data field of a command, in the short or the extended encoding.
+
+    A command whose length fields do not match its size is refused: a command
+    the relay cannot parse is one it cannot vouch for.
+    """
+    header = parse_header(apdu)
+    body = apdu[4:]
+    if not body:
+        return b""
+    if body[0] != 0 or len(body) == 1:
+        # Short form: Lc, data, optional Le. A lone 00 is a short Le with no data.
+        lc = body[0]
+        data = body[1 : 1 + lc]
+        trailer = len(body) - 1 - lc
+        if len(data) != lc or trailer > 1:
+            raise RemotePolicyError(
+                "command data does not match its length fields", header=header.hex
+            )
+        return data
+    if len(body) == 3:
+        return b""  # extended Le, no data
+    lc = int.from_bytes(body[1:3], "big")
+    data = body[3 : 3 + lc]
+    trailer = len(body) - 3 - lc
+    if len(body) < 4 or lc == 0 or len(data) != lc or trailer not in (0, 2):
+        raise RemotePolicyError("command data does not match its length fields", header=header.hex)
+    return data
+
+
 def select_target(apdu: bytes) -> bytes | None:
     """The AID a SELECT-by-name command targets, or ``None`` if it is not one.
 
-    Only the short form with P1 = 04 (select by DF name) is recognised. Anything
-    else that looks like a SELECT is refused by the caller, because a SELECT the
-    relay cannot read is a SELECT it cannot vouch for.
+    Only P1 = 04 (select by DF name) is recognised. Anything else that looks like
+    a SELECT is refused by the caller, because a SELECT the relay cannot read is
+    a SELECT it cannot vouch for. An empty AID selects the default applet.
     """
     header = parse_header(apdu)
     if header.ins != INS_SELECT:
@@ -263,32 +307,22 @@ def select_target(apdu: bytes) -> bytes | None:
         raise RemotePolicyError(
             f"SELECT with P1={header.p1:02X} is not select-by-name; refused", header=header.hex
         )
-    body = apdu[4:]
-    if not body:
-        return b""  # SELECT with no AID: the default applet
-    lc = body[0]
-    if lc == 0 and len(body) > 1:
-        raise RemotePolicyError("extended-length SELECT refused", header=header.hex)
-    aid = body[1 : 1 + lc]
-    if len(aid) != lc:
-        raise RemotePolicyError("SELECT data shorter than its length byte", header=header.hex)
-    return aid
+    return command_data(apdu)
 
 
 def delete_target(apdu: bytes) -> bytes | None:
-    """The AID a DELETE names, when its data travels in the clear.
+    """The AID a DELETE names, when its data is readable; ``None`` when it is not.
 
-    Under a secure channel with command encryption the data is opaque and this
-    returns ``None``; with a MAC alone the ``4F`` AID template is readable and
-    the MAC simply trails it.
+    With a MAC alone the ``4F`` AID template is in the clear and the MAC trails
+    it. Under command encryption the data is opaque.
     """
-    body = apdu[5:]  # past CLA INS P1 P2 Lc
-    if len(body) < 3 or body[0] != 0x4F:
+    data = command_data(apdu)
+    if len(data) < 3 or data[0] != 0x4F:
         return None
-    length = body[1]
-    if not 5 <= length <= 16 or len(body) < 2 + length:
+    length = data[1]
+    if not 5 <= length <= 16 or len(data) < 2 + length:
         return None
-    return body[2 : 2 + length]
+    return data[2 : 2 + length]
 
 
 @dataclass
@@ -311,6 +345,9 @@ class RelayPolicy:
     initialize_updates: dict[str, int] = field(default_factory=dict)
     external_authenticates: dict[str, int] = field(default_factory=dict)
     _pending_select: bytes | None = field(default=None, init=False, repr=False)
+    #: Whether the open secure channel encrypts command data, from the security
+    #: level the last successful EXTERNAL AUTHENTICATE asked for.
+    _command_encryption: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.rules = rules_for(self.op)
@@ -372,14 +409,23 @@ class RelayPolicy:
                     f"SELECT of AID {target.hex().upper()} is not allowed during {self.op}",
                     header=header.hex,
                 )
+            if target not in _CONTEXT_BY_AID:
+                raise RemotePolicyError(
+                    f"SELECT of AID {target.hex().upper()} has no relay context; refused",
+                    header=header.hex,
+                )
             self._pending_select = target
             return header
 
         allowed = rules.allowed_ins.get(self.context, frozenset())
         if header.ins not in allowed:
+            where = (
+                "the selected applet is unknown"
+                if self.context == UNKNOWN
+                else f"the {self.context} is selected"
+            )
             raise RemotePolicyError(
-                f"INS {header.ins:02X} is not allowed while the {self.context} is selected "
-                f"during {self.op}",
+                f"INS {header.ins:02X} is not allowed while {where} during {self.op}",
                 header=header.hex,
             )
 
@@ -395,10 +441,19 @@ class RelayPolicy:
                 header,
             )
         elif header.ins == INS_DELETE:
+            if rules.delete_targets is None:
+                raise RemotePolicyError(
+                    f"DELETE is not allowed during {self.op}", header=header.hex
+                )
             deleted = delete_target(apdu)
-            if deleted is not None and (
-                rules.delete_targets is None or deleted not in rules.delete_targets
-            ):
+            if deleted is None:
+                if not self._command_encryption:
+                    raise RemotePolicyError(
+                        "DELETE names a target the relay cannot read, on a channel that does "
+                        "not encrypt commands; refused",
+                        header=header.hex,
+                    )
+            elif deleted not in rules.delete_targets:
                 raise RemotePolicyError(
                     f"DELETE of {deleted.hex().upper()} refused; only the PIV instance, "
                     "package and security domain may be deleted",
@@ -439,14 +494,20 @@ class RelayPolicy:
         """Record what the card did with an allowed command."""
         self.apdus += 1
         header = parse_header(apdu)
-        ok = sw1 == 0x90 and sw2 == 0x00
+        # 61XX is success with response bytes waiting for GET RESPONSE.
+        ok = (sw1 == 0x90 and sw2 == 0x00) or sw1 == 0x61
         if self._pending_select is not None:
+            target, self._pending_select = self._pending_select, None
             if ok:
-                self.context = _CONTEXT_BY_AID[self._pending_select]
-            self._pending_select = None
+                self.context = _CONTEXT_BY_AID[target]
+                self._command_encryption = False  # selecting closes any secure channel
+            elif sw1 in _UNCERTAIN_SW1:
+                self.context = UNKNOWN
+                self._command_encryption = False
             return
         if header.ins == INS_INITIALIZE_UPDATE:
             self.initialize_updates[self.context] = self.initialize_updates.get(self.context, 0) + 1
+            self._command_encryption = False
         elif header.ins == INS_EXTERNAL_AUTHENTICATE:
             self.external_authenticates[self.context] = (
                 self.external_authenticates.get(self.context, 0) + 1
@@ -457,5 +518,6 @@ class RelayPolicy:
                     "another attempt can burn a retry",
                     header=header.hex,
                 )
+            self._command_encryption = bool(header.p1 & _SECURITY_LEVEL_C_DEC)
         elif header.ins == INS_LOAD:
             self.load_blocks += 1

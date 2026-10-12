@@ -44,18 +44,23 @@ per operation: which applet may be selected (the PIV applet and its security
 domain; the card manager only where card content management is the point),
 which instructions may pass in each of those contexts, how many INITIALIZE
 UPDATE and EXTERNAL AUTHENTICATE commands each security domain may see, how many
-commands and seconds an operation may take. A DELETE whose data travels in the
-clear may name the PIV instance, its package or its security domain and nothing
-else. Key generation is bound to the slot the holder asked for, and the
-management-key handshake to key 9B, so no slot key can be exercised. Card-holder
-verifier commands are never relayed. A refusal ends the operation and names the
+commands and seconds an operation may take. A DELETE may name the PIV instance,
+its package or its security domain and nothing else; one whose target cannot be
+read is refused unless the channel is known to encrypt command data. Key
+generation is bound to the slot the holder asked for, and the management-key
+handshake to key 9B, so no slot key can be exercised. The certificate write is
+not bound: PUT DATA names its object in the data, not the header, so during an
+attestation the service can write any PIV data object, and only the certificate
+the tool reads back is checked. Card-holder verifier commands are never relayed. A refusal ends the operation and names the
 command header, so the rules can be reviewed against what the service actually
 needs rather than loosened in advance.
 
 Inside an encrypted channel only the class and instruction bytes stay in the
 clear. The policy fences which security domain the channel was opened to and
 which instructions pass through it; it cannot see what an encrypted command
-carries, and the documentation says so.
+carries, and the documentation says so. The selected applet is tracked from the
+card's answers, not the service's requests; an answer that leaves the selection
+uncertain admits nothing but another SELECT.
 
 The service's result is shown as the service's assertion. What the tool can
 verify itself, it reads from the card before and after: identity, personalization

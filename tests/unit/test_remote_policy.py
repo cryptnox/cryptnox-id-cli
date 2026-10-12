@@ -1,5 +1,7 @@
 """The relay policy: what a hostile or confused service cannot make the card do."""
 
+import dataclasses
+
 import pytest
 
 from cryptnox_id_cli.remote import policy as pol
@@ -27,7 +29,10 @@ def apdu(cla: int, ins: int, p1: int = 0, p2: int = 0, data: bytes = b"", le: bo
 CPLC = apdu(0x80, 0xCA, 0x9F, 0x7F)
 KEY_INFO = apdu(0x80, 0xCA, 0x00, 0xE0)
 INIT_UPDATE = apdu(0x80, 0x50, 0x00, 0x00, bytes(8))
-EXT_AUTH = apdu(0x84, 0x82, 0x00, 0x00, bytes(16), le=False)
+# Security level in P1: 01 = C-MAC only (what the service uses on the card
+# manager), 03 = C-MAC + command encryption (what it uses on the applet).
+EXT_AUTH = apdu(0x84, 0x82, 0x01, 0x00, bytes(16), le=False)
+EXT_AUTH_ENC = apdu(0x84, 0x82, 0x03, 0x00, bytes(16), le=False)
 PIV_GET_DATA = apdu(0x00, 0xCB, 0x3F, 0xFF, bytes.fromhex("5C035FC102"))
 
 
@@ -64,14 +69,36 @@ def test_select_by_file_id_is_refused_not_ignored():
         pol.select_target(bytes.fromhex("00A40000023F00"))
 
 
-def test_extended_length_select_is_refused():
-    with pytest.raises(RemotePolicyError, match="extended-length"):
-        pol.select_target(bytes.fromhex("00A40400000009") + pol.PIV_SSD_AID)
+def test_extended_length_select_is_read_like_the_short_form():
+    extended = bytes.fromhex("00A40400000009") + pol.PIV_SSD_AID
+    assert pol.select_target(extended) == pol.PIV_SSD_AID
+    assert pol.select_target(extended + b"\x00\x00") == pol.PIV_SSD_AID
 
 
-def test_select_with_short_data_is_refused():
-    with pytest.raises(RemotePolicyError, match="shorter than its length"):
-        pol.select_target(bytes.fromhex("00A404000BA000"))
+def test_command_data_reads_both_encodings():
+    assert pol.command_data(bytes.fromhex("80CA9F7F")) == b""
+    assert pol.command_data(bytes.fromhex("80CA9F7F00")) == b""  # short Le, no data
+    assert pol.command_data(bytes.fromhex("80CA9F7F000000")) == b""  # extended Le, no data
+    assert pol.command_data(bytes.fromhex("00A404000102")) == b"\x02"
+    assert pol.command_data(bytes.fromhex("00A40400010200")) == b"\x02"
+    assert pol.command_data(bytes.fromhex("00A4040000000102")) == b"\x02"
+    assert pol.command_data(bytes.fromhex("00A40400000001020000")) == b"\x02"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "00A404000BA000",  # short Lc longer than the data
+        "00A40400020102FFFF",  # short form with two trailing bytes
+        "00A404000002",  # extended form cut after the first length byte
+        "00A40400000000AABB",  # extended Lc of zero
+        "00A40400000009A000",  # extended Lc longer than the data
+        "00A4040000000102FF",  # extended form with one trailing byte
+    ],
+)
+def test_malformed_command_lengths_are_refused(command):
+    with pytest.raises(RemotePolicyError, match="length fields"):
+        pol.command_data(bytes.fromhex(command))
 
 
 # --------------------------------------------------------------------------- #
@@ -214,6 +241,39 @@ def test_a_failed_select_does_not_move_the_context():
     allow(policy, KEY_INFO)  # still the card manager's key table
 
 
+def test_a_select_answered_61xx_moves_the_context():
+    # 61XX is success with the response waiting for GET RESPONSE, the normal
+    # answer to a SELECT that returns data on a T=0 reader.
+    policy = pol.RelayPolicy("reset")
+    allow(policy, select(pol.PIV_AID), sw=(0x61, 0x1A))
+    assert policy.context == pol.PIV
+    allow(policy, apdu(0x00, 0xC0, 0x00, 0x00))
+    with pytest.raises(RemotePolicyError, match="not allowed while the piv is selected"):
+        policy.check(wrapped(0xE4))
+
+
+@pytest.mark.parametrize("sw", [(0x6C, 0x1A), (0x62, 0x83), (0x63, 0x00)])
+def test_a_select_with_an_uncertain_answer_admits_only_another_select(sw):
+    policy = pol.RelayPolicy("inspect")
+    allow(policy, select(pol.PIV_AID), sw=sw)
+    assert policy.context == pol.UNKNOWN
+    for command in (KEY_INFO, PIV_GET_DATA, INIT_UPDATE):
+        with pytest.raises(RemotePolicyError, match="selected applet is unknown"):
+            policy.check(command)
+    allow(policy, select(pol.ISD_AID))
+    assert policy.context == pol.ISD
+    allow(policy, KEY_INFO)
+
+
+def test_a_selectable_aid_without_a_context_is_refused():
+    policy = pol.RelayPolicy("inspect")
+    policy.rules = dataclasses.replace(
+        policy.rules, selectable=policy.rules.selectable | {WALLET_AID}
+    )
+    with pytest.raises(RemotePolicyError, match="no relay context"):
+        policy.check(select(WALLET_AID))
+
+
 def test_piv_context_allows_only_piv_reads():
     policy = pol.RelayPolicy("inspect")
     allow(policy, select(pol.PIV_AID))
@@ -298,6 +358,11 @@ def delete_apdu(aid: bytes, cla: int = 0x84, mac: bytes = b"\x00" * 8) -> bytes:
     return bytes([cla, 0xE4, 0x00, 0x00, len(data)]) + data + b"\x00"
 
 
+def delete_apdu_extended(aid: bytes, cla: int = 0x84, mac: bytes = b"\x00" * 8) -> bytes:
+    data = bytes([0x4F, len(aid)]) + aid + mac
+    return bytes([cla, 0xE4, 0x00, 0x00, 0x00]) + len(data).to_bytes(2, "big") + data
+
+
 def wrapped(ins: int, p1: int = 0, p2: int = 0, n: int = 24) -> bytes:
     return apdu(0x84, ins, p1, p2, b"\x00" * n, le=False)
 
@@ -340,13 +405,64 @@ def test_reset_may_only_delete_piv_things(op, aid):
 
 
 @pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+@pytest.mark.parametrize("aid", [WALLET_AID, FIDO2_AID, FIDO2_PACKAGE_AID])
+def test_the_delete_allow_list_holds_in_the_extended_encoding_too(op, aid):
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    with pytest.raises(RemotePolicyError, match=f"DELETE of {aid.hex().upper()}"):
+        policy.check(delete_apdu_extended(aid))
+    allow(policy, delete_apdu_extended(pol.PIV_AID))
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
 def test_an_encrypted_delete_passes_on_instruction_and_context_alone(op):
     # Under command encryption the AID is opaque; the header-level rules still
     # hold (ISD context only) and the limitation is documented.
     policy = pol.RelayPolicy(op)
     allow(policy, INIT_UPDATE)
-    allow(policy, EXT_AUTH)
+    allow(policy, EXT_AUTH_ENC)
     allow(policy, wrapped(0xE4, 0x00, 0x00))
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_an_unreadable_delete_is_refused_unless_the_channel_encrypts(op):
+    # With a MAC alone the AID is in the clear, so a DELETE that does not parse
+    # is not a legitimate command the relay happens not to understand.
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH)
+    with pytest.raises(RemotePolicyError, match="cannot read") as info:
+        policy.check(wrapped(0xE4, 0x00, 0x00))
+    assert info.value.header == "84E40000"
+    with pytest.raises(RemotePolicyError, match="cannot read"):
+        policy.check(delete_apdu(pol.PIV_AID)[:5] + b"\x00" * 21)  # template byte lost
+
+
+@pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
+def test_command_encryption_is_forgotten_when_the_channel_ends(op):
+    policy = pol.RelayPolicy(op)
+    allow(policy, INIT_UPDATE)
+    allow(policy, EXT_AUTH_ENC)
+    allow(policy, wrapped(0xE4))
+    allow(policy, INIT_UPDATE)  # a new channel negotiation
+    with pytest.raises(RemotePolicyError, match="cannot read"):
+        policy.check(wrapped(0xE4))
+    allow(policy, EXT_AUTH_ENC)
+    allow(policy, wrapped(0xE4))
+    allow(policy, select(pol.ISD_AID))  # selecting closes the channel
+    with pytest.raises(RemotePolicyError, match="cannot read"):
+        policy.check(wrapped(0xE4))
+
+
+def test_a_failed_authentication_does_not_mark_the_channel_encrypted():
+    policy = pol.RelayPolicy("reset")
+    allow(policy, INIT_UPDATE)
+    policy.check(EXT_AUTH_ENC)
+    with pytest.raises(RemotePolicyError, match="EXTERNAL AUTHENTICATE failed"):
+        policy.observe(EXT_AUTH_ENC, 0x63, 0x00)
+    with pytest.raises(RemotePolicyError, match="cannot read"):
+        policy.check(wrapped(0xE4))
 
 
 @pytest.mark.parametrize("op", pol.DESTRUCTIVE_OPS)
@@ -402,6 +518,7 @@ def test_reset_cannot_select_other_card_functions(op, aid):
 
 def test_delete_target_parsing():
     assert pol.delete_target(delete_apdu(pol.PIV_AID)) == pol.PIV_AID
+    assert pol.delete_target(delete_apdu_extended(pol.PIV_AID)) == pol.PIV_AID
     assert pol.delete_target(wrapped(0xE4)) is None  # opaque
     assert pol.delete_target(bytes.fromhex("84E40000034F01AA")) is None  # implausible length
 

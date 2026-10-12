@@ -26,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the card's PIV state, data objects, security-domain key versions and
   neighbouring functions read locally before consent and again afterwards.
   The relay policy for these operations admits card content management
-  through the card manager only, restricts a readable DELETE to the PIV
-  instance, package and security domain, and stops at the first failed
-  authentication.
+  through the card manager only, restricts a DELETE to the PIV instance,
+  package and security domain (refusing one it cannot read unless the
+  channel encrypts commands), and stops at the first failed authentication.
 - `remote attest`: generate a key in a slot through the service and receive
   its key-attestation certificate. The certificate is verified locally against
   the pinned anchors and bound to the card's CPLC UID, the requested slot, the
