@@ -58,8 +58,11 @@ Operations
    slot key), key generation for the requested slot only, and the certificate
    write. The tool then verifies the certificate against the pinned anchors and
    binds it to the card, the slot and the certificate stored on the card. The
-   generation itself happening on the card is the service's claim; nothing the
-   relay sees authenticates it.
+   certificate write itself is not bound to the slot: PUT DATA names its object
+   inside the data, so the service could write any PIV data object during the
+   operation, and only the certificate read back is checked. The generation
+   itself happening on the card is the service's claim; nothing the relay sees
+   authenticates it.
 
 ``reset``
    Wipes and reinstalls the PIV function. The service authenticates to the
@@ -72,12 +75,12 @@ Operations
 
    The relay policy for this operation admits card content management through
    the card manager only, lets a DELETE name nothing but the PIV instance, its
-   package and its security domain where the command travels in the clear,
-   caps authentication attempts per security domain, and stops at the first
-   failed authentication so no further attempt can spend a card-management
-   retry. Inside an encrypted channel the policy sees instructions, not
-   targets; that limit is real and is why the FIDO2 and genuineness state is
-   read before and after.
+   package and its security domain, refuses a DELETE it cannot read unless the
+   channel encrypts commands, caps authentication attempts per security
+   domain, and stops at the first failed authentication so no further attempt
+   can spend a card-management retry. Inside an encrypted channel the policy
+   sees instructions, not targets; that limit is real and is why the FIDO2 and
+   genuineness state is read before and after.
 
 ``dev-reset``
    As ``reset``, for development cards, leaving the card manager and the PIV
