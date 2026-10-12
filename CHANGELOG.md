@@ -70,6 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The PyInstaller spec collected the trust anchors from a package name that no
+  longer exists, so a frozen build shipped without them and could verify no
+  attestation or genuineness chain. The spec is `packaging/cryptnox-id.spec`
+  now, named after the tool, and a test checks that every name in it resolves.
 - `factory piv preperso status` reported the SCP version of whatever applet was
   selected last, not the PIV security domain's.
 - `cryptography>=43` is now required: the SCP02 code imports its `decrepit`
