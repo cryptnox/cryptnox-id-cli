@@ -6,6 +6,7 @@ import json
 import sys
 
 import pytest
+from _cardfakes import wire_session
 from click.testing import CliRunner
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -14,6 +15,7 @@ from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.applets.piv import objects as piv_obj
 from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import attest_verify as av
 from cryptnox_id_cli.remote import channel as rchannel
@@ -165,8 +167,7 @@ def wired(monkeypatch, mock_connection, pki):
         return original(apdu)
 
     before.transmit = transmit
-    monkeypatch.setattr(remote_cmd, "pick_reader", lambda pref: "Fake Reader 00 00")
-    monkeypatch.setattr(remote_cmd, "connect", lambda name: before)
+    wire_session(monkeypatch, before, reader_name="Fake Reader 00 00")
     monkeypatch.setattr(av.trust, "load_anchors", lambda extra_dir=None: ([pki["root_der"]], []))
     monkeypatch.delenv(rchannel.URL_ENV, raising=False)
 
@@ -231,7 +232,10 @@ def test_slot_is_validated():
 
 
 def test_dry_run_refuses(monkeypatch):
-    monkeypatch.setattr(remote_cmd, "pick_reader", lambda *a: (_ for _ in ()).throw(AssertionError))
+    def boom(*a, **k):
+        raise AssertionError("reader must not be opened under --dry-run")
+
+    monkeypatch.setattr(AppContext, "open_session", boom)
     result = run(["--dry-run", "remote", "attest"])
     assert result.exit_code != 0
     assert "nothing was sent to the card" in result.output

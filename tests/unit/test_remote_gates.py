@@ -5,9 +5,11 @@ import json
 import sys
 
 import pytest
+from _cardfakes import wire_session
 from click.testing import CliRunner
 
 from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import channel as rchannel
 
@@ -70,8 +72,7 @@ def wired(monkeypatch, mock_connection):
         },
         [],
     )
-    monkeypatch.setattr(remote_cmd, "pick_reader", lambda pref: "Fake Reader 00 00")
-    monkeypatch.setattr(remote_cmd, "connect", lambda name: conn)
+    wire_session(monkeypatch, conn, reader_name="Fake Reader 00 00")
     monkeypatch.delenv(rchannel.URL_ENV, raising=False)
     monkeypatch.delenv(remote_cmd.DEV_ACCESS_ENV, raising=False)
     holder: dict = {"conn": conn, "opened": 0}
@@ -142,7 +143,7 @@ def test_dry_run_refuses_before_anything_opens(monkeypatch):
     def boom(*a, **k):
         raise AssertionError("reader must not be opened under --dry-run")
 
-    monkeypatch.setattr(remote_cmd, "pick_reader", boom)
+    monkeypatch.setattr(AppContext, "open_session", boom)
     for op in ("reset", "dev-reset"):
         result = run(["--dry-run", "remote", op, "--i-understand-this-is-irreversible"])
         assert result.exit_code != 0

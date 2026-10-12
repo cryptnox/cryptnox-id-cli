@@ -4,6 +4,7 @@ import contextlib
 import json
 
 import pytest
+from _cardfakes import wire_session
 from click.testing import CliRunner
 
 from cryptnox_id_cli.cli.commands import remote as remote_cmd
@@ -44,9 +45,8 @@ def wired(monkeypatch, mock_connection):
         {SELECT_ISD: "6F108408A000000151000000A5049F6501FF|9000", CPLC_CMD: f"{CPLC_RESP}|9000"},
         [],
     )
-    monkeypatch.setattr(remote_cmd, "pick_reader", lambda pref: "Fake Reader 00 00")
-    monkeypatch.setattr(remote_cmd, "connect", lambda name: conn)
-    holder: dict = {}
+    wire_session(monkeypatch, conn, reader_name="Fake Reader 00 00")
+    holder: dict = {"conn": conn}
 
     @contextlib.contextmanager
     def fake_open(url, **kwargs):
@@ -82,7 +82,7 @@ def test_dry_run_refuses_before_anything_opens(monkeypatch):
     def boom(*a, **k):
         raise AssertionError("reader must not be opened under --dry-run")
 
-    monkeypatch.setattr(remote_cmd, "pick_reader", boom)
+    monkeypatch.setattr(AppContext, "open_session", boom)
     result = run(["--dry-run", "remote", "inspect"])
     assert result.exit_code != 0
     assert "nothing was sent to the card" in result.output
@@ -166,8 +166,7 @@ def test_protocol_violation_exits_14(wired):
 
 def test_card_is_released_even_when_the_operation_fails(wired, monkeypatch):
     released = []
-    conn = remote_cmd.connect("x")
-    monkeypatch.setattr(conn, "disconnect", lambda: released.append(True))
+    monkeypatch.setattr(wired["conn"], "disconnect", lambda: released.append(True))
     wired["arm"]([{"type": "nonsense"}])
     run(["--json", "remote", "inspect"])
     assert released == [True]

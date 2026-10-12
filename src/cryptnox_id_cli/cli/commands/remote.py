@@ -31,7 +31,7 @@ from cryptnox_id_cli.secrets.resolver import resolve_secret
 from cryptnox_id_cli.state.detector import StateDetector
 from cryptnox_id_cli.transport.apdu import APDU
 from cryptnox_id_cli.transport.errors import CryptnoxError, RemoteConnectError
-from cryptnox_id_cli.transport.pcsc import CardSession, PCSCConnection, connect, pick_reader
+from cryptnox_id_cli.transport.pcsc import CardSession, RawConnection
 from cryptnox_id_cli.util import tlv
 
 _FULL_TRANSCRIPT_KEY = "remote.full_transcript"
@@ -86,8 +86,8 @@ def _endpoint(op: str) -> tuple[str, bool]:
 
 @dataclass
 class _Card:
-    reader: str
-    conn: PCSCConnection
+    reader: str | None
+    conn: RawConnection
     session: CardSession
     atr: str
     cplc_uid: str | None
@@ -104,14 +104,11 @@ class _Card:
 
 def _open_card(app: AppContext) -> _Card:
     """Open the reader and read the card's identity. Leaves the card manager selected."""
-    reader = pick_reader(app.reader)
-    app.resolved_reader = reader
-    conn = connect(reader)
-    session = app.make_session(conn, reader_name=reader)
+    session = app.open_session()
     cplc = _read_cplc(session)
     return _Card(
-        reader=reader,
-        conn=conn,
+        reader=session.reader_name or app.resolved_reader,
+        conn=session.raw_connection,
         session=session,
         atr=session.atr.hex().upper(),
         cplc_uid=cplc["uid"] if cplc else None,
