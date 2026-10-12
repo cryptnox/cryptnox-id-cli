@@ -95,6 +95,12 @@ class PivApplet:
     def get_data(self, oid: bytes) -> Response:
         return self.session.transmit(obj.get_data_apdu(oid), context="GET DATA")
 
+    def get_data_extended(self, ident: int, index: int = 0) -> Response:
+        """Vendor GET DATA (``2F47xx``): version, status, config, structure listing."""
+        return self.session.transmit(
+            obj.get_data_extended_apdu(ident, index), context=f"GET DATA 2F{ident:04X}"
+        )
+
     def read_object(self, oid: bytes) -> bytes | None:
         """Return the unwrapped object content, or None if absent (6A82)."""
         resp = self.get_data(oid)

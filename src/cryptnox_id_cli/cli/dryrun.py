@@ -36,6 +36,9 @@ PLANS_OWN = frozenset(
         "apdu transcript",
         "factory piv preperso finalize",
         "factory piv preperso load-config",
+        "piv admin delete-factory-keyset",
+        "piv admin keys",
+        "piv admin rotate-keys",
         "piv perso import-key",
         "piv perso import-p12",
         "piv quickstart",
@@ -80,6 +83,7 @@ READ_ONLY = frozenset(
         "piv discover",
         "piv export-attestation",
         "piv info",
+        "piv inventory",
         "piv objects list",
         "piv objects read",
         "piv perso generate-ccc",
@@ -106,6 +110,7 @@ READ_ONLY = frozenset(
 #: partition test forces every new command to be classified here or above.
 NO_DRY_RUN = frozenset(
     {
+        "factory piv preperso set-mgmt-key",
         "fido config min-pin-length",
         "fido config toggle-always-uv",
         "fido credential assert",

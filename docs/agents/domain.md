@@ -20,9 +20,10 @@ Single-context repo: one `CONTEXT.md` at the root, one `docs/adr/` (numbered
 
 When output names a domain concept — in a commit message, an issue title, a test
 name, a docs sentence — use the term as `CONTEXT.md` defines it and avoid the listed
-synonyms. In this repo that means, for example: *admin channel*, never "management
-key"; *pre-personalization* vs *personalization*, never the ambiguous "provisioning";
-*genuineness* or *key attestation*, never bare "attestation".
+synonyms. In this repo that means, for example: *admin channel* and *management key
+(9B)* are two different keys and never stand in for each other; *pre-personalization*
+vs *personalization*, never the ambiguous "provisioning"; *genuineness* or *key
+attestation*, never bare "attestation".
 
 If a concept you need isn't in the glossary, that's a signal: either you're inventing
 language the project doesn't use (reconsider), or there's a real gap — extend

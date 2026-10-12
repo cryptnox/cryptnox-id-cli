@@ -37,8 +37,9 @@ machine token (see :doc:`/json-output`).
      - ``status_word``
      - The card rejected a command (the message carries the ISO status word).
    * - 7
-     - ``scp03_error``
-     - SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch).
+     - ``scp03_error`` / ``mgmt_key``
+     - SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch), or
+       PIV management-key (``9B``) authentication failed.
    * - 8
      - ``profile_error``
      - Pre-personalization profile parse/validation failure.

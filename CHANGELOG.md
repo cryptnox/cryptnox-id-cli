@@ -9,10 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `RSA4096` alongside the existing algorithms: `perso generate-key`,
-  `perso import-key`, CSR/self-signed-cert signing, and profile key
-  mechanisms.
-- `perso generate-key --create-key-object` - the same dev/eval fallback
+- `piv inventory`: the applet's key objects, verifiers, containers and config
+  flags with their access rules, read without authentication.
+- The finalized (SECURED) state, read from the applet's status object, in
+  `piv status`, `info`, `report` and `factory piv preperso status`.
+- `piv admin keys`: the admin security domain's key table; `--check-default`
+  authenticates once to key version 1 with the GlobalPlatform default key.
+- `piv admin rotate-keys`: replace key version 1 of the PIV security domain in
+  place; new keys from `PIV_SCP03_NEW_ENC` / `_MAC` / `_DEK`, key version 2
+  never addressed, key check values and a fresh authentication verified after.
+- `piv admin delete-factory-keyset`: delete key version 2 after a typed
+  confirmation; refuses while key version 1 is still the test key.
+- `RSA4096` in `perso generate-key`, `perso import-key`, CSR and
+  self-signed-cert signing, and profile key mechanisms.
+- `perso generate-key --create-key-object`, the dev/eval fallback
   `import-key` already had.
 - `remote authenticate` and `remote inspect`: identify and probe the card
   through the Cryptnox remote PIV service, with the card in the local reader.
@@ -38,27 +48,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   floor from `fail_under`, and a tighter floor over the command modules. With
   branch coverage enabled both floors compare the combined statement-and-branch
   percentage, which sits below line coverage alone.
+- Coverage measurement in CI (`pytest-cov` in the `dev` extra) with a
+  project-wide floor and a tighter one over the command modules, both on
+  combined statement-and-branch coverage.
+- `factory piv preperso set-mgmt-key`: load the PIV management key (9B)
+  over the admin channel; `--replace` overwrites a set value.
+  `factory piv preperso status` reports whether 9B holds a value.
+- `PIV_MGMT_KEY` (hex) for the PIV management key, next to `PIV_SCP03_*`.
+
+### Changed
+
+- `piv admin status` and `factory piv preperso status` read the admin security
+  domain's SCP version and key versions from its key information template
+  instead of sending INITIALIZE UPDATE, which this chip counts as a failed
+  authentication. `piv admin status --key-version` is gone.
 
 ### Removed
 
-- `transport.pcsc.list_reader_names()`. Nothing called it; `reader_states()`
-  returns the same names along with card presence and ATR.
+- `transport.pcsc.list_reader_names()`; `reader_states()` returns the same
+  names with card presence and ATR.
 
 ### Fixed
 
-- The APDU transcript no longer renders the data field of a secret-bearing
-  command whose length byte disagrees with the bytes present. An `Lc` larger
-  than the remaining bytes left the data field unsplit, and the command then
-  took the path that masks only values registered with the redactor, so an
-  unregistered PIN could reach the log in the clear. Commands that can carry a
-  secret now withhold the whole body when the length does not parse; commands
-  that cannot still render in full, and the case-1 retry-counter probe is
-  unaffected.
-- `doctor` no longer advises "use a DESFire-capable contactless reader" to
-  someone already on a contactless one. It now tells the detector which reader
-  the session is on, so the DESFire diagnosis uses the reader name as well as
-  the ATR. Cards that answer with their own wired-style ATR rather than the
-  PC/SC composed contactless one were the affected case.
+- `factory piv preperso status` reported the SCP version of whatever applet was
+  selected last, not the PIV security domain's.
+- `cryptography>=43` is now required: the SCP02 code imports its `decrepit`
+  3DES module, which older releases do not have, so an install on a system
+  with cryptography 41 failed at start-up.
+
+- `factory piv preperso load-config` warns that structural operations are
+  permanent (existing elements cannot be changed or removed; only new ones can
+  be added) instead of calling them reversible before finalize.
+- Error messages and docs no longer suggest reinstalling the applet as a
+  recovery step; a full reset of the PIV applet is a Cryptnox operation. The
+  `load-config` failure message points at adding missing key objects with
+  `--create-key-object`.
+- `PivPersonalized` no longer requires the optional Discovery Object; CHUID,
+  CCC and a set PIN suffice. Discovery is still probed and listed.
+- `factory piv preperso status` reports `finalize_allowed` under the rule
+  `finalize` applies (applet selectable, not SECURED) and adds
+  `load_config_allowed` for a blank applet.
+- The APDU transcript withholds the whole body of a secret-bearing command
+  whose `Lc` disagrees with the bytes present, instead of rendering an
+  unmasked data field. Other commands still render in full.
+- `doctor` uses the reader name as well as the ATR for the DESFire
+  diagnosis, so it no longer recommends a contactless reader to someone
+  already on one.
+- `perso generate-key` and `quickstart` handle an RSA public-key template
+  truncated at 256 bytes over the admin channel by repeating the generation
+  over plain APDUs after 9B authentication.
+- An unparseable public-key template ends in a CLI error naming the response
+  length, not an unhandled exception.
+- A `PIV_SCP03_*` value that is not valid hex ends in a CLI error naming the
+  variable, not an unhandled exception that printed the value.
 
 ## [1.0.3] - 2026-08-31
 

@@ -35,9 +35,16 @@ data objects. It decides what _does_ exist.
 _Avoid_: provisioning, enrollment
 
 **Personalization state**:
-A ladder, never a boolean: pre-personalized, partially personalized, personalized,
-secured (locked). Output state labels follow the ladder.
+A ladder, never a boolean: pre-personalized, partially personalized, personalized.
+Output state labels follow the ladder. Finalized (SECURED) is reported beside the
+ladder, not as a rung: finalize locks the structure only, so a secured applet can
+sit at any rung.
 _Avoid_: initialized, blank, done
+
+**Inventory**:
+The applet's own listing of its structure - key objects, verifiers, containers and
+config flags with their access rules - read without authentication.
+_Avoid_: dump, snapshot (export-config is a different, observed-state file)
 
 **Profile**:
 A named pre-personalization configuration, such as `cryptnox-default` or `ms-logon`.
@@ -70,9 +77,21 @@ _Avoid_: self-test (the FIDO2 credential self-test is a different operation)
 ### Keys and administration
 
 **Admin channel**:
-The SCP03 secure channel to the PIV applet, through which all PIV writes go. This
-card has no Yubico-style management key.
-_Avoid_: management key (another vendor's concept; nothing on this card answers to it)
+The SCP02/SCP03 secure channel to the PIV applet, through which PIV writes go. The
+one exception is reading back a large generated public key, which some cards deliver
+only after management-key authentication.
+_Avoid_: management key (a different key with a different authentication - see
+Management key)
+
+**Management key (9B)**:
+The PIV applet's own AES administration key at key reference 9B. It authenticates over
+plain APDUs (GENERAL AUTHENTICATE, mutual) and authorizes writes to the key objects it
+administers, which is every key object unless a profile names another. Contact-only.
+The CLI uses it for one thing: finishing on-card key generation when the admin channel
+cannot return the full public-key template. Its value comes from `--default-keys` or
+`PIV_MGMT_KEY`.
+_Avoid_: admin key (collides with the admin channel), Yubico-style management key (it
+does not replace the admin channel and no PIN/PUK operation uses it)
 
 **Default keys**:
 The publicly documented GlobalPlatform test key value. It authenticates convenience,

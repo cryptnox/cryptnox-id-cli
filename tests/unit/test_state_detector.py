@@ -9,6 +9,38 @@ from cryptnox_id_cli.state.model import (
 )
 from cryptnox_id_cli.transport.pcsc import CardSession
 
+SELECT_PIV = "00A404000BA00000030800001000010000"
+APT = (
+    "616F4F0BA000000308000010000100"
+    "79074F05A000000308"
+    "500B4F70656E46495053323031"
+    "5F5049687474703A2F2F6E766C707562732E6E6973742E676F762F6E697374707562732F"
+    "5370656369616C5075626C69636174696F6E732F4E4953542E53502E3830302D37332D342E706466"
+)
+GET_STATUS = "00CB3F00055C032F475300"
+STATUS_SECURED = "531880010F8101008201008301008401008501008601008701FF"
+
+
+def test_secured_flag_comes_from_the_applet_status_object(mock_connection):
+    exchanges = {SELECT_PIV: f"{APT}|9000", GET_STATUS: f"{STATUS_SECURED}|9000"}
+    conn = mock_connection("3B00", exchanges, [])
+    st = StateDetector(
+        CardSession(conn), probe_fido=False, probe_desfire=False, probe_genuine=False
+    ).detect()
+    assert st.piv_secured is True
+    # Finalize locks the structure only; the personalization ladder stays separate.
+    assert st.piv == PivState.PRE_PERSONALIZED
+    assert st.to_dict()["piv"]["secured"] is True
+    assert not any("SECURED" in n for n in st.notes)
+
+
+def test_secured_flag_is_none_when_the_applet_has_no_status_object(acs_session):
+    st = StateDetector(
+        acs_session, probe_fido=False, probe_desfire=False, probe_genuine=False
+    ).detect()
+    assert st.piv_secured is None
+    assert any("SECURED" in n for n in st.notes)
+
 
 def test_detect_real_acs_state(acs_session):
     st = StateDetector(acs_session).detect()

@@ -34,7 +34,7 @@ dependencies = [
     "pyscard>=2.0",
     "click>=8.1",
     "rich>=13.0",
-    "cryptography>=41.0",
+    "cryptography>=43.0",
     # Cap below 6: cbor2 6.x is a Rust build with no Intel-macOS wheel, so a plain
     # `pip install` fails there without a Rust toolchain. Our CBOR use is trivial
     # (CTAP dumps/loads) and 5.x ships wheels everywhere.

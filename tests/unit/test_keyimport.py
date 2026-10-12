@@ -1,6 +1,7 @@
 """Key-injection wire grammar: element plans, exact lengths, APDUs, EMSA padding."""
 
 import pytest
+from _cardfakes import RecordingConn
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 
@@ -225,26 +226,11 @@ def test_emsa_rejects_unknown_digest_length():
 
 
 # ------------------------------------------------- plain-channel chaining --- #
-class _RecordingConn:
-    def __init__(self) -> None:
-        self.frames: list[bytes] = []
-
-    def transmit(self, apdu: list[int]) -> tuple[list[int], int, int]:
-        self.frames.append(bytes(apdu))
-        return [], 0x90, 0x00
-
-    def get_atr(self) -> bytes:
-        return b"\x3b\x00"
-
-    def disconnect(self) -> None:
-        pass
-
-
 def test_transmit_chained_framing():
     from cryptnox_id_cli.transport.apdu import APDU
     from cryptnox_id_cli.transport.pcsc import CardSession
 
-    conn = _RecordingConn()
+    conn = RecordingConn()
     session = CardSession(conn)
     data = bytes(300)
     resp = session.transmit_chained(APDU(0x00, 0x87, 0x07, 0x9C, data=data, le=256), block_size=200)

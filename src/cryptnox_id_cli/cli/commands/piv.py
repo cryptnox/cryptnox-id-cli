@@ -9,20 +9,23 @@ lives under ``factory piv preperso``.
 from __future__ import annotations
 
 import contextlib
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, NamedTuple
 
 import click
 from rich.console import Console
 
 from cryptnox_id_cli import CLI_NAME, trust
 from cryptnox_id_cli.applets.piv import constants as pivc
-from cryptnox_id_cli.applets.piv import keyimport
+from cryptnox_id_cli.applets.piv import inventory as inventory_mod
+from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as preperso_mod
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
-from cryptnox_id_cli.applets.piv.admin import PivAdmin, scp_label
+from cryptnox_id_cli.applets.piv.admin import InitializeUpdateRejected, PivAdmin, scp_label
 from cryptnox_id_cli.applets.piv.objects import (
     PIV_OBJECTS,
     extract_certificate,
@@ -31,14 +34,41 @@ from cryptnox_id_cli.applets.piv.objects import (
 )
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
+from cryptnox_id_cli.applets.piv.ssd import (
+    CRYPTNOX_KEY_VERSION,
+    CUSTOMER_KEY_VERSION,
+    PIV_SSD_AID,
+    SecurityDomainInfo,
+    delete_key_version_apdu,
+    describe_security_domain,
+    kcv,
+    put_key_apdu,
+    select_security_domain,
+)
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.crypto import csr as csr_mod
 from cryptnox_id_cli.crypto import piv_objects, x509util
 from cryptnox_id_cli.crypto.attestation import verify_attestation_chain
 from cryptnox_id_cli.output.render import state_style
-from cryptnox_id_cli.secrets.resolver import resolve_scp03_keys, resolve_secret
+from cryptnox_id_cli.secrets.resolver import (
+    DEFAULT_GP_KEY,
+    MGMT_KEY_ENV,
+    resolve_mgmt_key,
+    resolve_new_scp03_keys,
+    resolve_scp03_keys,
+    resolve_secret,
+)
 from cryptnox_id_cli.state import StateDetector
-from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError, describe_sw
+from cryptnox_id_cli.transport.errors import (
+    CryptnoxError,
+    Scp02Error,
+    Scp03Error,
+    StatusWordError,
+    describe_sw,
+)
+from cryptnox_id_cli.transport.pcsc import is_contactless_interface
+from cryptnox_id_cli.transport.scp02 import Scp02Session
+from cryptnox_id_cli.transport.scp03 import Scp03Keys
 from cryptnox_id_cli.util import tlv
 from cryptnox_id_cli.util.hexutil import to_hex
 
@@ -108,11 +138,18 @@ def status(app: AppContext) -> None:
         "pin": st.piv_pin.to_dict() if st.piv_pin else None,
         "puk": st.piv_puk.to_dict() if st.piv_puk else None,
         "objects_present": st.piv_objects,
+        "secured": st.piv_secured,
         "notes": st.notes,
     }
 
     def human(c: Console) -> None:
         c.print(f"[bold]PIV state:[/bold] {state_style(st.piv.label)}")
+        if st.piv_secured is None:
+            c.print("  Structure: finalize state not readable")
+        elif st.piv_secured:
+            c.print("  Structure: finalized (SECURED), no further pre-personalization")
+        else:
+            c.print("  Structure: not finalized")
         if st.piv_pin:
             extra = f", {st.piv_pin.retries} tries left" if st.piv_pin.retries is not None else ""
             blocked = " [red](blocked)[/red]" if st.piv_pin.blocked else ""
@@ -191,6 +228,114 @@ def slots(app: AppContext) -> None:
         c.print(table)
 
     app.out.result({"slots": rows}, human)
+
+
+def _mode_cell(mode: int) -> str:
+    return f"{inventory_mod.describe_mode(mode)} ({mode:02X})"
+
+
+@command.command("inventory")
+@click.pass_obj
+def inventory(app: AppContext) -> None:
+    """List the applet's structure with its access rules (no authentication).
+
+    Key objects, verifiers and containers as the applet itself reports them, plus
+    its version, state and config flags.
+    """
+    with app.open_session() as session:
+        inv = inventory_mod.read_inventory(_select(session))
+
+    def human(c: Console) -> None:
+        ver = inv.version
+        c.print(f"[bold]{ver.label} {ver.version}[/bold]" if ver else "[bold]PIV applet[/bold]")
+        if inv.status:
+            s = inv.status
+            finalized = "finalized (SECURED)" if s.secured else "not finalized"
+            c.print(f"  State:     {inventory_mod.describe_state(s.state)}, {finalized}")
+            interface = "contactless" if s.contactless else "contact"
+            c.print(f"  Interface: {interface}; FIPS mode {'on' if s.fips_mode else 'off'}")
+        if inv.config:
+            flags = ", ".join(
+                f"{name.replace('_', '-')}={'on' if on else 'off'}"
+                for name, on in inv.config.to_dict().items()
+            )
+            c.print(f"  Config:    {flags}")
+        if inv.restricted:
+            c.print(
+                "\n[yellow]The applet withholds its structure (restrict-enumeration is "
+                "set); listing key objects, verifiers and containers needs the admin "
+                "channel.[/yellow]"
+            )
+        if inv.keys is not None:
+            table = app.out.table(
+                "Slot",
+                "Name",
+                "Mechanism",
+                "Roles",
+                "Attributes",
+                "Contact",
+                "Contactless",
+                "Admin",
+                title=f"Key objects ({len(inv.keys)})",
+            )
+            for k in inv.keys:
+                table.add_row(
+                    f"{k.ref:02X}",
+                    k.slot_name,
+                    k.mechanism_name,
+                    "+".join(inventory_mod.role_names(k.role)) or "none",
+                    "+".join(inventory_mod.attribute_names(k.attributes)) or "none",
+                    _mode_cell(k.mode_contact),
+                    _mode_cell(k.mode_contactless),
+                    f"{k.admin_key:02X}",
+                )
+            c.print(table)
+        if inv.verifiers is not None:
+            table = app.out.table(
+                "Ref",
+                "Name",
+                "Contact",
+                "Contactless",
+                "Length",
+                "Retries",
+                "Rules",
+                title=f"Verifiers ({len(inv.verifiers)})",
+            )
+            for v in inv.verifiers:
+                rules = (
+                    f"charset={v.charset:02X} history={v.history} sequence={v.sequence} "
+                    f"repeat={v.repeat} restrict-update={'yes' if v.restrict_update else 'no'}"
+                )
+                table.add_row(
+                    f"{v.ref:02X}",
+                    v.name,
+                    _mode_cell(v.mode_contact),
+                    _mode_cell(v.mode_contactless),
+                    f"{v.min_length}-{v.max_length}",
+                    f"{v.retries_contact}/{v.retries_contactless}",
+                    rules,
+                )
+            c.print(table)
+        if inv.containers is not None:
+            table = app.out.table(
+                "OID",
+                "Name",
+                "Contact",
+                "Contactless",
+                "Admin",
+                title=f"Containers ({len(inv.containers)})",
+            )
+            for o in inv.containers:
+                table.add_row(
+                    o.oid_hex,
+                    o.name,
+                    _mode_cell(o.mode_contact),
+                    _mode_cell(o.mode_contactless),
+                    f"{o.admin_key:02X}",
+                )
+            c.print(table)
+
+    app.out.result(inv.to_dict(), human)
 
 
 # ------------------------------------------------------------------ certs --- #
@@ -716,29 +861,381 @@ def admin() -> None:
     """PIV administrative operations over SCP03 (vendor: OpenFIPS201)."""
 
 
+def _require_security_domain(session) -> SecurityDomainInfo:  # noqa: ANN001
+    domain = describe_security_domain(session)
+    if domain is None:
+        raise CryptnoxError(
+            "No security domain answered: neither the PIV security domain "
+            f"({PIV_SSD_AID.hex().upper()}) nor the ISD is selectable on this interface."
+        )
+    return domain
+
+
+def _print_key_table(app: AppContext, c: Console, domain: SecurityDomainInfo) -> None:
+    c.print(f"PIV admin security domain {domain.aid_hex} ({scp_label(domain.scp_version)}):")
+    if not domain.keys:
+        c.print(f"  key table withheld (SW={domain.key_table_sw:04X})")
+        return
+    table = app.out.table("Key version", "Key ID", "Type", "Length")
+    for k in domain.keys:
+        table.add_row(str(k.key_version), str(k.key_id), k.type_name, f"{k.length} B")
+    c.print(table)
+
+
 @admin.command("status")
-@click.option("--key-version", default=0, type=int, help="SCP03 key version (default 0).")
 @click.pass_obj
-def admin_status(app: AppContext, key_version: int) -> None:
-    """Probe the SCP03 admin channel (read-only INITIALIZE UPDATE, no auth)."""
+def admin_status(app: AppContext) -> None:
+    """Show the admin security domain's SCP version and key versions (no authentication)."""
     with app.open_session() as session:
-        adm = PivAdmin(session)
-        adm.select()
-        info = adm.initialize_update_probe(key_version=key_version)
+        domain = _require_security_domain(session)
 
     def human(c: Console) -> None:
-        scp_id = info.get("scp_id")
-        label = scp_label(scp_id)
-        c.print(f"PIV admin secure channel ({label}):")
-        if isinstance(scp_id, int):
-            c.print(f"  SCP ID:      {scp_id:#04x} ({label})")
-        c.print(f"  key version: {info.get('key_version')}")
-        i_param = info.get("scp_i")
-        if isinstance(i_param, int):
-            c.print(f"  i-param:     {i_param:#04x}")
-        c.print("  INITIALIZE UPDATE supported - run `piv admin authenticate` to open it.")
+        _print_key_table(app, c, domain)
+        c.print(
+            "  Read without authenticating; nothing counted against the card's "
+            "failed-authentication limit. Run `piv admin authenticate` to open the channel."
+        )
 
-    app.out.result(info, human)
+    app.out.result(domain.to_dict(), human)
+
+
+def _check_default_key(app: AppContext, session) -> dict[str, object]:  # noqa: ANN001
+    """One authentication to the customer key version with the GlobalPlatform default
+    key. Success is a completed authentication, so it leaves the card's
+    failed-authentication count clear; a wrong key costs one."""
+    keys = resolve_scp03_keys(app.redactor, default_keys=True)
+    adm = PivAdmin(session)
+    adm.select()
+    result: dict[str, object] = {"performed": True, "key_version": CUSTOMER_KEY_VERSION}
+    try:
+        adm.open(keys, key_version=CUSTOMER_KEY_VERSION)
+    except InitializeUpdateRejected as exc:
+        return {**result, "answers_to_default": None, "detail": str(exc)}
+    except (Scp02Error, Scp03Error) as exc:
+        return {
+            **result,
+            "answers_to_default": False,
+            "detail": str(exc),
+            "failed_authentication_counted": True,
+        }
+    return {
+        **result,
+        "answers_to_default": True,
+        "scp_version": scp_label(adm.scp_version),
+        "failed_authentication_counted": False,
+    }
+
+
+def _default_key_verdict(check: dict[str, object] | None) -> str:
+    if check is None:
+        return "not checked (pass --check-default)"
+    if not check["performed"]:
+        return f"not checked ({check['reason']})"
+    answers = check["answers_to_default"]
+    if answers is True:
+        return (
+            "[red]YES[/red]. Anyone can administer this card's PIV applet; replace the "
+            "key before deployment."
+        )
+    if answers is False:
+        return (
+            f"no ({check['detail']}). One failed authentication is now counted on the "
+            "card; a successful `piv admin authenticate` clears it."
+        )
+    return f"undetermined ({check['detail']})"
+
+
+@admin.command("keys")
+@click.option(
+    "--check-default",
+    is_flag=True,
+    help=f"Authenticate once to key version {CUSTOMER_KEY_VERSION} with the publicly known "
+    "GlobalPlatform test key. A wrong key counts as one failed authentication on the card.",
+)
+@click.pass_obj
+def admin_keys(app: AppContext, check_default: bool) -> None:
+    """List the admin security domain's key table (no authentication).
+
+    With --check-default, also test whether the customer key version still answers
+    to the GlobalPlatform default key. That is one authentication attempt, never a
+    search over candidate keys.
+    """
+    with app.open_session() as session:
+        domain = _require_security_domain(session)
+        check: dict[str, object] | None = None
+        if check_default:
+            if app.dry_run:
+                check = {"performed": False, "reason": "dry-run"}
+            elif CUSTOMER_KEY_VERSION not in domain.key_versions:
+                check = {
+                    "performed": False,
+                    "reason": f"key version {CUSTOMER_KEY_VERSION} is not in the key table",
+                }
+            else:
+                app.out.warn(
+                    "a wrong key counts as one failed authentication on the card; five in a "
+                    "row slow every later authentication down until one succeeds."
+                )
+                check = _check_default_key(app, session)
+
+    def human(c: Console) -> None:
+        _print_key_table(app, c, domain)
+        c.print(
+            f"  Key version {CUSTOMER_KEY_VERSION} answers to the GlobalPlatform default key: "
+            f"{_default_key_verdict(check)}"
+        )
+
+    app.out.result({**domain.to_dict(), "default_key_check": check}, human)
+
+
+def _open_domain_channel(session, aid: bytes, keys: Scp03Keys, key_version: int) -> PivAdmin:  # noqa: ANN001
+    """A secure channel to the security domain itself (not through the PIV applet),
+    which is where PUT KEY and DELETE KEY are processed."""
+    resp = select_security_domain(session, aid)
+    if not resp.ok:
+        raise CryptnoxError(f"SELECT {aid.hex().upper()} failed (SW={resp.sw_hex()}).")
+    adm = PivAdmin(session)
+    adm.open(keys, key_version=key_version)
+    return adm
+
+
+def _key_encryption_key(adm: PivAdmin, keys: Scp03Keys) -> bytes:
+    """SCP02 wraps new key values under the session DEK, SCP03 under the static one."""
+    if isinstance(adm.scp, Scp02Session):
+        return adm.scp.s_dek
+    return keys.dek
+
+
+def _hex_list(values: list[bytes]) -> list[str]:
+    return [v.hex().upper() for v in values]
+
+
+@admin.command("rotate-keys")
+@click.option(
+    "--default-keys",
+    is_flag=True,
+    help="The CURRENT keys are the publicly known GlobalPlatform test keys (a card as shipped).",
+)
+@click.option("--dry-run", is_flag=True, help="Show the plan; send nothing.")
+@click.pass_obj
+def admin_rotate_keys(app: AppContext, default_keys: bool, dry_run: bool) -> None:
+    """Replace key version 1 of the PIV security domain in place.
+
+    Current keys: --default-keys or PIV_SCP03_ENC/MAC/DEK. New keys: PIV_SCP03_NEW_ENC/
+    MAC/DEK (hex, 16 bytes each), never the command line. Key version 2, Cryptnox's
+    keyset for remote reset and attestation, is never addressed.
+    """
+    new_keys = resolve_new_scp03_keys(app.redactor)
+    if new_keys == Scp03Keys.same(DEFAULT_GP_KEY):
+        raise CryptnoxError("the new keys are the publicly known test keys; choose your own.")
+    planning = dry_run or app.dry_run
+    current = None if planning else resolve_scp03_keys(app.redactor, default_keys=default_keys)
+    if current is not None and current == new_keys:
+        raise CryptnoxError("the new keys equal the current ones; nothing to rotate.")
+    with app.open_session() as session:
+        before = _require_security_domain(session)
+        if CUSTOMER_KEY_VERSION not in before.key_versions:
+            raise CryptnoxError(
+                f"key version {CUSTOMER_KEY_VERSION} is not in the key table of "
+                f"{before.aid_hex}; nothing to replace."
+            )
+        if before.scp_version is None:
+            raise CryptnoxError(
+                f"cannot tell SCP02 from SCP03 from the key table of {before.aid_hex}; refusing."
+            )
+        label = scp_label(before.scp_version)
+        new_kcvs = [kcv(before.scp_version, k) for k in (new_keys.enc, new_keys.mac, new_keys.dek)]
+        if planning:
+            plan = {
+                "dry_run": True,
+                "aid": before.aid_hex,
+                "scp_version": label,
+                "replace_version": CUSTOMER_KEY_VERSION,
+                "new_version": CUSTOMER_KEY_VERSION,
+                "new_key_kcvs": _hex_list(new_kcvs),
+                "key_versions": before.key_versions,
+            }
+
+            def plan_human(c: Console) -> None:
+                c.print(
+                    f"[bold]DRY RUN[/bold] - would replace key version {CUSTOMER_KEY_VERSION} of "
+                    f"{before.aid_hex} ({label}) in place with one PUT KEY."
+                )
+                c.print(f"  New key check values: {' '.join(_hex_list(new_kcvs))} (ENC MAC DEK)")
+                c.print(f"  Key versions on the card: {before.key_versions}; only 1 is addressed.")
+                c.print("\n  [dim]Nothing was sent to the card.[/dim]")
+
+            app.out.result(plan, plan_human)
+            return
+
+        if current is None:  # unreachable: resolved above whenever not planning
+            raise RuntimeError("current keys were not resolved")
+        app.out.warn(
+            f"this replaces key version {CUSTOMER_KEY_VERSION} of {before.aid_hex}; the current "
+            "keys stop working the moment the card accepts the command."
+        )
+        if not app.yes and not click.confirm("Proceed with the rotation?", default=False):
+            raise click.Abort()
+
+        adm = _open_domain_channel(session, before.aid, current, CUSTOMER_KEY_VERSION)
+        apdu, kcvs = put_key_apdu(
+            before.scp_version,
+            _key_encryption_key(adm, current),
+            new_keys,
+            replace_version=CUSTOMER_KEY_VERSION,
+            new_version=CUSTOMER_KEY_VERSION,
+        )
+        resp = adm.send(apdu, context="PUT KEY")
+        if not resp.ok:
+            # The card writes nothing when it refuses PUT KEY; the current keys still work.
+            raise StatusWordError(resp.sw1, resp.sw2, context="PUT KEY (rotate-keys)")
+        card_kcvs_match = resp.data == bytes([CUSTOMER_KEY_VERSION]) + b"".join(kcvs)
+
+        adm.forget_channel()
+        verify_error: str | None = None
+        try:
+            _open_domain_channel(session, before.aid, new_keys, CUSTOMER_KEY_VERSION)
+        except CryptnoxError as exc:
+            verify_error = str(exc)
+        after = describe_security_domain(session, (before.aid,))
+
+    factory_before = before.keys_for(CRYPTNOX_KEY_VERSION)
+    factory_after = after.keys_for(CRYPTNOX_KEY_VERSION) if after else None
+    factory_unchanged = factory_after == factory_before
+    payload = {
+        "aid": before.aid_hex,
+        "scp_version": label,
+        "replaced_version": CUSTOMER_KEY_VERSION,
+        "new_key_kcvs": _hex_list(kcvs),
+        "card_kcvs_match": card_kcvs_match,
+        "new_keys_authenticate": verify_error is None,
+        "key_versions_before": before.key_versions,
+        "key_versions_after": after.key_versions if after else None,
+        "factory_keyset_unchanged": factory_unchanged,
+    }
+
+    def human(c: Console) -> None:
+        c.print(
+            f"[green]Replaced key version {CUSTOMER_KEY_VERSION}[/green] of {before.aid_hex} "
+            f"({label})."
+        )
+        agree = "card agrees" if card_kcvs_match else "[red]card echoed different values[/red]"
+        c.print(f"  Key check values: {' '.join(_hex_list(kcvs))} (ENC MAC DEK); {agree}")
+        auth = "yes" if verify_error is None else f"[red]no[/red] ({verify_error})"
+        c.print(f"  New keys authenticate: {auth}")
+        if factory_before:
+            word = "unchanged" if factory_unchanged else "[red]CHANGED[/red]"
+            c.print(f"  Key version {CRYPTNOX_KEY_VERSION} (Cryptnox): {word}")
+        else:
+            c.print(f"  Key version {CRYPTNOX_KEY_VERSION} (Cryptnox): not on this card")
+        c.print(
+            "  From now on set PIV_SCP03_ENC / PIV_SCP03_MAC / PIV_SCP03_DEK to the new values."
+        )
+
+    app.out.result(payload, human)
+    if not (card_kcvs_match and verify_error is None and factory_unchanged):
+        raise CryptnoxError(
+            "PUT KEY was accepted (SW 9000) but a post-check failed; see the lines above. "
+            f"Key version {CUSTOMER_KEY_VERSION} now expects the new keys: confirm with "
+            "`piv admin authenticate` using the PIV_SCP03_NEW_* values as PIV_SCP03_*."
+        )
+
+
+@admin.command("delete-factory-keyset")
+@click.option(
+    "--i-understand-this-is-irreversible",
+    "understood",
+    is_flag=True,
+    help="Required for non-interactive use.",
+)
+@click.option("--dry-run", is_flag=True, help="Show the plan; send nothing.")
+@click.pass_obj
+def admin_delete_factory_keyset(app: AppContext, understood: bool, dry_run: bool) -> None:
+    """IRREVERSIBLY delete key version 2, Cryptnox's keyset, from the PIV security domain.
+
+    Cryptnox uses key version 2 for remote reset and attestation; without it those
+    services cannot reach this card again. Authenticates with key version 1 from
+    PIV_SCP03_ENC/MAC/DEK, which must no longer be the GlobalPlatform test keys.
+    """
+    planning = dry_run or app.dry_run
+    keys = None if planning else resolve_scp03_keys(app.redactor)
+    if keys is not None and keys == Scp03Keys.same(DEFAULT_GP_KEY):
+        raise CryptnoxError(
+            f"key version {CUSTOMER_KEY_VERSION} is still the publicly known test key; rotate "
+            "it first (`piv admin rotate-keys`)."
+        )
+    with app.open_session() as session:
+        before = _require_security_domain(session)
+        factory = before.keys_for(CRYPTNOX_KEY_VERSION)
+        if not factory:
+            app.out.result(
+                {"aid": before.aid_hex, "deleted": False, "key_versions": before.key_versions},
+                lambda c: c.print(
+                    f"Key version {CRYPTNOX_KEY_VERSION} is not on {before.aid_hex}; nothing to "
+                    f"delete (key versions: {before.key_versions})."
+                ),
+            )
+            return
+        if planning:
+            app.out.result(
+                {
+                    "dry_run": True,
+                    "aid": before.aid_hex,
+                    "would_delete_version": CRYPTNOX_KEY_VERSION,
+                    "keys": [k.to_dict() for k in factory],
+                },
+                lambda c: c.print(
+                    f"[bold]DRY RUN[/bold] - would delete key version {CRYPTNOX_KEY_VERSION} "
+                    f"({len(factory)} keys) from {before.aid_hex}. Nothing was sent to the card."
+                ),
+            )
+            return
+        if keys is None:  # unreachable: resolved above whenever not planning
+            raise RuntimeError("current keys were not resolved")
+        if not understood:
+            if app.json or not sys.stdin.isatty():
+                raise CryptnoxError(
+                    "delete-factory-keyset requires --i-understand-this-is-irreversible in "
+                    "non-interactive mode."
+                )
+            app.out.warn(
+                "This is IRREVERSIBLE: Cryptnox's remote reset and attestation will no longer "
+                "reach this card."
+            )
+            if click.prompt("Type DELETE-FACTORY-KEYSET to continue") != "DELETE-FACTORY-KEYSET":
+                raise click.Abort()
+
+        adm = _open_domain_channel(session, before.aid, keys, CUSTOMER_KEY_VERSION)
+        resp = adm.send(delete_key_version_apdu(CRYPTNOX_KEY_VERSION), context="DELETE KEY")
+        if not resp.ok:
+            raise StatusWordError(resp.sw1, resp.sw2, context="DELETE KEY (delete-factory-keyset)")
+        adm.forget_channel()
+        after = describe_security_domain(session, (before.aid,))
+
+    gone = after is not None and CRYPTNOX_KEY_VERSION not in after.key_versions
+    payload = {
+        "aid": before.aid_hex,
+        "deleted": True,
+        "sw": resp.sw_hex(),
+        "key_versions_after": after.key_versions if after else None,
+        "verified": gone,
+    }
+
+    def human(c: Console) -> None:
+        c.print(
+            f"[green]Deleted key version {CRYPTNOX_KEY_VERSION}[/green] from {before.aid_hex} "
+            f"(SW={resp.sw_hex()})."
+        )
+        remaining = after.key_versions if after else "unknown"
+        state = "confirmed" if gone else "[red]not confirmed[/red]"
+        c.print(f"  Key table re-read: versions {remaining}; removal {state}.")
+
+    app.out.result(payload, human)
+    if not gone:
+        raise CryptnoxError(
+            f"DELETE KEY was accepted but key version {CRYPTNOX_KEY_VERSION} is still listed; "
+            "re-run `piv admin keys`."
+        )
 
 
 @admin.command("authenticate")
@@ -813,8 +1310,9 @@ def perso() -> None:
 @click.option(
     "--default-keys",
     is_flag=True,
-    help="Use the default GlobalPlatform TEST keys "
-    "(publicly known - fine for dev/eval, never for deployment).",
+    help="Use the publicly known GlobalPlatform TEST keys for the admin channel, and "
+    "the same published value for the PIV management key (9B) if the card needs it "
+    "(fine for dev/eval, never for deployment).",
 )
 @click.option(
     "--out", "out_", type=click.Path(dir_okay=False), help="Write public-key PEM to FILE."
@@ -871,7 +1369,10 @@ def perso_generate_key(
             probe = session.transmit(keyimport.probe_apdu(ref, mech), context=f"probe {slot}")
             if probe.sw == 0x6A86:
                 _create_key_object(app, adm, keys, ref, mech, False, slot)
-        public_key = _generate_key_on_card(adm, keys, ref, mech, label=slot)
+        generated = _generate_key_on_card(
+            app, adm, keys, ref, mech, label=slot, default_keys=default_keys
+        )
+    public_key = generated.public_key
     pem = perso_mod.public_key_pem(public_key)
     der = public_key.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
@@ -885,10 +1386,13 @@ def perso_generate_key(
         "public_key_sha256": fingerprint,
         "out": out_,
         "public_key_pem": None if out_ else pem.decode(),
+        "generate_path": generated.path,
+        "management_key_auth": generated.management_key_auth,
     }
+    how = "on-card, via the PIV management key" if generated.management_key_auth else "on-card"
 
     def human(c: Console) -> None:
-        c.print(f"[green]Generated {alg} key in slot {slot}[/green] (on-card).")
+        c.print(f"[green]Generated {alg} key in slot {slot}[/green] ({how}).")
         c.print(f"  Public key SHA-256: {fingerprint}")
         if out_:
             c.print(f"  Public key PEM -> {out_}")
@@ -907,7 +1411,49 @@ def _set_verifier(adm: PivAdmin, keys, ref: int, padded: bytes, *, label: str):
     return adm.send(perso_mod.set_verifier_value_apdu(ref, padded), context=f"SET {label}")
 
 
-def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: str):
+class GeneratedKey(NamedTuple):
+    """An on-card generated public key and the path that produced it."""
+
+    #: An RSA or EC public key from ``cryptography``; untyped like every other
+    #: public-key value in this module (the two classes share no protocol).
+    public_key: Any
+    #: ``admin-channel`` or ``management-key``.
+    path: str
+    #: ``{"mechanism": "AES-256", "source": "$PIV_MGMT_KEY"}`` on the management-key
+    #: path, ``None`` on the admin channel.
+    management_key_auth: dict[str, object] | None
+
+
+def _parse_generated(mech: int, data: bytes, *, label: str, path: str):
+    """Parse a GENERATE response, turning a malformed template into a CLI error."""
+    try:
+        return perso_mod.parse_public_key(mech, data)
+    except ValueError as exc:
+        raise CryptnoxError(
+            f"GENERATE key {label}: the card returned a public-key template this CLI "
+            f"cannot parse ({len(data)} bytes over the {path} path, SW=9000): {exc}. "
+            "Re-run with --verbose to capture the exchange."
+        ) from exc
+
+
+def _generate_key_on_card(
+    app: AppContext,
+    adm: PivAdmin,
+    keys,
+    ref: int,
+    mech: int,
+    *,
+    label: str,
+    default_keys: bool = False,
+) -> GeneratedKey:
+    """Generate a key pair on the card and return its public half.
+
+    The admin channel is tried first and is the whole story on a card that can return
+    the full public-key template through it. A card that cannot says so in its own
+    response - success, but only as many bytes as were asked for, with the template's
+    own header declaring more - and only then does the generation repeat over plain
+    APDUs behind a PIV management key authentication.
+    """
     adm.select()
     adm.open(keys)
     resp = adm.send(perso_mod.generate_keypair_apdu(ref, mech), context=f"GENERATE {label}")
@@ -915,7 +1461,109 @@ def _generate_key_on_card(adm: PivAdmin, keys, ref: int, mech: int, *, label: st
         raise CryptnoxError(f"GENERATE key {label} failed (SW=6F00): {_IMPORT_SW_HINTS[0x6F00]}.")
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"GENERATE key {label}")
-    return perso_mod.parse_public_key(mech, resp.data)
+    if perso_mod.generate_response_truncated(mech, resp):
+        return _generate_via_mgmt_key(
+            app,
+            adm,
+            ref,
+            mech,
+            label=label,
+            default_keys=default_keys,
+            received=len(resp.data),
+            declared=perso_mod.declared_template_bytes(resp.data),
+        )
+    return GeneratedKey(
+        _parse_generated(mech, resp.data, label=label, path="admin-channel"),
+        "admin-channel",
+        None,
+    )
+
+
+def _atr_or_none(session) -> bytes | None:
+    """The session's ATR when the transport can supply one (diagnostic use only)."""
+    try:
+        return session.atr
+    except Exception:  # noqa: BLE001 - a missing ATR only costs a less precise message
+        return None
+
+
+def _generate_via_mgmt_key(
+    app: AppContext,
+    adm: PivAdmin,
+    ref: int,
+    mech: int,
+    *,
+    label: str,
+    default_keys: bool,
+    received: int,
+    declared: int | None,
+) -> GeneratedKey:
+    """Repeat the generation over plain APDUs, authenticating the management key first.
+
+    The card generated and stored a key pair on the truncated attempt already - the
+    applet builds the response only after generating - so that first key is gone
+    whatever happens here, and RSA generation runs twice on such a card.
+    """
+    declared_text = f"{declared}" if declared is not None else "more"
+    app.out.warn(
+        f"the admin channel returned {received} of {declared_text} bytes of the public-key "
+        "template; completing the generation with the PIV management key (9B) over plain "
+        f"APDUs. The first attempt already replaced the key in slot {label}; the key that "
+        "remains is the one generated now."
+    )
+    material = resolve_mgmt_key(
+        app.redactor,
+        default_keys=default_keys,
+        missing_message=(
+            f"The card returned {received} of {declared_text} bytes of the public-key "
+            "template over the admin channel, so this command must authenticate the PIV "
+            "management key (slot 9B) and repeat the generation over plain APDUs. Set "
+            f"${MGMT_KEY_ENV} (hex: 32, 48 or 64 characters for AES-128/192/256), or pass "
+            "--default-keys if this card still holds the published development value."
+        ),
+    )
+    # A re-SELECT resets the card's secure channel, which is exactly the state the plain
+    # phase wants; the key-holder role granted afterwards survives every later command.
+    adm.select()
+    adm.forget_channel()
+    contactless = is_contactless_interface(adm.card.reader_name, _atr_or_none(adm.card))
+    auth = mgmt_auth.authenticate(adm.card.transmit, material, contactless=contactless)
+    app.out.detail(
+        f"PIV management key 9B: {mgmt_auth.mechanism_name(auth.mechanism)}, mutual "
+        f"authentication, card verified (value from {auth.source})."
+    )
+
+    context = f"GENERATE {label} (management-key path)"
+    resp = adm.card.transmit(perso_mod.generate_keypair_apdu(ref, mech), context=context)
+    if resp.sw == 0x6F00 and keyimport.rsa_modulus_len(mech):
+        raise CryptnoxError(f"GENERATE key {label} failed (SW=6F00): {_IMPORT_SW_HINTS[0x6F00]}.")
+    if resp.sw == 0x6982:
+        raise StatusWordError(
+            resp.sw1,
+            resp.sw2,
+            context=(
+                f"GENERATE key {label} (management-key path; 9B authenticated, so slot "
+                f"{label}'s key object is bound to a different admin key than 9B)"
+            ),
+        )
+    if not resp.ok:
+        raise StatusWordError(
+            resp.sw1, resp.sw2, context=f"GENERATE key {label} (management-key path)"
+        )
+    if perso_mod.generate_response_truncated(mech, resp):
+        raise CryptnoxError(
+            f"GENERATE key {label}: the card truncated the response on the plain path as "
+            f"well ({len(resp.data)} bytes); this CLI has no further fallback."
+        )
+    info: dict[str, object] = {
+        "mechanism": mgmt_auth.mechanism_name(auth.mechanism),
+        "source": auth.source,
+    }
+    return GeneratedKey(
+        _parse_generated(mech, resp.data, label=label, path="management-key"),
+        "management-key",
+        info,
+    )
 
 
 def _import_cert_der(adm: PivAdmin, keys, ref: int, cert_der: bytes, *, label: str):
@@ -1089,7 +1737,8 @@ def _create_key_object(
     if resp.sw == 0x6985:
         raise CryptnoxError(
             "the applet is finalized (SECURED): key objects can no longer be created. "
-            "Import into an existing object, or reinstall the applet."
+            "Import into an existing object. A full reset of the PIV applet is a Cryptnox "
+            "operation: contact Cryptnox support."
         )
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"CREATE KEY {slot}")
@@ -2201,8 +2850,9 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
 @click.option(
     "--default-keys",
     is_flag=True,
-    help="Use the default GlobalPlatform TEST keys "
-    "(publicly known - fine for dev/eval, never for deployment).",
+    help="Use the publicly known GlobalPlatform TEST keys for the admin channel, and "
+    "the same published value for the PIV management key (9B) if the card needs it "
+    "(fine for dev/eval, never for deployment).",
 )
 @click.option(
     "--dry-run", "dry_run", is_flag=True, help="Detect, plan and show the steps; write nothing."
@@ -2416,7 +3066,10 @@ def quickstart(
                         raise StatusWordError(resp.sw1, resp.sw2, context="SET PUK")
                     record(planned_step.step, "ok", sw=resp.sw_hex())
                 elif planned_step.step == "generate-key":
-                    public_key = _generate_key_on_card(adm, keys, ref, mech, label=slot)
+                    generated = _generate_key_on_card(
+                        app, adm, keys, ref, mech, label=slot, default_keys=default_keys
+                    )
+                    public_key = generated.public_key
                     spki = public_key.public_bytes(
                         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
                     )
@@ -2427,7 +3080,12 @@ def quickstart(
                     record(
                         planned_step.step,
                         "ok",
-                        detail={"algorithm": alg, "public_key_sha256": fingerprint},
+                        detail={
+                            "algorithm": alg,
+                            "public_key_sha256": fingerprint,
+                            "generate_path": generated.path,
+                            "management_key_auth": generated.management_key_auth,
+                        },
                     )
                 elif planned_step.step == "certificate":
                     if spki is None:  # unreachable: generate-key runs whenever certificate runs

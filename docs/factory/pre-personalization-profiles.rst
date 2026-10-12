@@ -137,10 +137,11 @@ give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.
    worse than an absent one: the Windows inbox PIV minidriver rejects the
    whole card. This tool never writes that form.
 
-   The container also cannot be removed afterwards, because ``load-config``
-   stops at the first element that already exists. Recovering a card requires
-   reinstalling the PIV applet, which erases its keys and certificates.
-   Discovery is optional in PIV, and a card without it works normally.
+   The container also cannot be removed afterwards: existing elements cannot
+   be changed or removed, only new ones added, and ``load-config`` stops at
+   the first element that already exists. A full reset of the PIV applet
+   erases its keys and certificates and is a Cryptnox operation (contact
+   Cryptnox support).
 
 ``from_yaml`` rejects unknown mode/role/mechanism names and validates the
 whole profile before anything is sent to a card:

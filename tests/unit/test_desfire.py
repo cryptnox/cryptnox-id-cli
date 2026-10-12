@@ -1,6 +1,7 @@
 """DESFire transport tests: native framing, 91AF frame chaining, parsers, errors."""
 
 import pytest
+from _cardfakes import QueueConn
 
 from cryptnox_id_cli.applets.mifare import desfire
 from cryptnox_id_cli.applets.mifare.desfire import (
@@ -9,25 +10,6 @@ from cryptnox_id_cli.applets.mifare.desfire import (
     DesfireTransport,
 )
 from cryptnox_id_cli.transport.pcsc import CardSession
-
-
-class QueueConn:
-    """A RawConnection that returns queued (data, sw1, sw2) responses in order."""
-
-    def __init__(self, responses):
-        self._responses = list(responses)
-        self.sent: list[bytes] = []
-
-    def transmit(self, apdu):
-        self.sent.append(bytes(apdu))
-        data, sw1, sw2 = self._responses.pop(0)
-        return list(data), sw1, sw2
-
-    def get_atr(self):
-        return b""
-
-    def disconnect(self):
-        pass
 
 
 def test_frame_encoding():

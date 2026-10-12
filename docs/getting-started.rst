@@ -104,6 +104,8 @@ Development keys
 
    * **SCP03 / GlobalPlatform ISD** — the published GlobalPlatform test key
      ``40 41 42 … 4F`` (``--default-keys``);
+   * **PIV management key (9B)** — the same published GlobalPlatform test
+     value, doubled for an AES-256 key object (``--default-keys``);
    * **DESFire** application keys after ``app create`` — all-zero AES
      (``--zero-key``);
    * **PIV PIN / PUK** in the examples — ``123456`` / ``12345678``.
@@ -112,6 +114,7 @@ Development keys
    deployment must rotate all of them, which is exactly what the
    environment-variable key input is for: ``PIV_SCP03_ENC`` /
    ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` for the admin channel,
+   ``PIV_MGMT_KEY`` for the PIV management key,
    ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_NEW_PUK``
    for PINs and PUKs, and the DESFire ``--key-env NAME`` form.
 

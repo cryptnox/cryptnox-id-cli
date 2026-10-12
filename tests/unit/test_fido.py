@@ -2,6 +2,7 @@
 
 import cbor2
 import pytest
+from _cardfakes import QueueConn
 
 from cryptnox_id_cli.applets.fido import constants as c
 from cryptnox_id_cli.applets.fido.ctap import Ctap2Client, describe_get_info
@@ -12,23 +13,6 @@ from cryptnox_id_cli.transport.pcsc import CardSession
 
 # The real Cryptnox card's AAGUID, observed live over the ACR1252 (elevated).
 AAGUID = bytes.fromhex("1d1b4e3376a147fb97a014b10d0933f1")
-
-
-class QueueConn:
-    def __init__(self, responses):
-        self._responses = list(responses)
-        self.sent: list[bytes] = []
-
-    def transmit(self, apdu):
-        self.sent.append(bytes(apdu))
-        data, sw1, sw2 = self._responses.pop(0)
-        return list(data), sw1, sw2
-
-    def get_atr(self):
-        return b""
-
-    def disconnect(self):
-        pass
 
 
 def _info_payload() -> bytes:
