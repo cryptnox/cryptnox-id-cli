@@ -250,7 +250,9 @@ throwaway dev root: <code class="docutils literal notranslate"><span class="pre"
 <p><strong>Genuineness is not the ISD / PIV-SSD check.</strong>
 <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span></code> proves the attestation applet’s device key and certificate
 chain. It does <strong>not</strong> verify the per-card ISD or PIV-SSD keys (KDF/HSM-derived)
-— this tool has no access to those secrets, and the output says so.</p>
+— this tool has no access to those secrets, and the output says so. The
+per-card PIV-SSD key set is key version 2 of the PIV security domain; see
+<a class="reference internal" href="piv/piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a> for what it is and why to leave it in place.</p>
 </section>
 <section id="remote-service">
 <h2>Remote service<a class="headerlink" href="#remote-service" title="Link to this heading"></a></h2>

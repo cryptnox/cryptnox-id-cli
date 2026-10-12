@@ -251,11 +251,14 @@ commands in a row without re-typing the prefix, use <a class="reference internal
 <h2>Development keys<a class="headerlink" href="#development-keys" title="Link to this heading"></a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Development and evaluation cards use well-known <strong>default</strong> keys, and the
-examples in this documentation use them too:</p>
+<p>Cards ship with well-known <strong>default</strong> keys so that the first
+personalization works out of the box, and the examples in this
+documentation use them too:</p>
 <ul class="simple">
-<li><p><strong>SCP03 / GlobalPlatform ISD</strong> — the published GlobalPlatform test key
-<code class="docutils literal notranslate"><span class="pre">40</span> <span class="pre">41</span> <span class="pre">42</span> <span class="pre">…</span> <span class="pre">4F</span></code> (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>);</p></li>
+<li><p><strong>PIV admin channel (SCP03)</strong> — key version 1 of the card’s PIV security
+domain (<code class="docutils literal notranslate"><span class="pre">A00000015153504101</span></code>) holds the published GlobalPlatform test
+key <code class="docutils literal notranslate"><span class="pre">40</span> <span class="pre">41</span> <span class="pre">42</span> <span class="pre">…</span> <span class="pre">4F</span></code> (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>). The card manager (ISD) is a
+separate domain with per-card keys that the CLI never uses;</p></li>
 <li><p><strong>PIV management key (9B)</strong> — the same published GlobalPlatform test
 value, doubled for an AES-256 key object (<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>);</p></li>
 <li><p><strong>DESFire</strong> application keys after <code class="docutils literal notranslate"><span class="pre">app</span> <span class="pre">create</span></code> — all-zero AES
@@ -263,12 +266,13 @@ value, doubled for an AES-256 key object (<code class="docutils literal notransl
 <li><p><strong>PIV PIN / PUK</strong> in the examples — <code class="docutils literal notranslate"><span class="pre">123456</span></code> / <code class="docutils literal notranslate"><span class="pre">12345678</span></code>.</p></li>
 </ul>
 <p>These are <strong>not secrets</strong> — they are public, published values. A production
-deployment must rotate all of them, which is exactly what the
-environment-variable key input is for: <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> /
-<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> for the admin channel,
-<code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> for the PIV management key,
+deployment must replace them. The environment variables only
+<em>authenticate</em> with keys that are already on the card; putting new admin
+keys on the card is a separate step, see <a class="reference internal" href="piv/piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a>.
+After it, the admin channel takes <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> /
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code>; <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> carries the PIV management key,
 <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>
-for PINs and PUKs, and the DESFire <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> form.</p>
+the PINs and PUKs, and DESFire keys use the <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> form.</p>
 </div>
 </section>
 <section id="next">

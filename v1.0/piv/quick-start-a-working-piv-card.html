@@ -161,12 +161,12 @@ and sign with. About ten minutes, one command if you let it.</p>
 interface on this card; contactless works for reading once personalized.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> installed, and <code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> if you want to run the verification
 step (any recent version).</p></li>
-<li><p>The card’s SCP03 administration keys. <strong>Development/evaluation cards</strong> use the
-GlobalPlatform test keys — pass <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>. <strong>Provisioned cards</strong> take
-their keys from the <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code>
-environment variables (hex). Keys never go on the command line, and the
-default keys are for development cards only — see the warning in
-<a class="reference internal" href="../getting-started.html"><span class="doc">Getting started</span></a>.</p></li>
+<li><p>The card’s SCP03 administration keys. As shipped, every card uses the
+GlobalPlatform test keys — pass <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>. Before a card goes into
+production, replace them (<a class="reference internal" href="piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a>); from then on the
+keys come from the <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code>
+environment variables (hex). Keys never go on the command line — see the
+warning in <a class="reference internal" href="../getting-started.html"><span class="doc">Getting started</span></a>.</p></li>
 </ul>
 <p>Check what you have:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>readers

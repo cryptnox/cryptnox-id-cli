@@ -149,10 +149,12 @@
 <h1>Factory commands<a class="headerlink" href="#factory-commands" title="Link to this heading"></a></h1>
 <p>Manufacturing-stage commands. Pre-personalization lays down the PIV applet’s
 <em>structure</em> — data containers, PIN/PUK verifiers, key objects — from a profile,
-over the SCP03 admin channel. Operators normally never need these; development
-and evaluation cards use them with <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>. Production cards take
-their admin keys from environment variables; production key management is a
-manufacturing procedure outside this documentation.</p>
+over the SCP03 admin channel. Operators normally never need these. As shipped,
+every card opens the admin channel with the GlobalPlatform test keys
+(<code class="docutils literal notranslate"><span class="pre">--default-keys</span></code>); replacing them before production is described in
+<a class="reference internal" href="../piv/piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a>, after which the commands take the keys from the
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment
+variables.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>factory piv preperso status            lifecycle + structure overview
 factory piv preperso inspect-defaults  show the built-in profiles
 factory piv preperso init-config       write a built-in profile to editable YAML
