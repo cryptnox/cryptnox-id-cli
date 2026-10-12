@@ -275,6 +275,11 @@ class CardSession:
     def atr(self) -> bytes:
         return self._conn.get_atr()
 
+    @property
+    def raw_connection(self) -> RawConnection:
+        """The connection beneath the session, for code that must not chain responses."""
+        return self._conn
+
     def _emit(self, line: str) -> None:
         if self._log is not None:
             self._log.write(line + "\n")

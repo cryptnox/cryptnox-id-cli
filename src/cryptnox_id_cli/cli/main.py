@@ -18,6 +18,7 @@ from cryptnox_id_cli.cli.commands import info as info_cmd
 from cryptnox_id_cli.cli.commands import mifare as mifare_cmd
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
 from cryptnox_id_cli.cli.commands import readers as readers_cmd
+from cryptnox_id_cli.cli.commands import remote as remote_cmd
 from cryptnox_id_cli.cli.commands import report as report_cmd
 from cryptnox_id_cli.cli.commands import shell as shell_cmd
 from cryptnox_id_cli.cli.context import AppContext
@@ -104,6 +105,7 @@ main.add_command(piv_cmd.command)
 main.add_command(mifare_cmd.command)
 main.add_command(fido_cmd.command)
 main.add_command(genuine_cmd.command)
+main.add_command(remote_cmd.command)
 main.add_command(report_cmd.command)
 main.add_command(factory_cmd.command)
 main.add_command(shell_cmd.command)

@@ -41,6 +41,10 @@ dependencies = [
     "cbor2>=5.4,<6",
     "asn1crypto>=1.5",
     "pyyaml>=6.0",
+    # The remote PIV service speaks WebSocket. Floor is 13.0, the first release
+    # whose synchronous client (websockets.sync.client) is stable; the CLI is
+    # synchronous throughout and does not run an event loop.
+    "websockets>=13,<18",
 ]
 
 [project.urls]

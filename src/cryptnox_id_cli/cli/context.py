@@ -47,6 +47,18 @@ class AppContext:
             self._log_fh.write(f"# {CLI_NAME} APDU transcript (secrets redacted)\n")
         return self._log_fh
 
+    def apdu_trace(self, line: str) -> None:
+        """Record one already-redacted transcript line (log file + verbose trace).
+
+        The same sink :class:`CardSession` writes to, for code that transmits
+        outside a session.
+        """
+        fh = self._ensure_log()
+        if fh is not None:
+            fh.write(line + "\n")
+            fh.flush()
+        self._trace(line)
+
     def make_session(self, conn: RawConnection, *, reader_name: str | None = None) -> CardSession:
         """Wrap an already-open connection in a CardSession with our redactor/log."""
         return CardSession(

@@ -69,6 +69,59 @@ class Scp02Error(CryptnoxError):
     exit_code = 7
 
 
+class RemoteError(CryptnoxError):
+    """A remote PIV service operation could not be carried out."""
+
+    code = "remote_error"
+    exit_code = 12
+
+
+class RemoteConnectError(RemoteError):
+    """The service could not be reached, or the TLS handshake failed."""
+
+    code = "remote_connect"
+    exit_code = 13
+
+
+class RemoteProtocolError(RemoteError):
+    """The service sent something this client cannot interpret safely."""
+
+    code = "remote_protocol"
+    exit_code = 14
+
+
+class RemotePolicyError(RemoteError):
+    """The service asked for a command the relay policy refuses to send.
+
+    Carries the offending APDU header so the rule set can be reviewed against
+    what the service actually needs.
+    """
+
+    code = "remote_policy"
+    exit_code = 15
+
+    def __init__(self, message: str, *, header: str | None = None) -> None:
+        super().__init__(message)
+        self.header = header
+
+    def to_dict(self) -> dict[str, object]:
+        return {"error": self.code, "message": str(self), "apdu_header": self.header}
+
+
+class RemoteOperationError(RemoteError):
+    """The service completed the exchange but reported the operation as failed."""
+
+    code = "remote_failed"
+    exit_code = 16
+
+    def __init__(self, message: str, *, result: dict[str, object] | None = None) -> None:
+        super().__init__(message)
+        self.result = result
+
+    def to_dict(self) -> dict[str, object]:
+        return {"error": self.code, "message": str(self), "result": self.result}
+
+
 @dataclass(frozen=True)
 class SWInfo:
     sw: int
