@@ -83,6 +83,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#status-words-and-errors">Status words and errors</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#fido2">FIDO2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#genuineness">Genuineness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#remote-service">Remote service</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#yubico-piv-tool-interop">yubico-piv-tool interop</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#getting-a-shareable-diagnostic">Getting a shareable diagnostic</a></li>
 </ul>
@@ -118,6 +119,11 @@
 <li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Remote service</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="remote/remote-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="remote/remote-commands.html">Commands</a></li>
 </ul>
 
         </div>
@@ -245,6 +251,32 @@ throwaway dev root: <code class="docutils literal notranslate"><span class="pre"
 <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span></code> proves the attestation applet’s device key and certificate
 chain. It does <strong>not</strong> verify the per-card ISD or PIV-SSD keys (KDF/HSM-derived)
 — this tool has no access to those secrets, and the output says so.</p>
+</section>
+<section id="remote-service">
+<h2>Remote service<a class="headerlink" href="#remote-service" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">remote</span></code> commands exit with a code that names the failure class (see
+<a class="reference internal" href="exit-codes.html"><span class="doc">Exit codes</span></a>):</p>
+<ul class="simple">
+<li><p><strong>13</strong> <code class="docutils literal notranslate"><span class="pre">remote_connect</span></code>: the service could not be reached or the TLS
+handshake failed. Check the network; the endpoint is fixed to
+<code class="docutils literal notranslate"><span class="pre">wss://piv.cryptnox.com</span></code>. With <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_REMOTE_URL</span></code> set, only
+<code class="docutils literal notranslate"><span class="pre">authenticate</span></code> and <code class="docutils literal notranslate"><span class="pre">inspect</span></code> run, and only to <code class="docutils literal notranslate"><span class="pre">wss://</span></code> or loopback.</p></li>
+<li><p><strong>14</strong> <code class="docutils literal notranslate"><span class="pre">remote_protocol</span></code>: the service sent a frame the tool cannot
+interpret. Update the tool; if the newest version fails the same way,
+report it with the message.</p></li>
+<li><p><strong>15</strong> <code class="docutils literal notranslate"><span class="pre">remote_policy</span></code>: the service asked for a card command the relay
+policy refuses; the message names the command header. Nothing was sent to
+the card for that command and the operation stopped. This is the tool
+protecting the card; report the header so the policy can be reviewed.</p></li>
+<li><p><strong>16</strong> <code class="docutils literal notranslate"><span class="pre">remote_failed</span></code>: the exchange completed and the service reported
+the operation as failed; the error object carries the service’s result.
+A per-card rate limit exists; wait before retrying.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code> refuse to run non-interactively
+without <code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code>, and <code class="docutils literal notranslate"><span class="pre">--yes</span></code> is not
+accepted for them. <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">attest</span></code> refuses non-interactively without
+<code class="docutils literal notranslate"><span class="pre">--yes</span></code> when the slot or the attestation container already holds a
+certificate.</p>
 </section>
 <section id="yubico-piv-tool-interop">
 <h2>yubico-piv-tool interop<a class="headerlink" href="#yubico-piv-tool-interop" title="Link to this heading"></a></h2>

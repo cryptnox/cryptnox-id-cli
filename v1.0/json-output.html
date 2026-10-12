@@ -81,6 +81,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#result-envelope">Result envelope</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#error-object">Error object</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#snapshot-reports">Snapshot reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#remote-service-operations">Remote service operations</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
@@ -116,6 +117,11 @@
 <li class="toctree-l1"><a class="reference internal" href="genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-guide.html">Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Remote service</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="remote/remote-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="remote/remote-commands.html">Commands</a></li>
 </ul>
 
         </div>
@@ -271,6 +277,19 @@ re-present the card, and check the reader passes native DESFire APDUs.</p>
 <p>A section may also report <code class="docutils literal notranslate"><span class="pre">{&quot;state&quot;:</span> <span class="pre">&quot;Unknown&quot;,</span> <span class="pre">&quot;error&quot;:</span> <span class="pre">&quot;&lt;message&gt;&quot;}</span></code> when a
 probe fails. Nothing in any report contains a PIN, key, or private material —
 <code class="docutils literal notranslate"><span class="pre">safe_to_share</span></code> is always <code class="docutils literal notranslate"><span class="pre">true</span></code>.</p>
+</section>
+<section id="remote-service-operations">
+<h2>Remote service operations<a class="headerlink" href="#remote-service-operations" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">remote</span></code> commands return one object with a fixed top level: <code class="docutils literal notranslate"><span class="pre">op</span></code>,
+<code class="docutils literal notranslate"><span class="pre">endpoint</span></code>, <code class="docutils literal notranslate"><span class="pre">card</span></code> (reader, ATR, CPLC UID and serial, all read locally),
+<code class="docutils literal notranslate"><span class="pre">result</span></code> (the service’s own result object, passed through unchanged),
+<code class="docutils literal notranslate"><span class="pre">verified_locally</span></code> (each cross-check as <code class="docutils literal notranslate"><span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">false</span></code> or <code class="docutils literal notranslate"><span class="pre">null</span></code> when
+the service reported nothing to compare) and <code class="docutils literal notranslate"><span class="pre">relay</span></code> (commands relayed,
+seconds, proof-of-work bits, the service’s log lines). <code class="docutils literal notranslate"><span class="pre">reset</span></code> and
+<code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> add <code class="docutils literal notranslate"><span class="pre">before</span></code> and <code class="docutils literal notranslate"><span class="pre">after</span></code> inventories; <code class="docutils literal notranslate"><span class="pre">attest</span></code> adds
+<code class="docutils literal notranslate"><span class="pre">verification</span></code> with every binding checked on the returned certificate.
+Fields under <code class="docutils literal notranslate"><span class="pre">result</span></code> are the service’s assertions; only <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code>,
+<code class="docutils literal notranslate"><span class="pre">before</span></code>, <code class="docutils literal notranslate"><span class="pre">after</span></code> and <code class="docutils literal notranslate"><span class="pre">verification</span></code> are the tool’s own findings.</p>
 </section>
 </section>
 
