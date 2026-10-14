@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `piv perso import-cert --csr FILE` refuses a certificate whose public key
+  is not the CSR's; `--verify-pin` has the slot sign a challenge and refuses
+  unless the certificate's key verifies it.
 - `piv inventory`: the applet's key objects, verifiers, containers and config
   flags with their access rules, read without authentication.
 - The finalized (SECURED) state, read from the applet's status object, in
@@ -58,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `piv quickstart` defaults to RSA-2048 on `--profile ms-logon --slot 9A`,
+  the Windows shape, instead of warning that its ECC default will not work
+  there.
+- `piv quickstart` plans from the applet's key-object listing. A structure
+  that lacks the requested (slot, mechanism) object gets that object created
+  under `--include-preperso` instead of a second `load-config`, which the
+  applet refuses with `6E27`.
 - `piv admin status` and `factory piv preperso status` read the admin security
   domain's SCP version and key versions from its key information template
   instead of sending INITIALIZE UPDATE, which this chip counts as a failed
@@ -72,6 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `factory piv preperso status` reported the SCP version of whatever applet was
   selected last, not the PIV security domain's.
+- The Windows logon guide's quickstart example lacked `--algorithm RSA2048`
+  and generated an ECC key Windows cannot use.
 - `cryptography>=43` is now required: the SCP02 code imports its `decrepit`
   3DES module, which older releases do not have, so an install on a system
   with cryptography 41 failed at start-up.

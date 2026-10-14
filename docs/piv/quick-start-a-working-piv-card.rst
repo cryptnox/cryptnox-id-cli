@@ -79,12 +79,12 @@ returns ``6985`` for sign operations).
 
 .. note::
 
-   ``quickstart`` defaults to **ECC** (P-256) everywhere. ``--algorithm
-   RSA2048`` is accepted for ``--profile ms-logon`` on slot 9A — the one
-   built-in profile/slot combination with an RSA key object — and pass it
-   there for Windows, whose inbox PIV minidriver does not enumerate EC keys
-   (see :doc:`/piv/windows-logon-and-remote-desktop`); left on the ECC default, that combination prints a
-   warning saying exactly that.
+   ``quickstart`` defaults to **ECC** (P-256), except with ``--profile
+   ms-logon`` on slot 9A, the one built-in profile/slot combination with an
+   RSA key object, where it defaults to RSA-2048 because the Windows inbox PIV
+   minidriver does not enumerate EC keys (see
+   :doc:`/piv/windows-logon-and-remote-desktop`). ``--algorithm RSA2048`` is
+   accepted there and rejected elsewhere.
 
    A slot can be generated on-card with any mechanism it has a **key object**
    for, and the pre-personalization profile decides which those are. Every key
@@ -118,7 +118,8 @@ returns ``6985`` for sign operations).
         --public-key 9c.pub.pem --out 9c.crt.pem
    $ cryptnox-id piv perso import-cert --slot 9C --cert 9c.crt.pem
 
-Or CA-issued: ``generate-csr`` -> have your CA sign it -> ``import-cert``.
+Or CA-issued: ``generate-csr`` -> have your CA sign it -> ``import-cert --csr
+9c.csr.pem``, which refuses a certificate the CA issued for some other key.
 Large certificates are written with ISO command chaining automatically.
 
 **Step 4 — standard data objects.** Most PIV clients (including

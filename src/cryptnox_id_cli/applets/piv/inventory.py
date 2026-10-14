@@ -393,6 +393,15 @@ def _enumerate(piv: PivApplet, ident: int, parse):  # noqa: ANN001, ANN202
     return out
 
 
+def read_keys(piv: PivApplet) -> list[KeyObject] | None:
+    """The key objects, or ``None`` when the applet withholds the listing."""
+    return _enumerate(piv, ID_KEY, parse_key)
+
+
+def read_verifiers(piv: PivApplet) -> list[VerifierObject] | None:
+    return _enumerate(piv, ID_VERIFIER, parse_verifier)
+
+
 @dataclass(frozen=True)
 class Inventory:
     version: AppletVersion | None

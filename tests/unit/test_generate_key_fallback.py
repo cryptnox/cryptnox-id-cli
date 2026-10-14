@@ -409,6 +409,7 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
     facts = piv_cmd.CardFacts(
         pin_configured=True,
         puk_configured=True,
+        structure_present=True,
         key_object_present=True,
         cert_present=False,
         chuid_present=True,
