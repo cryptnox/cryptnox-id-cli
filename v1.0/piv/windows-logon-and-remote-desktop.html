@@ -184,11 +184,12 @@ application can offer the credential. The card looks empty rather than
 broken, which makes this easy to misdiagnose.</p>
 <p>This is a property of the Windows driver, not of this card. The same test
 reproduces on a YubiKey 5, and P-384 fails the same way as P-256.</p>
-<p>Because of this, pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> to <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> for any
-card intended for Windows (quickstart’s default is ECC, and it warns when
-that default lands on <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>’s 9A). The RSA key is still generated
-<strong>on-card</strong> and never leaves it, so choosing RSA costs nothing in key
-protection.</p>
+<p>Because of this, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to RSA-2048 on the
+<code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile with slot 9A, the Windows shape, and to ECC everywhere
+else. The examples below pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> all the same, so a
+copied command stays right if the shape changes. The RSA key is still
+generated <strong>on-card</strong> and never leaves it, so choosing RSA costs nothing in
+key protection.</p>
 <p>If a deployment genuinely requires ECC on Windows, that needs a third-party
 minidriver (Yubico’s supports P-256/P-384), which is outside the
 no-extra-software path this guide describes.</p>
@@ -198,7 +199,7 @@ no-extra-software path this guide describes.</p>
 <h2>Step 0 — pre-personalize with the ms-logon profile (once per card)<a class="headerlink" href="#step-0-pre-personalize-with-the-ms-logon-profile-once-per-card" title="Link to this heading"></a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--include-preperso<span class="w"> </span><span class="se">\</span>
-<span class="w">     </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9a.csr.pem<span class="w"> </span>--default-keys
+<span class="w">     </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9a.csr.pem<span class="w"> </span>--default-keys
 </pre></div>
 </div>
 <p>The second form does everything in one shot — PIN, PUK, an on-card <strong>RSA-2048</strong>
@@ -211,9 +212,13 @@ CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.<
 <p><strong>Path A — CSR to the CA (key stays on-card).</strong> Submit <code class="docutils literal notranslate"><span class="pre">9a.csr.pem</span></code> against
 a smart-card-logon template and import the issued certificate:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>certreq<span class="w"> </span>-submit<span class="w"> </span>-attrib<span class="w"> </span><span class="s2">"CertificateTemplate:SmartcardLogon"</span><span class="w"> </span>9a.csr.pem<span class="w"> </span>9a-issued.cer
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a-issued.cer
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a-issued.cer<span class="w"> </span>--csr<span class="w"> </span>9a.csr.pem
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">--csr</span></code> makes the import refuse a certificate whose public key is not the
+one in the CSR, which is what happens when an enrollment tool generated a key
+of its own instead of signing the card’s request. A certificate for another
+key would be written without complaint and fail only at logon.</p>
 <p><strong>Path B — PKI-issued PKCS#12 (centralized key generation).</strong> If your PKI
 delivers a <code class="docutils literal notranslate"><span class="pre">.pfx</span></code>/<code class="docutils literal notranslate"><span class="pre">.p12</span></code>, one command imports both the key and the
 certificate:</p>

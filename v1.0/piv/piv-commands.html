@@ -299,6 +299,7 @@ piv perso import-p12              one-command PKCS#12 (.p12/.pfx) key + certific
 piv perso generate-csr            PKCS#10 CSR, signed on-card
 piv perso self-sign-cert          self-signed certificate (dev/test), signed on-card
 piv perso import-cert             write a certificate into the slot container
+                                  (--csr / --verify-pin check it is for the slot's key)
 piv perso generate-chuid          build a minimal CHUID object
 piv perso generate-ccc            build a minimal CCC object
 piv perso generate-discovery      build the Discovery object
@@ -330,12 +331,23 @@ return the full template take the admin channel as before.</p></li>
 <li><p>When that path is taken, the key pair from the first attempt is replaced by the
 one generated over the plain path, whose public half is the one reported; RSA
 generation therefore runs twice on such a card.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to ECC P-256. It accepts <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code>
-only for <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on slot 9A — the one built-in shape with an
-RSA key object — and rejects it elsewhere; pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code>
-there for Windows, which does not enumerate EC keys (left on the ECC
-default, that combination warns). For other cards known to carry an RSA
-object, use <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">generate-key</span></code> directly.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to ECC P-256, except with <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code>
+on slot 9A, the one built-in shape with an RSA key object and the Windows
+one, where it defaults to RSA-2048 because Windows does not enumerate EC
+keys. <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code> is accepted there and rejected elsewhere. For
+other cards known to carry an RSA object, use <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">generate-key</span></code>
+directly.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> reads the applet’s key-object listing before planning. A
+card with no structure at all needs <code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code> (or a
+<code class="docutils literal notranslate"><span class="pre">load-config</span></code>); a card whose structure lacks the key object for the
+requested slot and mechanism gets that one object created with
+<code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code>, never a second <code class="docutils literal notranslate"><span class="pre">load-config</span></code> over the existing
+structure, which the applet refuses with <code class="docutils literal notranslate"><span class="pre">6E27</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-cert</span></code> writes the certificate it is given. <code class="docutils literal notranslate"><span class="pre">--csr</span> <span class="pre">FILE</span></code>
+refuses one whose public key is not the CSR’s, with no PIN; <code class="docutils literal notranslate"><span class="pre">--verify-pin</span></code>
+has the slot sign a challenge and refuses unless the certificate’s key
+verifies it. Without either, a certificate for another key is written and
+fails only when used.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-key</span></code> is the way to place an <strong>externally generated</strong> RSA
 key. It sends the key as CHANGE REFERENCE DATA ADMIN elements over SCP03 and
 starts with a CLEAR, so re-runs are safe.</p></li>

@@ -192,9 +192,9 @@ first; <code class="docutils literal notranslate"><span class="pre">--dry-run</s
 <p class="admonition-title">Note</p>
 <p>Secrets are resolved up front (<code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>
 or masked prompts; <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> when the PIN already exists). Quickstart
-defaults to ECC P-256. For a Windows card pass <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> with
-<code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on slot 9A (Windows does not enumerate EC keys; left on
-the ECC default, that combination warns). For RSA on any other card shape, use
+defaults to ECC P-256, except with <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code> on slot 9A, the
+Windows shape, where it defaults to RSA-2048 because Windows does not enumerate
+EC keys. For RSA on any other card shape, use
 <code class="docutils literal notranslate"><span class="pre">generate-key</span></code> directly on a slot with an RSA key object, or <a class="reference internal" href="#piv-personalization-import-key"><span class="std std-ref">import a
 key</span></a>. A slot that already has a certificate is left
 untouched (never silently replaces a certified key); with <code class="docutils literal notranslate"><span class="pre">--cert-mode</span> <span class="pre">csr</span></code> a
@@ -309,12 +309,14 @@ logon / Remote Desktop enrollment path — see <a class="reference internal" hre
 <span class="w">    </span>--public-key<span class="w"> </span>9c.pub.pem<span class="w"> </span>--out<span class="w"> </span>9c.csr.pem
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>self-sign-cert<span class="w"> </span>--slot<span class="w"> </span>9C<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Test User"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--public-key<span class="w"> </span>9c.pub.pem<span class="w"> </span>--out<span class="w"> </span>9c.crt.pem
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w">    </span>--slot<span class="w"> </span>9C<span class="w"> </span>--cert<span class="w"> </span>9c.crt.pem<span class="w">      </span><span class="c1"># ISO command chaining</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w">    </span>--slot<span class="w"> </span>9C<span class="w"> </span>--cert<span class="w"> </span>9c.crt.pem<span class="w"> </span>--csr<span class="w"> </span>9c.csr.pem
 </pre></div>
 </div>
 <p>Signing requires a SIGN-role slot; an AUTHENTICATE-only slot (e.g. 9A) returns
 <code class="docutils literal notranslate"><span class="pre">6985</span></code>. Large certificates are written with ISO command chaining
-automatically.</p>
+automatically. <code class="docutils literal notranslate"><span class="pre">import-cert</span></code> writes the certificate it is given; <code class="docutils literal notranslate"><span class="pre">--csr</span></code>
+refuses one whose public key is not the CSR’s, and <code class="docutils literal notranslate"><span class="pre">--verify-pin</span></code> has the
+slot sign a challenge and refuses unless the certificate’s key verifies it.</p>
 </section>
 <section id="step-4-data-objects">
 <h2>Step 4 — data objects<a class="headerlink" href="#step-4-data-objects" title="Link to this heading"></a></h2>
