@@ -27,7 +27,7 @@ from cryptnox_id_cli.util import tlv
 
 def _self_signed(key, name: str) -> x509.Certificate:
     subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)])
-    now = datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+    now = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
     return (
         x509.CertificateBuilder()
         .subject_name(subject)
