@@ -20,6 +20,7 @@ def _facts(**overrides) -> CardFacts:
     base = {
         "pin_configured": False,
         "puk_configured": False,
+        "structure_present": True,
         "key_object_present": True,
         "cert_present": False,
         "chuid_present": False,
@@ -33,14 +34,17 @@ def _runs(steps) -> list[str]:
     return [s.step for s in steps if s.run]
 
 
+BLANK = {"structure_present": False, "key_object_present": False}
+
+
 def test_structure_missing_without_flag_is_a_hard_error():
     with pytest.raises(CryptnoxError, match="factory piv preperso load-config"):
-        _plan_quickstart(_facts(key_object_present=False), OPTS)
+        _plan_quickstart(_facts(**BLANK), OPTS)
 
 
 def test_structure_missing_with_flag_runs_everything():
     opts = QuickstartOptions(0x9C, 0x11, "self-signed", include_preperso=True)
-    steps = _plan_quickstart(_facts(key_object_present=False), opts)
+    steps = _plan_quickstart(_facts(**BLANK), opts)
     assert _runs(steps) == [
         "preperso-load-config",
         "set-pin",
@@ -51,6 +55,32 @@ def test_structure_missing_with_flag_runs_everything():
         "write-ccc",
         "smoke-test",
     ]
+    assert {s.step: s.reason for s in steps}["create-key-object"] == "provided by the profile"
+
+
+def test_structure_missing_and_profile_without_the_object_creates_it_after_load_config():
+    opts = QuickstartOptions(
+        0x9A, 0x07, "none", include_preperso=True, profile_provides_key_object=False
+    )
+    steps = _plan_quickstart(_facts(**BLANK), opts)
+    assert _runs(steps)[:2] == ["preperso-load-config", "create-key-object"]
+
+
+def test_object_missing_in_an_existing_structure_points_at_create_key_object():
+    """The 6E27 loop: a structure can only grow, so load-config must never be re-run
+    over it. Without the flag the error names the targeted fix."""
+    with pytest.raises(CryptnoxError, match="--create-key-object") as info:
+        _plan_quickstart(_facts(key_object_present=False), OPTS)
+    assert "load-config" not in str(info.value).split("--create-key-object")[0]
+
+
+def test_object_missing_in_an_existing_structure_creates_only_the_object():
+    opts = QuickstartOptions(0x9A, 0x07, "none", include_preperso=True)
+    steps = _plan_quickstart(_facts(key_object_present=False), opts)
+    runs = _runs(steps)
+    assert runs[0] == "create-key-object"
+    assert "preperso-load-config" not in runs
+    assert {s.step: s.reason for s in steps}["preperso-load-config"] == "structure present"
 
 
 def test_preperso_skipped_when_structure_present():
@@ -138,7 +168,7 @@ def test_quickstart_dry_run_sends_nothing(monkeypatch):
 
 
 def test_quickstart_dry_run_structure_missing_errors(monkeypatch):
-    result = _invoke(["quickstart", "--dry-run"], monkeypatch, _facts(key_object_present=False))
+    result = _invoke(["quickstart", "--dry-run"], monkeypatch, _facts(**BLANK))
     assert result.exit_code != 0
     assert isinstance(result.exception, CryptnoxError)
 
@@ -173,10 +203,10 @@ def _invoke_capturing_mechanism(args, monkeypatch, facts=None, state="PivPrePers
     return result, seen
 
 
-def test_quickstart_defaults_to_ecc_on_ms_logon_9a_but_warns_about_windows(monkeypatch):
-    """The default stays ECC everywhere — but on the Windows shape (ms-logon + 9A) it
-    must warn that an ECC card cannot work with the Windows inbox minidriver (it does
-    not enumerate EC keys) and point at --algorithm RSA2048. Not silent."""
+def test_quickstart_defaults_to_rsa_on_ms_logon_9a(monkeypatch):
+    """The default stays ECC everywhere except the Windows shape (ms-logon + 9A): the
+    Windows inbox minidriver does not enumerate EC keys, so an ECC card there is
+    useless for its purpose. RSA-2048 is the default there, and the run says so."""
     from cryptnox_id_cli.applets.piv import perso as perso_mod
 
     result, seen = _invoke_capturing_mechanism(
@@ -185,8 +215,8 @@ def test_quickstart_defaults_to_ecc_on_ms_logon_9a_but_warns_about_windows(monke
         _facts(),
     )
     assert result.exit_code == 0, result.output
-    assert seen["mech"] == perso_mod.ALGORITHMS["ECCP256"]
-    assert "RSA2048" in result.output  # the warning names the fix
+    assert seen["mech"] == perso_mod.ALGORITHMS["RSA2048"]
+    assert "RSA2048" in result.output
 
 
 def test_quickstart_explicit_ecc_on_ms_logon_9a_stays_quiet(monkeypatch):
@@ -268,7 +298,7 @@ def test_quickstart_rejects_rsa_outside_the_ms_logon_9a_shape():
     assert "ms-logon" in result.output
 
 
-def test_quickstart_rsa_without_the_key_object_points_at_preperso(monkeypatch):
+def test_quickstart_rsa_without_the_key_object_points_at_create_key_object(monkeypatch):
     from cryptnox_id_cli.applets.piv import perso as perso_mod
 
     result, seen = _invoke_capturing_mechanism(
@@ -287,9 +317,77 @@ def test_quickstart_rsa_without_the_key_object_points_at_preperso(monkeypatch):
     )
     assert result.exit_code != 0
     assert isinstance(result.exception, CryptnoxError)
-    # Pin that it was the RSA (slot, mechanism) object that was probed and found missing —
+    assert "--create-key-object" in str(result.exception)
+    # Pin that it was the RSA (slot, mechanism) object that was looked up and found missing,
     # otherwise this test is indistinguishable from the plain ECC structure-missing one.
     assert seen["mech"] == perso_mod.ALGORITHMS["RSA2048"]
+
+
+# ------------------------------------------------- facts from the key-object listing --- #
+SELECT_PIV = "00A404000BA00000030800001000010000"
+APT = (
+    "616F4F0BA000000308000010000100"
+    "79074F05A000000308"
+    "500B4F70656E46495053323031"
+    "5F5049687474703A2F2F6E766C707562732E6E6973742E676F762F6E697374707562732F"
+    "5370656369616C5075626C69636174696F6E732F4E4953542E53502E3830302D37332D342E706466"
+)
+KEY_9A_ECC = "53158B019A8C01018D010091019B8E01118F0101900110"
+VERIFIER_PIN = "53248B01808C013F8D01008E01068F010890010691010092010093010094010095010096015A"
+
+
+def _ext(ident: int, index: int = 0) -> str:
+    return f"00CB3F{index:02X}055C032F{ident:04X}00"
+
+
+def _session(mock_connection, exchanges: dict[str, str]):
+    from cryptnox_id_cli.transport.pcsc import CardSession
+
+    return CardSession(mock_connection("3B00", {SELECT_PIV: f"{APT}|9000", **exchanges}, []))
+
+
+def test_facts_distinguish_a_missing_object_from_a_missing_structure(mock_connection):
+    """A 9A ECC object and a PIN verifier exist; RSA-2048 on 9A does not. That is
+    'structure present, object missing', which must not be read as 'no structure'."""
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    exchanges = {
+        _ext(inv.ID_KEY): f"{KEY_9A_ECC}|9000",
+        _ext(inv.ID_VERIFIER): f"{VERIFIER_PIN}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x07)
+    assert facts.structure_present is True
+    assert facts.key_object_present is False
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.key_object_present is True
+
+
+def test_facts_without_any_listed_object_mean_no_structure(mock_connection):
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, {}), 0x9C, 0x11)
+    assert facts.structure_present is False
+    assert facts.key_object_present is False
+
+
+def test_facts_fall_back_to_the_probe_when_the_listing_is_withheld(mock_connection):
+    """restrict-enumeration set: the applet answers 6986, and the one (slot, mechanism)
+    probe decides again, as it did before the listing existed."""
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.applets.piv import keyimport
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    probe = keyimport.probe_apdu(0x9C, 0x11).to_bytes().hex().upper()
+    withheld = {_ext(inv.ID_KEY): "|6986", _ext(inv.ID_VERIFIER): "|6986"}
+    facts, _ = _collect_quickstart_facts(
+        _session(mock_connection, {**withheld, probe: "|6982"}), 0x9C, 0x11
+    )
+    assert facts.key_object_present is True and facts.structure_present is True
+    facts, _ = _collect_quickstart_facts(
+        _session(mock_connection, {**withheld, probe: "|6A86"}), 0x9C, 0x11
+    )
+    assert facts.key_object_present is False and facts.structure_present is False
 
 
 def test_quickstart_csr_requires_csr_out():

@@ -152,6 +152,16 @@ def test_read_inventory_stops_at_the_first_missing_index(mock_connection):
     assert result.restricted is False
 
 
+def test_read_keys_and_verifiers_alone(mock_connection):
+    piv = PivApplet(CardSession(mock_connection("3B00", _exchanges(), [])))
+    piv.select()
+    assert [k.ref for k in inv.read_keys(piv) or []] == [0x9B, 0x9A, 0x9C, 0x9D, 0x9E]
+    assert [v.ref for v in inv.read_verifiers(piv) or []] == [0x80, 0x81]
+    withheld = PivApplet(CardSession(mock_connection("3B00", _exchanges(restricted=True), [])))
+    withheld.select()
+    assert inv.read_keys(withheld) is None
+
+
 def test_read_inventory_reports_withheld_structure(mock_connection):
     piv = PivApplet(CardSession(mock_connection("3B00", _exchanges(restricted=True), [])))
     piv.select()

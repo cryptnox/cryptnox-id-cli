@@ -40,11 +40,12 @@ The certificate itself is dictated by Active Directory, not by the card:
    This is a property of the Windows driver, not of this card. The same test
    reproduces on a YubiKey 5, and P-384 fails the same way as P-256.
 
-   Because of this, pass ``--algorithm RSA2048`` to ``piv quickstart`` for any
-   card intended for Windows (quickstart's default is ECC, and it warns when
-   that default lands on ``ms-logon``'s 9A). The RSA key is still generated
-   **on-card** and never leaves it, so choosing RSA costs nothing in key
-   protection.
+   Because of this, ``piv quickstart`` defaults to RSA-2048 on the
+   ``ms-logon`` profile with slot 9A, the Windows shape, and to ECC everywhere
+   else. The examples below pass ``--algorithm RSA2048`` all the same, so a
+   copied command stays right if the shape changes. The RSA key is still
+   generated **on-card** and never leaves it, so choosing RSA costs nothing in
+   key protection.
 
    If a deployment genuinely requires ECC on Windows, that needs a third-party
    minidriver (Yubico's supports P-256/P-384), which is outside the
@@ -57,7 +58,7 @@ Step 0 — pre-personalize with the ms-logon profile (once per card)
 
    $ cryptnox-id factory piv preperso load-config --profile ms-logon --default-keys
    $ cryptnox-id piv quickstart --profile ms-logon --include-preperso \
-        --slot 9A --cert-mode csr --csr-out 9a.csr.pem --default-keys
+        --slot 9A --algorithm RSA2048 --cert-mode csr --csr-out 9a.csr.pem --default-keys
 
 The second form does everything in one shot — PIN, PUK, an on-card **RSA-2048**
 key in 9A (the private key never leaves the card), a CSR for your CA, and the
@@ -74,7 +75,12 @@ a smart-card-logon template and import the issued certificate:
 .. code-block:: console
 
    $ certreq -submit -attrib "CertificateTemplate:SmartcardLogon" 9a.csr.pem 9a-issued.cer
-   $ cryptnox-id piv perso import-cert --slot 9A --cert 9a-issued.cer
+   $ cryptnox-id piv perso import-cert --slot 9A --cert 9a-issued.cer --csr 9a.csr.pem
+
+``--csr`` makes the import refuse a certificate whose public key is not the
+one in the CSR, which is what happens when an enrollment tool generated a key
+of its own instead of signing the card's request. A certificate for another
+key would be written without complaint and fail only at logon.
 
 **Path B — PKI-issued PKCS#12 (centralized key generation).** If your PKI
 delivers a ``.pfx``/``.p12``, one command imports both the key and the

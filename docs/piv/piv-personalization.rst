@@ -41,9 +41,9 @@ first; ``--dry-run`` shows the step plan without writing.
 
    Secrets are resolved up front (``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_NEW_PUK``
    or masked prompts; ``CRYPTNOX_PIV_PIN`` when the PIN already exists). Quickstart
-   defaults to ECC P-256. For a Windows card pass ``--algorithm RSA2048`` with
-   ``--profile ms-logon`` on slot 9A (Windows does not enumerate EC keys; left on
-   the ECC default, that combination warns). For RSA on any other card shape, use
+   defaults to ECC P-256, except with ``--profile ms-logon`` on slot 9A, the
+   Windows shape, where it defaults to RSA-2048 because Windows does not enumerate
+   EC keys. For RSA on any other card shape, use
    ``generate-key`` directly on a slot with an RSA key object, or :ref:`import a
    key <piv-personalization-import-key>`. A slot that already has a certificate is left
    untouched (never silently replaces a certified key); with ``--cert-mode csr`` a
@@ -177,11 +177,13 @@ Step 3 — CSR and certificates (on-card signing)
        --public-key 9c.pub.pem --out 9c.csr.pem
    $ cryptnox-id piv perso self-sign-cert --slot 9C --subject "CN=Test User" \
        --public-key 9c.pub.pem --out 9c.crt.pem
-   $ cryptnox-id piv perso import-cert    --slot 9C --cert 9c.crt.pem      # ISO command chaining
+   $ cryptnox-id piv perso import-cert    --slot 9C --cert 9c.crt.pem --csr 9c.csr.pem
 
 Signing requires a SIGN-role slot; an AUTHENTICATE-only slot (e.g. 9A) returns
 ``6985``. Large certificates are written with ISO command chaining
-automatically.
+automatically. ``import-cert`` writes the certificate it is given; ``--csr``
+refuses one whose public key is not the CSR's, and ``--verify-pin`` has the
+slot sign a challenge and refuses unless the certificate's key verifies it.
 
 Step 4 — data objects
 -----------------------

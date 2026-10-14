@@ -169,6 +169,7 @@ Personalization (``piv perso``)
    piv perso generate-csr            PKCS#10 CSR, signed on-card
    piv perso self-sign-cert          self-signed certificate (dev/test), signed on-card
    piv perso import-cert             write a certificate into the slot container
+                                     (--csr / --verify-pin check it is for the slot's key)
    piv perso generate-chuid          build a minimal CHUID object
    piv perso generate-ccc            build a minimal CCC object
    piv perso generate-discovery      build the Discovery object
@@ -198,12 +199,23 @@ Notes
 * When that path is taken, the key pair from the first attempt is replaced by the
   one generated over the plain path, whose public half is the one reported; RSA
   generation therefore runs twice on such a card.
-* ``piv quickstart`` defaults to ECC P-256. It accepts ``--algorithm RSA*``
-  only for ``--profile ms-logon`` on slot 9A — the one built-in shape with an
-  RSA key object — and rejects it elsewhere; pass ``--algorithm RSA2048``
-  there for Windows, which does not enumerate EC keys (left on the ECC
-  default, that combination warns). For other cards known to carry an RSA
-  object, use ``piv perso generate-key`` directly.
+* ``piv quickstart`` defaults to ECC P-256, except with ``--profile ms-logon``
+  on slot 9A, the one built-in shape with an RSA key object and the Windows
+  one, where it defaults to RSA-2048 because Windows does not enumerate EC
+  keys. ``--algorithm RSA*`` is accepted there and rejected elsewhere. For
+  other cards known to carry an RSA object, use ``piv perso generate-key``
+  directly.
+* ``piv quickstart`` reads the applet's key-object listing before planning. A
+  card with no structure at all needs ``--include-preperso`` (or a
+  ``load-config``); a card whose structure lacks the key object for the
+  requested slot and mechanism gets that one object created with
+  ``--include-preperso``, never a second ``load-config`` over the existing
+  structure, which the applet refuses with ``6E27``.
+* ``piv perso import-cert`` writes the certificate it is given. ``--csr FILE``
+  refuses one whose public key is not the CSR's, with no PIN; ``--verify-pin``
+  has the slot sign a challenge and refuses unless the certificate's key
+  verifies it. Without either, a certificate for another key is written and
+  fails only when used.
 * ``piv perso import-key`` is the way to place an **externally generated** RSA
   key. It sends the key as CHANGE REFERENCE DATA ADMIN elements over SCP03 and
   starts with a CLEAR, so re-runs are safe.

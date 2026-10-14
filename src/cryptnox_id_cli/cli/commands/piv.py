@@ -2414,9 +2414,78 @@ def perso_self_sign_cert(
     )
 
 
+def _mechanism_for_public_key(public_key) -> int:  # noqa: ANN001
+    """The applet mechanism a certificate's public key implies."""
+    from cryptography.hazmat.primitives.asymmetric import ec, rsa
+
+    name = None
+    if isinstance(public_key, rsa.RSAPublicKey):
+        name = {2048: "RSA2048", 3072: "RSA3072", 4096: "RSA4096"}.get(public_key.key_size)
+    elif isinstance(public_key, ec.EllipticCurvePublicKey):
+        name = {"secp256r1": "ECCP256", "secp384r1": "ECCP384"}.get(public_key.curve.name)
+    if name is None:
+        raise CryptnoxError(
+            "the certificate's public key is not of a type this applet holds "
+            "(RSA-2048/3072/4096, P-256, P-384)."
+        )
+    return perso_mod.ALGORITHMS[name]
+
+
+def _check_slot_signs_for(session, ref: int, public_key, pin: bytes, slot: str) -> None:  # noqa: ANN001
+    """One PIN verification and one on-card signature over a fresh challenge, verified
+    with the certificate's public key: proof that the certificate is for this slot's key."""
+    import hashlib
+    import os
+
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric import ec, padding
+
+    mech = _mechanism_for_public_key(public_key)
+    hash_alg = keyimport.digest_for_mechanism(mech)
+    message = os.urandom(32)
+    digest = hashlib.new(hash_alg.name, message).digest()
+    try:
+        signature = _sign_with_session(session, ref, mech, pin, lambda sign: sign(digest))
+    except StatusWordError as exc:
+        if exc.info.sw_hex() == "6985":
+            raise CryptnoxError(
+                f"slot {slot} cannot sign on this applet (its role is not SIGN), so the "
+                "certificate cannot be checked this way; use --csr instead."
+            ) from exc
+        if exc.info.sw_hex() == "6A86":
+            raise CryptnoxError(
+                f"slot {slot} holds no key of the certificate's type; the certificate is "
+                "not for this slot."
+            ) from exc
+        raise
+    try:
+        if keyimport.rsa_modulus_len(mech):
+            public_key.verify(signature, message, padding.PKCS1v15(), hash_alg)
+        else:
+            public_key.verify(signature, message, ec.ECDSA(hash_alg))
+    except InvalidSignature as exc:
+        raise CryptnoxError(
+            f"the certificate's public key does not verify a signature made by slot {slot}; "
+            "refusing to import a certificate for another key."
+        ) from exc
+
+
 @perso.command("import-cert")
 @click.option("--slot", required=True, help="Key slot hex, e.g. 9A.")
 @click.option("--cert", "cert_file", required=True, type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--csr",
+    "csr_file",
+    type=click.Path(exists=True, dir_okay=False),
+    help="Refuse unless the certificate's public key is the one in this CSR (the CSR the "
+    "certificate was issued from). No PIN needed.",
+)
+@click.option(
+    "--verify-pin",
+    is_flag=True,
+    help="Refuse unless the slot's key signs a challenge the certificate's public key "
+    "verifies. Needs the PIN; works without the CSR.",
+)
 @click.option(
     "--default-keys",
     is_flag=True,
@@ -2424,8 +2493,19 @@ def perso_self_sign_cert(
     "(publicly known - fine for dev/eval, never for deployment).",
 )
 @click.pass_obj
-def perso_import_cert(app: AppContext, slot: str, cert_file: str, default_keys: bool) -> None:
-    """Import an X.509 certificate into the slot's PIV container (over SCP03)."""
+def perso_import_cert(
+    app: AppContext,
+    slot: str,
+    cert_file: str,
+    csr_file: str | None,
+    verify_pin: bool,
+    default_keys: bool,
+) -> None:
+    """Import an X.509 certificate into the slot's PIV container (over SCP03).
+
+    The certificate is written as given; a certificate for another key fails only
+    when it is used. --csr and --verify-pin make the command check first.
+    """
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
@@ -2438,8 +2518,28 @@ def perso_import_cert(app: AppContext, slot: str, cert_file: str, default_keys: 
         if raw.lstrip().startswith(b"-----")
         else x509.load_der_x509_certificate(raw)
     )
+    public_key = cert.public_key()
+    checked: list[str] = []
+    if csr_file:
+        cert_spki = public_key.public_bytes(
+            serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        if cert_spki != _csr_spki(csr_file):
+            raise CryptnoxError(
+                f"the certificate's public key is not the one in {csr_file}; refusing to "
+                f"import a certificate that is not for the key in slot {slot}."
+            )
+        checked.append("csr")
+    pin_secret = (
+        resolve_secret(redactor=app.redactor, env_var="CRYPTNOX_PIV_PIN", prompt_label="PIV PIN")
+        if verify_pin
+        else None
+    )
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
     with app.open_session() as session:
+        if pin_secret is not None:
+            _check_slot_signs_for(session, ref, public_key, pin_secret, slot)
+            checked.append("signature")
         resp = _import_cert_der(
             PivAdmin(session),
             keys,
@@ -2448,13 +2548,19 @@ def perso_import_cert(app: AppContext, slot: str, cert_file: str, default_keys: 
             label=slot,
         )
     info = describe_sw(resp.sw1, resp.sw2)
+
+    def human(c: Console) -> None:
+        if not resp.ok:
+            c.print(f"[red]Import failed:[/red] {info.message} (SW={info.sw_hex()})")
+            return
+        c.print(f"[green]Certificate imported to slot {slot}.[/green]")
+        if checked:
+            c.print(f"  Key match checked: {', '.join(checked)}")
+        else:
+            c.print("  [dim]Key match not checked; --csr or --verify-pin would have.[/dim]")
+
     app.out.result(
-        {"slot": slot, "imported": resp.ok, "sw": info.sw_hex()},
-        lambda c: c.print(
-            f"[green]Certificate imported to slot {slot}.[/green]"
-            if resp.ok
-            else f"[red]Import failed:[/red] {info.message} (SW={info.sw_hex()})"
-        ),
+        {"slot": slot, "imported": resp.ok, "sw": info.sw_hex(), "checked": checked}, human
     )
 
 
@@ -2634,6 +2740,8 @@ class QuickstartOptions:
     mechanism: int
     cert_mode: str  # self-signed | csr | none
     include_preperso: bool
+    #: the pre-perso profile creates the (slot, mechanism) key object itself
+    profile_provides_key_object: bool = True
 
 
 @dataclass(frozen=True)
@@ -2642,6 +2750,7 @@ class CardFacts:
 
     pin_configured: bool
     puk_configured: bool
+    structure_present: bool  # the applet holds key objects or verifiers
     key_object_present: bool  # a (slot, mechanism) key object exists
     cert_present: bool
     chuid_present: bool
@@ -2659,7 +2768,7 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
     """Pure planner: which steps run for this card state. Raises when the card
     needs pre-personalization and the caller did not opt into it."""
     steps: list[PlannedStep] = []
-    if not facts.key_object_present:
+    if not facts.structure_present:
         if not opts.include_preperso:
             raise CryptnoxError(
                 "the PIV structure (containers, verifiers, key objects) is missing on "
@@ -2668,8 +2777,32 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
                 "--include-preperso (dev/eval cards)."
             )
         steps.append(PlannedStep("preperso-load-config", True, "structure missing"))
+        provided = opts.profile_provides_key_object
+        steps.append(
+            PlannedStep(
+                "create-key-object",
+                not provided,
+                "provided by the profile" if provided else "the profile has no such object",
+            )
+        )
+    elif not facts.key_object_present:
+        # A structure can only grow: load-config over it ends in 6E27 (object exists),
+        # so the missing (slot, mechanism) object is added on its own.
+        if not opts.include_preperso:
+            raise CryptnoxError(
+                f"this card has a PIV structure, but no key object for slot {opts.slot:02X} "
+                "with this mechanism. Add one with\n  "
+                f"{CLI_NAME} piv perso generate-key --slot {opts.slot:02X} --algorithm <name> "
+                "--create-key-object\nor re-run quickstart with --include-preperso (dev/eval "
+                "cards), which creates the object and leaves the rest of the structure alone."
+            )
+        steps.append(PlannedStep("preperso-load-config", False, "structure present"))
+        steps.append(
+            PlannedStep("create-key-object", True, "no key object for this slot and mechanism")
+        )
     else:
         steps.append(PlannedStep("preperso-load-config", False, "structure present"))
+        steps.append(PlannedStep("create-key-object", False, "key object present"))
     steps.append(
         PlannedStep(
             "set-pin",
@@ -2773,10 +2906,24 @@ def _apply_pin_truth(steps: list[PlannedStep], verdict: str) -> list[PlannedStep
 
 def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, str]:
     """Read-only detection pass: lifecycle state, verifier status, object presence,
-    and the non-destructive (slot, mechanism) key-object probe."""
+    and the applet's own key-object listing (the non-destructive (slot, mechanism)
+    probe stands in when the listing is withheld)."""
     st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
     piv = _select(session)
-    probe = session.transmit(keyimport.probe_apdu(ref, mech), context="probe quickstart")
+    key_objects = None
+    verifiers = None
+    with contextlib.suppress(CryptnoxError):
+        key_objects = inventory_mod.read_keys(piv)
+        verifiers = inventory_mod.read_verifiers(piv)
+    pin_configured = bool(st.piv_pin and st.piv_pin.configured)
+    puk_configured = bool(st.piv_puk and st.piv_puk.configured)
+    if key_objects is None:
+        probe = session.transmit(keyimport.probe_apdu(ref, mech), context="probe quickstart")
+        key_object_present = probe.sw != 0x6A86
+        structure_present = key_object_present or pin_configured or puk_configured
+    else:
+        key_object_present = any(k.ref == ref and k.mechanism == mech for k in key_objects)
+        structure_present = bool(key_objects) or bool(verifiers)
     # "Certificate present" means a PARSEABLE certificate: a created-but-unused
     # container is zero-length per SP 800-73 4.1.1, and factory containers can
     # hold non-certificate placeholder data - neither should stop quickstart
@@ -2785,9 +2932,10 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     cert_present = obj_name is not None and _read_cert_der(piv, obj_name) is not None
     objs = st.piv_objects or {}
     facts = CardFacts(
-        pin_configured=bool(st.piv_pin and st.piv_pin.configured),
-        puk_configured=bool(st.piv_puk and st.piv_puk.configured),
-        key_object_present=probe.sw != 0x6A86,
+        pin_configured=pin_configured,
+        puk_configured=puk_configured,
+        structure_present=structure_present,
+        key_object_present=key_object_present,
         cert_present=cert_present,
         chuid_present=bool(objs.get("chuid")),
         ccc_present=bool(objs.get("ccc")),
@@ -2806,9 +2954,10 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     "--algorithm",
     default="ECCP256",
     show_default=True,
-    help="ECCP256, ECCP384, RSA2048, RSA3072 or RSA4096; the slot must have a key object for it "
-    "(RSA: only ms-logon's 9A among the built-in profiles — pass RSA2048 explicitly "
-    "for Windows, which does not enumerate EC keys).",
+    help="ECCP256, ECCP384, RSA2048, RSA3072 or RSA4096. Default ECCP256, except RSA2048 "
+    "for --profile ms-logon --slot 9A, the Windows shape (Windows does not enumerate EC "
+    "keys). The slot must have a key object for it: RSA only on ms-logon's 9A among the "
+    "built-in profiles.",
 )
 @click.option("--subject", default="CN=Cryptnox Dev Card", show_default=True)
 @click.option("--days", default=365, show_default=True, type=int)
@@ -2901,14 +3050,11 @@ def quickstart(
         == click.core.ParameterSource.DEFAULT
     )
     if windows_rsa_shape and algorithm_defaulted:
-        # The default stays ECC everywhere, but don't let it land silently on the one
-        # shape whose whole purpose is Windows: an ECC 9A card cannot log on there. An
-        # operator who passed --algorithm made a choice; this fires only on the default.
-        app.out.warn(
-            "profile ms-logon on slot 9A defaulting to ECCP256 - but the Windows "
-            "inbox minidriver does not enumerate EC keys, so this card will NOT work "
-            "for Windows logon/RDP/TLS. For Windows, re-run with --algorithm RSA2048 "
-            "(generated on-card; ms-logon's 9A has the RSA key object)."
+        # The one shape whose whole purpose is Windows, and an ECC 9A cannot log on there.
+        algorithm = "RSA2048"
+        app.out.note(
+            "profile ms-logon on slot 9A: defaulting to RSA2048, which Windows needs (the "
+            "inbox minidriver does not enumerate EC keys); pass --algorithm to override."
         )
 
     alg = algorithm.upper()
@@ -2946,7 +3092,13 @@ def quickstart(
 
     with app.open_session() as session:
         facts, state_before = _collect_quickstart_facts(session, ref, mech)
-        steps = _plan_quickstart(facts, QuickstartOptions(ref, mech, cert_mode, include_preperso))
+        provided = any(k.ref == ref and k.mechanism == mech for k in profile.keys)
+        steps = _plan_quickstart(
+            facts,
+            QuickstartOptions(
+                ref, mech, cert_mode, include_preperso, profile_provides_key_object=provided
+            ),
+        )
 
         if dry_run or app.dry_run:
             planned = [
@@ -3065,6 +3217,9 @@ def quickstart(
                     if not resp.ok:
                         raise StatusWordError(resp.sw1, resp.sw2, context="SET PUK")
                     record(planned_step.step, "ok", sw=resp.sw_hex())
+                elif planned_step.step == "create-key-object":
+                    _create_key_object(app, adm, keys, ref, mech, False, slot)
+                    record(planned_step.step, "ok", detail={"slot": slot, "algorithm": alg})
                 elif planned_step.step == "generate-key":
                     generated = _generate_key_on_card(
                         app, adm, keys, ref, mech, label=slot, default_keys=default_keys
