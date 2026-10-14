@@ -274,6 +274,14 @@ data masked unless the instruction is a known-harmless read, because the
 service chose the command and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> cannot vouch for what it carries.
 <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">--full-transcript</span></code> lifts that extra masking for troubleshooting; the
 standard masking of secret-bearing commands still applies.</p>
+<p>Relayed lines start with <code class="docutils literal notranslate"><span class="pre">relay</span></code>, so they read apart from the commands <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>
+sends on its own before and after the operation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="mi">00</span><span class="n">A4040008A00000015100000000</span>
+<span class="o">&lt;</span> <span class="mi">6</span><span class="n">F108408A000000151000000A5049F6501FF9000</span>
+<span class="n">relay</span> <span class="o">&gt;</span> <span class="mi">80</span><span class="n">CA9F7F00</span>
+<span class="n">relay</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="n">F7F2A</span><span class="o">..</span><span class="mf">.9000</span>
+</pre></div>
+</div>
 </section>
 </section>
 
