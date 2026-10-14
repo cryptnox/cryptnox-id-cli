@@ -168,7 +168,10 @@ def run_operation(
                     )
                 apdu = frame.apdu
                 policy.check(apdu)  # raises RemotePolicyError; nothing was sent
-                emit("> " + redact_relayed_command(apdu, redactor, unmasked=unmasked_transcript))
+                emit(
+                    "relay > "
+                    + redact_relayed_command(apdu, redactor, unmasked=unmasked_transcript)
+                )
                 try:
                     data, sw1, sw2 = card.transmit(list(apdu))
                 except TransportError as exc:
@@ -176,7 +179,7 @@ def run_operation(
                     raise RemoteError(f"the card stopped answering: {exc}") from exc
                 body = bytes(data)
                 emit(
-                    "< "
+                    "relay < "
                     + redact_relayed_response(
                         body, sw1, sw2, apdu[1], redactor, unmasked=unmasked_transcript
                     )

@@ -28,8 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through the Cryptnox remote PIV service, with the card in the local reader.
   The tool relays the commands the service sends under a fail-closed policy
   that keeps every other card function out of reach, and reports what the
-  service asserted apart from what it verified locally. Adds the `websockets`
-  dependency and exit codes 12 to 16.
+  service asserted apart from what it verified locally. Relayed commands
+  carry a `relay` prefix in `--apdu-log` and `--verbose` output. Adds the
+  `websockets` dependency and exit codes 12 to 16.
 - `remote reset` and `remote dev-reset`: wipe and reinstall the PIV function
   through the service, behind the same irreversibility gate as `factory piv
   preperso finalize` (typed phrase or explicit flag, `--yes` not accepted),

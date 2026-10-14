@@ -134,3 +134,11 @@ data masked unless the instruction is a known-harmless read, because the
 service chose the command and |cli| cannot vouch for what it carries.
 ``remote --full-transcript`` lifts that extra masking for troubleshooting; the
 standard masking of secret-bearing commands still applies.
+
+Relayed lines start with ``relay``, so they read apart from the commands |cli|
+sends on its own before and after the operation::
+
+   > 00A4040008A00000015100000000
+   < 6F108408A000000151000000A5049F6501FF9000
+   relay > 80CA9F7F00
+   relay < 9F7F2A...9000
