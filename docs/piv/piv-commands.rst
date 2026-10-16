@@ -66,7 +66,8 @@ prompts or the ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_
    ``piv pin unblock``, ``piv puk change``, or any other tool — consumes one
    retry. Exhausting the PUK retries is **permanent**: a blocked PUK has no
    recovery path. A full reset of the PIV applet, which erases all keys and
-   certificates, is a Cryptnox operation (contact Cryptnox support). Check
+   certificates, runs through the Cryptnox remote PIV service
+   (:doc:`/remote/remote-guide`). Check
    ``piv pin status`` (non-decrementing) before guessing.
 
 Admin channel

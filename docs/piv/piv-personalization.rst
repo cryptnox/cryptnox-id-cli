@@ -219,8 +219,8 @@ Step 6 — finalize (irreversible, factory)
    :doc:`/factory/factory-commands`.
 
 ``finalize`` transitions the applet to its ``SECURED`` operational state. It
-is irreversible; a full reset of the PIV applet is a Cryptnox operation
-(contact Cryptnox support). Interactively it asks
+is irreversible; a full reset of the PIV applet runs through the Cryptnox
+remote PIV service (:doc:`/remote/remote-guide`). Interactively it asks
 you to type the token ``FINALIZE-PIV``; non-interactively it requires the
 ``--i-understand-this-is-irreversible`` flag instead — either satisfies the
 gate.

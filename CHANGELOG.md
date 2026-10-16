@@ -48,10 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the pinned anchors and bound to the card's CPLC UID, the requested slot, the
   trust model and the certificate read back from the card before success is
   reported.
-- Coverage measurement in CI: `pytest-cov` in the `dev` extra, a project-wide
-  floor from `fail_under`, and a tighter floor over the command modules. With
-  branch coverage enabled both floors compare the combined statement-and-branch
-  percentage, which sits below line coverage alone.
 - Coverage measurement in CI (`pytest-cov` in the `dev` extra) with a
   project-wide floor and a tighter one over the command modules, both on
   combined statement-and-branch coverage.
@@ -73,6 +69,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   domain's SCP version and key versions from its key information template
   instead of sending INITIALIZE UPDATE, which this chip counts as a failed
   authentication. `piv admin status --key-version` is gone.
+- A finalized applet's key-object error and a failed `load-config` name
+  `remote reset` for a full PIV reset.
+- `--create-key-object` says that the key object it creates is permanent,
+  also when the chip then refuses the key size.
 
 ### Removed
 

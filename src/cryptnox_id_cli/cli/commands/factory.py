@@ -312,7 +312,8 @@ def load_config(
                 "  Operations before it were applied. An existing element cannot be changed "
                 "or removed; add missing key objects with `piv perso generate-key "
                 "--create-key-object` or `piv perso import-key --create-key-object`. A full "
-                "reset of the PIV applet is a Cryptnox operation: contact Cryptnox support."
+                "reset of the PIV applet runs through the Cryptnox remote PIV service: "
+                "`cryptnox-id remote reset`."
             )
 
     app.out.result({"profile": profile.name, "applied": applied_ok, "operations": sent}, report)
