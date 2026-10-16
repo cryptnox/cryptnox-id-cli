@@ -176,8 +176,12 @@ provisioned — see <a class="reference internal" href="genuine/genuineness-guid
 </thead>
 <tbody>
 <tr class="row-even"><td><p>PIV</p></td>
-<td><p>contact (admin), contact/contactless (use)</p></td>
-<td><p>All personalization/administration is contact-only.</p></td>
+<td><p>contact; contactless only for what needs no PIN</p></td>
+<td><p>Administration and everything behind the PIN are contact-only, so
+Windows logon needs a contact reader. Over contactless the built-in
+profiles expose the CHUID, the card-authentication certificate and the
+card-authentication key (9E), which needs no PIN: the data physical
+access control uses.</p></td>
 </tr>
 <tr class="row-odd"><td><p>FIDO2</p></td>
 <td><p>contactless (NFC)</p></td>

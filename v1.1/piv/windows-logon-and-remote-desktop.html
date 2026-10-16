@@ -162,6 +162,11 @@ the inbox PIV minidriver. The applet only performs client-authentication
 signing for keys created with a SIGN-capable role, so the card must be
 pre-personalized with the <strong>ms-logon profile</strong> (its 9A keys are
 <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE+SIGN</span></code>, and it adds an importable RSA-2048 object on 9A).</p>
+<p>Logon needs a <strong>contact</strong> reader, or the contact slot of a combo reader. Over
+contactless this applet accepts a PIN only inside PIV secure messaging (the
+SP 800-73-4 virtual contact interface); the built-in profiles create the PIN
+for contact use only, and the inbox minidriver has no documented support for
+secure messaging.</p>
 <p>The certificate itself is dictated by Active Directory, not by the card:</p>
 <ul class="simple">
 <li><p>issued by the <strong>enterprise CA</strong> (present in the domain’s NTAuth store) — a
