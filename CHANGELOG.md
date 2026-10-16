@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Remote operations warn when the service leaves INITIALIZE UPDATEs without a
+  completed authentication, with a count per security domain, also after a
+  failed operation. The JSON `relay` object lists them as
+  `open_initialize_updates`.
+
 ### Changed
 
 - `remote --default-keys` help and warnings updated for the current service.
@@ -102,14 +109,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cryptography>=43` is now required: the SCP02 code imports its `decrepit`
   3DES module, which older releases do not have, so an install on a system
   with cryptography 41 failed at start-up.
-
 - `factory piv preperso load-config` warns that structural operations are
   permanent (existing elements cannot be changed or removed; only new ones can
   be added) instead of calling them reversible before finalize.
 - Error messages and docs no longer suggest reinstalling the applet as a
-  recovery step; a full reset of the PIV applet is a Cryptnox operation. The
-  `load-config` failure message points at adding missing key objects with
-  `--create-key-object`.
+  recovery step. The `load-config` failure message points at adding missing
+  key objects with `--create-key-object`.
 - `PivPersonalized` no longer requires the optional Discovery Object; CHUID,
   CCC and a set PIN suffice. Discovery is still probed and listed.
 - `factory piv preperso status` reports `finalize_allowed` under the rule

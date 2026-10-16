@@ -344,6 +344,7 @@ class RelayPolicy:
     load_blocks: int = 0
     initialize_updates: dict[str, int] = field(default_factory=dict)
     external_authenticates: dict[str, int] = field(default_factory=dict)
+    open_initialize_updates: dict[str, int] = field(default_factory=dict)
     _pending_select: bytes | None = field(default=None, init=False, repr=False)
     #: Whether the open secure channel encrypts command data, from the security
     #: level the last successful EXTERNAL AUTHENTICATE asked for.
@@ -507,6 +508,9 @@ class RelayPolicy:
             return
         if header.ins == INS_INITIALIZE_UPDATE:
             self.initialize_updates[self.context] = self.initialize_updates.get(self.context, 0) + 1
+            self.open_initialize_updates[self.context] = (
+                self.open_initialize_updates.get(self.context, 0) + 1
+            )
             self._command_encryption = False
         elif header.ins == INS_EXTERNAL_AUTHENTICATE:
             self.external_authenticates[self.context] = (
@@ -519,5 +523,6 @@ class RelayPolicy:
                     header=header.hex,
                 )
             self._command_encryption = bool(header.p1 & _SECURITY_LEVEL_C_DEC)
+            self.open_initialize_updates.pop(self.context, None)
         elif header.ins == INS_LOAD:
             self.load_blocks += 1

@@ -575,3 +575,25 @@ def test_attest_cannot_select_other_card_functions():
     for aid in (WALLET_AID, FIDO2_AID, GENUINE_AID, DESFIRE_AID):
         with pytest.raises(RemotePolicyError, match="SELECT of AID"):
             pol.RelayPolicy("attest", slot=0x9C).check(select(aid))
+
+
+# --------------------------------------------------------------------------- #
+# INITIALIZE UPDATEs left without a completed authentication                  #
+# --------------------------------------------------------------------------- #
+def test_probes_stay_open_per_domain_until_an_authentication_completes():
+    policy = pol.RelayPolicy("reset")
+    allow(policy, INIT_UPDATE)
+    allow(policy, INIT_UPDATE, sw=(0x6A, 0x88))  # an absent key version counts too
+    assert policy.open_initialize_updates == {pol.ISD: 2}
+    allow(policy, select(pol.PIV_SSD_AID))
+    allow(policy, INIT_UPDATE)
+    assert policy.open_initialize_updates == {pol.ISD: 2, pol.PIV_SSD: 1}
+    allow(policy, EXT_AUTH)
+    assert policy.open_initialize_updates == {pol.ISD: 2}
+
+
+def test_inspect_probes_are_never_closed():
+    policy = pol.RelayPolicy("inspect")
+    for _ in range(policy.rules.max_initialize_updates):
+        allow(policy, INIT_UPDATE)
+    assert policy.open_initialize_updates == {pol.ISD: policy.rules.max_initialize_updates}

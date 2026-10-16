@@ -136,6 +136,42 @@ def test_human_output_separates_asserted_from_verified(wired):
     assert "piv_ssd" in result.output
 
 
+INIT_UPDATE_KVN0 = "80500000081122334455667788" + "00"
+INIT_UPDATE_KVN2 = "80500200081122334455667788" + "00"
+
+
+def test_inspect_probes_are_counted_and_warned_about(wired):
+    conn = wired["conn"]
+    conn._exchanges[INIT_UPDATE_KVN0] = "00" * 28 + "|9000"
+    wired["arm"](
+        [
+            {"type": "apdu", "hex": INIT_UPDATE_KVN0},
+            {"type": "apdu", "hex": INIT_UPDATE_KVN2},
+            {"type": "result", "ok": True},
+        ]
+    )
+    result = run(["--json", "remote", "inspect"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["relay"]["open_initialize_updates"] == {"isd": 2}
+    assert "left 2 INITIALIZE UPDATEs without a completed authentication" in result.stderr
+    assert "card manager: 2" in result.stderr
+
+
+def test_no_warning_when_the_service_sends_no_initialize_update(wired):
+    wired["arm"]([{"type": "apdu", "hex": CPLC_CMD}, {"type": "result", "ok": True}])
+    result = run(["--json", "remote", "inspect"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["relay"]["open_initialize_updates"] == {}
+    assert "INITIALIZE UPDATE" not in result.stderr
+
+
+def test_a_failed_operation_still_warns_about_open_probes(wired):
+    wired["arm"]([{"type": "apdu", "hex": INIT_UPDATE_KVN2}, {"type": "result", "ok": False}])
+    result = run(["--json", "remote", "inspect"])
+    assert result.exit_code == 16
+    assert "left 1 INITIALIZE UPDATE without a completed authentication" in result.stderr
+
+
 # --------------------------------------------------------------------------- #
 # Failures map to their exit codes and JSON shapes                            #
 # --------------------------------------------------------------------------- #

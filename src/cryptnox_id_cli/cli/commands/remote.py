@@ -26,7 +26,7 @@ from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.remote import attest_verify as av
 from cryptnox_id_cli.remote import channel as rchannel
 from cryptnox_id_cli.remote import relay
-from cryptnox_id_cli.remote.policy import PIV_SSD_AID, RelayPolicy
+from cryptnox_id_cli.remote.policy import ISD, PIV, PIV_SSD, PIV_SSD_AID, RelayPolicy
 from cryptnox_id_cli.state.detector import StateDetector
 from cryptnox_id_cli.transport.apdu import APDU
 from cryptnox_id_cli.transport.errors import CryptnoxError, RemoteConnectError
@@ -158,18 +158,38 @@ def _relay(
 ) -> relay.RelayReport:
     slot = params.get("slot")
     policy = RelayPolicy(op, slot=int(str(slot), 16) if isinstance(slot, str) else None)
-    with rchannel.open_channel(url) as ch:
-        return relay.run_operation(
-            ch,
-            card.conn,
-            op,
-            params,
-            policy=policy,
-            redactor=app.redactor,
-            transcript=app.apdu_trace,
-            unmasked_transcript=bool(ctx.meta.get(_FULL_TRANSCRIPT_KEY)),
-            on_log=lambda msg: app.out.note(f"service: {escape(msg)}"),
-        )
+    try:
+        with rchannel.open_channel(url) as ch:
+            return relay.run_operation(
+                ch,
+                card.conn,
+                op,
+                params,
+                policy=policy,
+                redactor=app.redactor,
+                transcript=app.apdu_trace,
+                unmasked_transcript=bool(ctx.meta.get(_FULL_TRANSCRIPT_KEY)),
+                on_log=lambda msg: app.out.note(f"service: {escape(msg)}"),
+            )
+    finally:
+        _warn_open_initialize_updates(app, policy.open_initialize_updates)
+
+
+_DOMAIN_NAMES = {ISD: "card manager", PIV_SSD: "PIV security domain", PIV: "PIV applet"}
+
+
+def _warn_open_initialize_updates(app: AppContext, open_counts: dict[str, int]) -> None:
+    counts = {ctx: n for ctx, n in open_counts.items() if n}
+    if not counts:
+        return
+    total = sum(counts.values())
+    detail = ", ".join(f"{_DOMAIN_NAMES.get(ctx, ctx)}: {n}" for ctx, n in counts.items())
+    app.out.warn(
+        f"the service left {total} INITIALIZE UPDATE{'s' if total != 1 else ''} without a "
+        f"completed authentication ({detail}). On some chips each one counts toward a delay "
+        "of about 24 seconds on later authentications to that security domain, until one "
+        "succeeds."
+    )
 
 
 def _cross_check(card: dict[str, object], result: dict[str, object]) -> dict[str, object]:
@@ -203,6 +223,7 @@ def _relay_info(report: relay.RelayReport) -> dict[str, object]:
         "seconds": round(report.seconds, 3),
         "pow_bits": report.pow_bits,
         "service_log": report.log_lines,
+        "open_initialize_updates": report.open_initialize_updates,
     }
 
 
