@@ -15,6 +15,12 @@ signing for keys created with a SIGN-capable role, so the card must be
 pre-personalized with the **ms-logon profile** (its 9A keys are
 ``AUTHENTICATE+SIGN``, and it adds an importable RSA-2048 object on 9A).
 
+Logon needs a **contact** reader, or the contact slot of a combo reader. Over
+contactless this applet accepts a PIN only inside PIV secure messaging (the
+SP 800-73-4 virtual contact interface); the built-in profiles create the PIN
+for contact use only, and the inbox minidriver has no documented support for
+secure messaging.
+
 The certificate itself is dictated by Active Directory, not by the card:
 
 * issued by the **enterprise CA** (present in the domain's NTAuth store) — a

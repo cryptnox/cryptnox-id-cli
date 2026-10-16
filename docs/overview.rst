@@ -27,8 +27,12 @@ Reachability at a glance
      - Interface
      - Notes
    * - PIV
-     - contact (admin), contact/contactless (use)
-     - All personalization/administration is contact-only.
+     - contact; contactless only for what needs no PIN
+     - Administration and everything behind the PIN are contact-only, so
+       Windows logon needs a contact reader. Over contactless the built-in
+       profiles expose the CHUID, the card-authentication certificate and the
+       card-authentication key (9E), which needs no PIN: the data physical
+       access control uses.
    * - FIDO2
      - contactless (NFC)
      - Windows: requires an Administrator terminal.
