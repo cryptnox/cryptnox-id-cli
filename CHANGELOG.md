@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-16
+
 ### Added
 
 - `piv perso import-cert --csr FILE` refuses a certificate whose public key
@@ -180,7 +182,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Three interchangeable console commands: `cryptnox-id`, the short `cnx-id`,
   and `cryptnox-id-card`.
 
-[Unreleased]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.0...v1.0.1
