@@ -8,8 +8,9 @@ and sign with. About ten minutes, one command if you let it.
 Prerequisites
 -------------
 
-* A **contact** smart-card reader. PIV administration is gated to the contact
-  interface on this card; contactless works for reading once personalized.
+* A **contact** smart-card reader. Administration and everything behind the
+  PIN work over the contact interface only; over contactless the card gives
+  out just the data that needs no PIN, such as the CHUID.
 * |cli| installed, and ``yubico-piv-tool`` if you want to run the verification
   step (any recent version).
 * The card's SCP03 administration keys. As shipped, every card uses the
