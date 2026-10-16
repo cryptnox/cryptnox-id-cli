@@ -1322,7 +1322,8 @@ def perso() -> None:
     is_flag=True,
     help="If the slot has no key object for this (slot, algorithm) pair, create one "
     "first (PUT DATA ADMIN, non-finalized cards only) - same dev/eval fallback as "
-    "`import-key --create-key-object`.",
+    "`import-key --create-key-object`. The object is permanent, also if the chip then "
+    "refuses the key size.",
 )
 @click.pass_obj
 def perso_generate_key(
@@ -1725,7 +1726,8 @@ def _create_key_object(
         attrs |= preperso_mod.ATTR_RSA_CRT
     app.out.warn(
         "creating the key object (PUT DATA ADMIN) - a structural change normally "
-        "done at pre-personalization."
+        "done at pre-personalization. It is permanent, also if the chip then refuses "
+        "this key size."
     )
     op = preperso_mod.create_key(ref, contact, contactless, mech, role, attrs)
     adm.select()
@@ -1737,8 +1739,8 @@ def _create_key_object(
     if resp.sw == 0x6985:
         raise CryptnoxError(
             "the applet is finalized (SECURED): key objects can no longer be created. "
-            "Import into an existing object. A full reset of the PIV applet is a Cryptnox "
-            "operation: contact Cryptnox support."
+            "Import into an existing object. A full reset of the PIV applet runs through the "
+            "Cryptnox remote PIV service: `cryptnox-id remote reset`."
         )
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"CREATE KEY {slot}")
@@ -1873,7 +1875,8 @@ def _post_import_smoke(
     "--create-key-object",
     is_flag=True,
     help="Dev/eval: create the (slot, mechanism) key object first if it is missing "
-    "(structural PUT DATA ADMIN; a finalized applet refuses this).",
+    "(structural PUT DATA ADMIN; a finalized applet refuses this). The object is "
+    "permanent, also if the chip then refuses the key size.",
 )
 @click.option(
     "--public-out",
@@ -2035,7 +2038,8 @@ def perso_import_key(
     "--create-key-object",
     is_flag=True,
     help="Dev/eval: create the (slot, mechanism) key object first if it is missing "
-    "(structural PUT DATA ADMIN; a finalized applet refuses this).",
+    "(structural PUT DATA ADMIN; a finalized applet refuses this). The object is "
+    "permanent, also if the chip then refuses the key size.",
 )
 @click.option("--pin", "pin_value", help="(discouraged) PIN for the post-import signing check.")
 @click.option("--no-smoke-test", is_flag=True, help="Skip the post-import signing check.")

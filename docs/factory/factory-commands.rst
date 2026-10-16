@@ -51,8 +51,8 @@ coexists on 9A — see the
 .. warning::
 
    ``finalize`` is **irreversible** — it locks the applet's structure for the
-   card's lifetime. A full reset of the PIV applet is a Cryptnox operation:
-   contact Cryptnox support. It is gated by a
+   card's lifetime. A full reset of the PIV applet runs through the Cryptnox
+   remote PIV service (:doc:`/remote/remote-guide`). It is gated by a
    typed confirmation token when run interactively, or the
    ``--i-understand-this-is-irreversible`` flag when run non-interactively —
    either satisfies the gate. Never run it on a card you are still developing

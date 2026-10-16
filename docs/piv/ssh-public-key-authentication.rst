@@ -95,8 +95,9 @@ If your card already has a different profile applied (e.g. it already went
 through :doc:`/piv/quick-start-a-working-piv-card` on 9C), this profile
 cannot be loaded over it: existing key objects keep their role, and
 ``--create-key-object`` creates new ones with the default profile's roles
-(AUTHENTICATE only on 9A). A full reset of the PIV applet is a Cryptnox
-operation: contact Cryptnox support. A blank/pre-perso card needs no such
+(AUTHENTICATE only on 9A). A full reset of the PIV applet runs through the
+Cryptnox remote PIV service (:doc:`/remote/remote-guide`). A blank/pre-perso
+card needs no such
 step.
 
 .. code-block:: console
