@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `remote --default-keys` help and warnings updated for the current service.
+
+### Removed
+
+- `remote dev-reset` no longer asks for a development token.
+
 ## [1.1.0] - 2026-10-16
 
 ### Added

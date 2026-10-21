@@ -142,7 +142,10 @@ Remote service
   protecting the card; report the header so the policy can be reviewed.
 - **16** ``remote_failed``: the exchange completed and the service reported
   the operation as failed; the error object carries the service's result.
-  A per-card rate limit exists; wait before retrying.
+  A per-card rate limit exists; wait before retrying. A ``dev-reset``
+  refused because the card cannot prove it is genuine, or a
+  ``reset --default-keys`` refused for lack of a factory token, left the card
+  untouched: contact Cryptnox support to have the card re-provisioned.
 
 ``remote reset`` and ``remote dev-reset`` refuse to run non-interactively
 without ``--i-understand-this-is-irreversible``, and ``--yes`` is not

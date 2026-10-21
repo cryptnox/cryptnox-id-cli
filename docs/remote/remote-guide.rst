@@ -86,10 +86,11 @@ Operations
 ``dev-reset``
    As ``reset``, for development cards, leaving the card manager and the PIV
    security domain on the publicly documented GlobalPlatform key so the PIV
-   function can be pre-personalized and personalized locally. Anyone with a
-   reader can then install or delete applets on the card, and the card is not
-   genuine until it is reset through the service again. The development access
-   credential comes from ``CRYPTNOX_REMOTE_DEV_TOKEN`` only.
+   function can be pre-personalized and personalized locally. Before anything
+   is deleted, the card must prove it is genuine with one of its own keys (see
+   below); a card that cannot is refused untouched. Afterwards anyone with a
+   reader can install or delete applets on the card, and only Cryptnox can make
+   it genuine again.
 
 What a failed authentication costs
 ----------------------------------
@@ -110,14 +111,20 @@ The ``--default-keys`` flag
 
 By default the service authenticates to the card manager with the card's own
 key, derived per card from its identity. That is the state a card leaves the
-factory in. A development card, or one deliberately put on the published
-GlobalPlatform default key, needs ``--default-keys`` instead; without it the
-service presents a derived key the card does not hold, the authentication
-fails, and the card counts each attempt as a failed authentication (see
-above). The flag is the caller's statement about the card, so the default is
-the safe one: forgetting it on a development card costs failed authentications
-and nothing else, while the reverse mistake on a production card would present a published
-key to a card that should only ever answer to its own.
+factory in, and a ``reset`` keeps it.
+
+On ``reset``, ``--default-keys`` asks the service to authenticate with the
+published GlobalPlatform default key instead and make the card genuine. That
+is a Cryptnox operation: the service refuses it without a Cryptnox factory
+token, and the refusal leaves the card untouched. A card that ended up on the
+default key, for example after a ``dev-reset``, is re-provisioned by Cryptnox
+support.
+
+On ``dev-reset``, the flag selects how the card proves it is genuine before
+anything is deleted: without it, with its card-manager key; with it, with key
+version 2 of its PIV security domain. A card that can prove neither is refused
+untouched; Cryptnox support re-provisions it. The service's refusal may suggest
+``reset --default-keys``, which it refuses without a factory token.
 
 What is sent to the service
 ---------------------------
