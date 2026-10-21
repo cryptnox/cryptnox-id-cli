@@ -230,16 +230,22 @@ remote dev-reset [--default-keys] [--i-understand-this-is-irreversible]
                       Development cards only. As reset, but the card manager
                       and the PIV security domain are left on the public
                       default key, so the PIV function can be worked on
-                      locally. Needs the development access credential in
-                      $CRYPTNOX_REMOTE_DEV_TOKEN (never an option). The
-                      phrase is DEV-RESET-PIV.
+                      locally. Before anything is deleted the card must
+                      prove it is genuine with one of its own keys; a card
+                      that cannot is refused untouched and must be
+                      re-provisioned by Cryptnox support. Only Cryptnox can
+                      make the card genuine again. The phrase is
+                      DEV-RESET-PIV.
 
 Options:
-  --default-keys      development cards only: the service authenticates
-                      with the publicly known GlobalPlatform default key
-                      instead of deriving this card's own. A production
-                      card refuses it, and the card counts one failed
-                      authentication.
+  --default-keys      on reset: reserved to Cryptnox. The service would
+                      authenticate with the publicly known GlobalPlatform
+                      default key and make the card genuine; it refuses
+                      without a Cryptnox factory token and leaves the card
+                      untouched.
+                      On dev-reset: the card proves it is genuine with key
+                      version 2 of its PIV security domain instead of its
+                      card-manager key.
 </pre></div>
 </div>
 <p>Before asking for consent, both commands read and show what the card holds:

@@ -272,7 +272,10 @@ the card for that command and the operation stopped. This is the tool
 protecting the card; report the header so the policy can be reviewed.</p></li>
 <li><p><strong>16</strong> <code class="docutils literal notranslate"><span class="pre">remote_failed</span></code>: the exchange completed and the service reported
 the operation as failed; the error object carries the service’s result.
-A per-card rate limit exists; wait before retrying.</p></li>
+A per-card rate limit exists; wait before retrying. A <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>
+refused because the card cannot prove it is genuine, or a
+<code class="docutils literal notranslate"><span class="pre">reset</span> <span class="pre">--default-keys</span></code> refused for lack of a factory token, left the card
+untouched: contact Cryptnox support to have the card re-provisioned.</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code> refuse to run non-interactively
 without <code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code>, and <code class="docutils literal notranslate"><span class="pre">--yes</span></code> is not
