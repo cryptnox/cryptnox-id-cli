@@ -74,7 +74,6 @@ def wired(monkeypatch, mock_connection):
     )
     wire_session(monkeypatch, conn, reader_name="Fake Reader 00 00")
     monkeypatch.delenv(rchannel.URL_ENV, raising=False)
-    monkeypatch.delenv(remote_cmd.DEV_ACCESS_ENV, raising=False)
     holder: dict = {"conn": conn, "opened": 0}
 
     @contextlib.contextmanager
@@ -103,8 +102,7 @@ OK_RESULT = {"type": "result", "ok": True, "wiped_and_reprovisioned": True, "ste
 # Fail closed                                                                 #
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("op", ["reset", "dev-reset"])
-def test_non_interactive_without_the_flag_refuses_before_connecting(wired, op, monkeypatch):
-    monkeypatch.setenv(remote_cmd.DEV_ACCESS_ENV, "dev-credential")
+def test_non_interactive_without_the_flag_refuses_before_connecting(wired, op):
     wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", op])
     assert result.exit_code == 1
@@ -113,8 +111,7 @@ def test_non_interactive_without_the_flag_refuses_before_connecting(wired, op, m
 
 
 @pytest.mark.parametrize("op", ["reset", "dev-reset"])
-def test_yes_is_not_a_bypass(wired, op, monkeypatch):
-    monkeypatch.setenv(remote_cmd.DEV_ACCESS_ENV, "dev-credential")
+def test_yes_is_not_a_bypass(wired, op):
     wired["arm"]([OK_RESULT])
     result = run(["--yes", "--json", "remote", op])
     assert result.exit_code == 1
@@ -153,7 +150,6 @@ def test_dry_run_refuses_before_anything_opens(monkeypatch):
 @pytest.mark.parametrize("op", ["reset", "dev-reset"])
 def test_endpoint_override_is_refused(wired, op, monkeypatch):
     monkeypatch.setenv(rchannel.URL_ENV, "ws://localhost:9999")
-    monkeypatch.setenv(remote_cmd.DEV_ACCESS_ENV, "dev-credential")
     result = run(["--json", "remote", op, "--i-understand-this-is-irreversible"])
     assert result.exit_code == 13
     assert "production service" in json.loads(result.stdout)["message"]
@@ -177,12 +173,28 @@ def test_reset_payload_carries_before_after_and_params(wired):
     assert payload["result"]["wiped_and_reprovisioned"] is True
 
 
-def test_default_keys_selects_the_dev_path_and_warns(wired):
+def test_reset_default_keys_warns_that_the_service_refuses_it(wired):
     channel = wired["arm"]([OK_RESULT])
     result = run(["remote", "reset", "--default-keys", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
     assert channel.sent[0]["params"] == {"fused": False}
-    assert "--default-keys" in result.output
+    assert "factory token" in result.output
+
+
+def test_dev_reset_default_keys_selects_the_ssd_proof(wired):
+    channel = wired["arm"]([OK_RESULT])
+    result = run(["remote", "dev-reset", "--default-keys", "--i-understand-this-is-irreversible"])
+    assert result.exit_code == 0, result.output
+    assert channel.sent[0]["params"] == {"fused": False}
+    assert "factory token" not in result.output
+
+
+def test_default_keys_help_differs_per_operation():
+    reset_help = " ".join(run(["remote", "reset", "--help"]).output.split())
+    dev_reset_help = " ".join(run(["remote", "dev-reset", "--help"]).output.split())
+    assert "factory token" in reset_help
+    assert "key version 2" in dev_reset_help
+    assert "retry" not in reset_help + dev_reset_help
 
 
 def test_fused_flag_no_longer_exists(wired):
@@ -191,28 +203,18 @@ def test_fused_flag_no_longer_exists(wired):
     assert result.exit_code == 2  # click usage error
 
 
-def test_dev_reset_sends_the_credential_from_the_environment_only(wired, monkeypatch):
-    monkeypatch.setenv(remote_cmd.DEV_ACCESS_ENV, "dev-credential-value")
+def test_dev_reset_needs_no_token_and_sends_none(wired, monkeypatch):
+    monkeypatch.setenv("CRYPTNOX_REMOTE_DEV_TOKEN", "left-over-value")
     channel = wired["arm"]([OK_RESULT])
-    result = run(
-        ["--json", "remote", "dev-reset", "--i-understand-this-is-irreversible"],
-    )
-    assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": True, "dev_token": "dev-credential-value"}
-    assert "dev-credential-value" not in result.output
-
-
-def test_dev_reset_without_the_credential_fails_closed(wired):
-    wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", "dev-reset", "--i-understand-this-is-irreversible"])
-    assert result.exit_code == 3  # secret_input
-    assert wired["opened"] == 0
+    assert result.exit_code == 0, result.output
+    assert channel.sent[0]["params"] == {"fused": True}
 
 
-def test_dev_reset_has_no_credential_option():
+def test_dev_reset_help_mentions_no_token():
     result = run(["remote", "dev-reset", "--help"])
     assert "--dev-token" not in result.output
-    assert "CRYPTNOX_REMOTE_DEV_TOKEN" in result.output
+    assert "CRYPTNOX_REMOTE_DEV_TOKEN" not in result.output
 
 
 def test_after_inventory_reflects_a_new_key_version(wired):

@@ -27,7 +27,6 @@ from cryptnox_id_cli.remote import attest_verify as av
 from cryptnox_id_cli.remote import channel as rchannel
 from cryptnox_id_cli.remote import relay
 from cryptnox_id_cli.remote.policy import PIV_SSD_AID, RelayPolicy
-from cryptnox_id_cli.secrets.resolver import resolve_secret
 from cryptnox_id_cli.state.detector import StateDetector
 from cryptnox_id_cli.transport.apdu import APDU
 from cryptnox_id_cli.transport.errors import CryptnoxError, RemoteConnectError
@@ -35,10 +34,6 @@ from cryptnox_id_cli.transport.pcsc import CardSession, RawConnection
 from cryptnox_id_cli.util import tlv
 
 _FULL_TRANSCRIPT_KEY = "remote.full_transcript"
-
-#: Environment variable carrying the development access credential for
-#: ``dev-reset``. Never an option: it would land in shell history.
-DEV_ACCESS_ENV = "CRYPTNOX_REMOTE_DEV_TOKEN"
 
 #: Phrases typed to confirm the irreversible operations interactively.
 RESET_PHRASE = "RESET-PIV"
@@ -336,10 +331,14 @@ def inspect(ctx: click.Context) -> None:
 # --------------------------------------------------------------------------- #
 # Destructive operations                                                      #
 # --------------------------------------------------------------------------- #
-_DEFAULT_KEYS_HELP = (
-    "Development cards only: have the service authenticate with the publicly known "
-    "GlobalPlatform default key instead of deriving this card's own. A production card "
-    "will refuse it, and the failed authentication costs a card-management retry."
+_RESET_DEFAULT_KEYS_HELP = (
+    "Reserved to Cryptnox: have the service authenticate with the publicly known "
+    "GlobalPlatform default key and make the card genuine. The service refuses it "
+    "without a Cryptnox factory token and leaves the card untouched."
+)
+_DEV_RESET_DEFAULT_KEYS_HELP = (
+    "Have the card prove it is genuine with key version 2 of its PIV security domain "
+    "instead of its card-manager key."
 )
 
 
@@ -357,14 +356,13 @@ def _confirm_destructive(
         app.out.warn(
             "dev-reset leaves the card manager and the PIV security domain on the PUBLIC "
             "default key: anyone with a reader can then install or delete applets, "
-            "including the wallet. The card is not genuine again until it is reset through "
-            "the service."
+            "including the wallet. Only Cryptnox can make the card genuine again."
         )
-    if default_keys:
+    elif default_keys:
         app.out.warn(
-            "--default-keys: the service will authenticate with the publicly known "
-            "GlobalPlatform default key. A production card holds its own derived key and "
-            "will refuse this, and the failed authentication costs a card-management retry."
+            "--default-keys: the service refuses this without a Cryptnox factory token and "
+            "leaves the card untouched. To have a card on the default key re-provisioned, "
+            "contact Cryptnox support."
         )
     if not app.json:
         _print_inventory(app.out.console, "Before", before)
@@ -385,13 +383,6 @@ def _run_destructive(
     url, _production = _endpoint(op)  # refuses any override for these operations
     # Sent explicitly either way, so behaviour never depends on the service's own default.
     params: dict[str, object] = {"fused": not default_keys}
-    if op == "dev-reset":
-        credential = resolve_secret(
-            redactor=app.redactor,
-            env_var=DEV_ACCESS_ENV,
-            prompt_label="Cryptnox remote development access",
-        )
-        params["dev_token"] = credential.decode("utf-8")
 
     card = _open_card(app)
     try:
@@ -431,7 +422,7 @@ def _run_destructive(
 
 
 @command.command("reset")
-@click.option("--default-keys", "default_keys", is_flag=True, help=_DEFAULT_KEYS_HELP)
+@click.option("--default-keys", "default_keys", is_flag=True, help=_RESET_DEFAULT_KEYS_HELP)
 @click.option(
     "--i-understand-this-is-irreversible",
     "understood",
@@ -454,7 +445,7 @@ def reset(ctx: click.Context, default_keys: bool, understood: bool) -> None:
 
 
 @command.command("dev-reset")
-@click.option("--default-keys", "default_keys", is_flag=True, help=_DEFAULT_KEYS_HELP)
+@click.option("--default-keys", "default_keys", is_flag=True, help=_DEV_RESET_DEFAULT_KEYS_HELP)
 @click.option(
     "--i-understand-this-is-irreversible",
     "understood",
@@ -465,11 +456,11 @@ def reset(ctx: click.Context, default_keys: bool, understood: bool) -> None:
 def dev_reset(ctx: click.Context, default_keys: bool, understood: bool) -> None:
     """IRREVERSIBLY wipe the PIV function and leave the card on the public default keys.
 
-    For development cards only. Needs the development access credential in
-    $CRYPTNOX_REMOTE_DEV_TOKEN. Afterwards the card manager and the PIV security
-    domain are on the publicly documented GlobalPlatform key, so the PIV function
-    can be pre-personalized and personalized locally; the card is not genuine
-    until reset through the service again.
+    For development cards only. Before anything is deleted, the card proves it
+    is genuine with one of its own keys; a card that cannot is refused untouched.
+    Afterwards the card manager and the PIV security domain are on the publicly
+    documented GlobalPlatform key, so the PIV function can be pre-personalized
+    and personalized locally. Only Cryptnox can make the card genuine again.
     """
     _run_destructive(
         ctx,
