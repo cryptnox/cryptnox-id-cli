@@ -123,7 +123,8 @@ support.
 On ``dev-reset``, the flag selects how the card proves it is genuine before
 anything is deleted: without it, with its card-manager key; with it, with key
 version 2 of its PIV security domain. A card that can prove neither is refused
-untouched.
+untouched; Cryptnox support re-provisions it. The service's refusal may suggest
+``reset --default-keys``, which it refuses without a factory token.
 
 What is sent to the service
 ---------------------------

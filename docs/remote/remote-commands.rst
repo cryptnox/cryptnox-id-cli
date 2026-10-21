@@ -95,7 +95,8 @@ Reset
                          default key, so the PIV function can be worked on
                          locally. Before anything is deleted the card must
                          prove it is genuine with one of its own keys; a card
-                         that cannot is refused untouched. Only Cryptnox can
+                         that cannot is refused untouched and must be
+                         re-provisioned by Cryptnox support. Only Cryptnox can
                          make the card genuine again. The phrase is
                          DEV-RESET-PIV.
 
