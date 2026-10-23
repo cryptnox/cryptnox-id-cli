@@ -124,20 +124,31 @@ def resolve_scp03_keys(
 NEW_SCP03_KEY_ENVS = ("PIV_SCP03_NEW_ENC", "PIV_SCP03_NEW_MAC", "PIV_SCP03_NEW_DEK")
 
 
-def resolve_new_scp03_keys(redactor: Redactor) -> Scp03Keys:
-    """The keys a rotation writes: the three ``PIV_SCP03_NEW_*`` variables, never the
-    command line and never a default value."""
-    names = " / ".join(f"${v}" for v in NEW_SCP03_KEY_ENVS)
+#: The current and the replacement card-manager keys, hex, 16 bytes each.
+CARD_MANAGER_KEY_ENVS = ("CARD_MANAGER_ENC", "CARD_MANAGER_MAC", "CARD_MANAGER_DEK")
+NEW_CARD_MANAGER_KEY_ENVS = (
+    "CARD_MANAGER_NEW_ENC",
+    "CARD_MANAGER_NEW_MAC",
+    "CARD_MANAGER_NEW_DEK",
+)
+
+
+def resolve_new_scp03_keys(
+    redactor: Redactor, envs: tuple[str, str, str] = NEW_SCP03_KEY_ENVS
+) -> Scp03Keys:
+    """The keys a rotation writes: three variables, never the command line and never a
+    default value."""
+    names = " / ".join(f"${v}" for v in envs)
     values: list[bytes] = []
-    for name in NEW_SCP03_KEY_ENVS:
+    for name in envs:
         raw = os.environ.get(name)
         if not raw:
             raise SecretInputError(
-                f"The new admin keys come from {names} (hex, 16 bytes each); set all three."
+                f"The new keys come from {names} (hex, 16 bytes each); set all three."
             )
         value = _hex_from_env(raw, f"${name}")
         if len(value) != 16:
-            raise SecretInputError(f"${name} is {len(value)} bytes; each admin key is 16 bytes.")
+            raise SecretInputError(f"${name} is {len(value)} bytes; each key is 16 bytes.")
         redactor.register(value)
         values.append(value)
     return Scp03Keys(*values)

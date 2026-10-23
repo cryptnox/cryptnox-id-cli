@@ -59,3 +59,41 @@ coexists on 9A — see the
    against.
 
 Profiles are documented in :doc:`/factory/pre-personalization-profiles`.
+
+The card as a whole
+-------------------
+
+.. code-block:: text
+
+   factory card status   the card's lifecycle and which JCOP modules are loaded
+   factory card fuse     IRREVERSIBLY fuse the card
+
+Both authenticate to the card manager: ``--default-keys`` for a development card
+on the GlobalPlatform test keys, otherwise ``CARD_MANAGER_ENC`` /
+``CARD_MANAGER_MAC`` / ``CARD_MANAGER_DEK``. ``status`` changes nothing; it
+reports the lifecycle, which of the four modules are loaded, and whether the
+configuration is sealed (the configuration module is gone).
+
+``fuse`` is the manufacturer's last step. In this order it deletes the JCOP
+sample modules (``egovaccelerators``, ``fips``, ``piv``) and then the
+configuration module, which seals the chip's configuration; moves the card's
+lifecycle to INITIALIZED and then SECURED, skipping what the card has already
+reached; and replaces the card-manager key. A module that is already gone is
+skipped. Afterwards it authenticates with the new key and reads the lifecycle
+and the modules again. A fused card still loads and deletes applets for whoever
+holds the card-manager key; SECURED is the card's normal operating state.
+
+The new key comes from ``CARD_MANAGER_NEW_ENC`` / ``CARD_MANAGER_NEW_MAC`` /
+``CARD_MANAGER_NEW_DEK``, or ``--randomize`` generates it. ``--randomize``
+requires ``--out FILE``: the key file is written with mode 0600, never over an
+existing file, before anything on the card changes. ``--dry-run`` shows the
+plan and needs no current key.
+
+.. warning::
+
+   ``fuse`` cannot be undone. The configuration stays sealed, the lifecycle
+   cannot go back from SECURED, and the card manager answers only to the new
+   key. The command prints the card's state and a warning, then asks you to
+   type ``FUSE-CARD``; ``-y`` skips the question, and non-interactive use
+   requires ``-y``. Keep the new key: without it nobody can administer the
+   card again.
