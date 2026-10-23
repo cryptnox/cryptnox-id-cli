@@ -253,7 +253,7 @@ def inventory(app: AppContext) -> None:
             finalized = "finalized (SECURED)" if s.secured else "not finalized"
             c.print(f"  State:     {inventory_mod.describe_state(s.state)}, {finalized}")
             interface = "contactless" if s.contactless else "contact"
-            c.print(f"  Interface: {interface}; FIPS mode {'on' if s.fips_mode else 'off'}")
+            c.print(f"  Interface: {interface}; FIPS-mode build: {'yes' if s.fips_mode else 'no'}")
         if inv.config:
             flags = ", ".join(
                 f"{name.replace('_', '-')}={'on' if on else 'off'}"

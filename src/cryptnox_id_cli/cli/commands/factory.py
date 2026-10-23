@@ -167,7 +167,7 @@ def inspect_defaults(app: AppContext) -> None:
     payload = {
         "supported_algorithms": supported,
         "slots": [s.ref_hex for s in PIV_SLOTS],
-        "pin_fips": {"min_length": 6, "retry_cap": 10},
+        "pin_limits": {"min_length": 6, "profile_retry_cap": 10, "applet_retry_limit": 15},
         "builtin_profiles": prof_mod.builtin_names(),
     }
 
@@ -175,7 +175,9 @@ def inspect_defaults(app: AppContext) -> None:
         con.print("PIV pre-personalization defaults (non-secret):")
         con.print(f"  Supported algorithms: {', '.join(supported)}")
         con.print(f"  Key slots: {', '.join(s.ref_hex for s in PIV_SLOTS)}")
-        con.print("  PIN/PUK limits: min length 6, retry cap 10")
+        con.print(
+            "  PIN/PUK limits: min length 6; retries up to 10 in a profile (the applet allows 15)"
+        )
         con.print(f"  Built-in profiles: {', '.join(prof_mod.builtin_names())}")
 
     app.out.result(payload, human)

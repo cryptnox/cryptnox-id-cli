@@ -3,7 +3,7 @@
 Three independent functions live on one physical card and are managed by
 separate, isolated modules (see ``applets/``):
 
-* PIV     — OpenFIPS201 2.0.0 FIPS JavaCard applet (contact).
+* PIV     — OpenFIPS201 2.0.0 JavaCard applet, FIPS-mode build (contact).
 * FIDO2   — CTAP 2.1 JavaCard applet (needs Administrator elevation on Windows).
 * DESFire — MIFARE DESFire EV2/EV3 contactless function (needs a contactless reader).
 
