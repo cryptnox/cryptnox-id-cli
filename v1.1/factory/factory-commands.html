@@ -81,7 +81,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Factory &amp; provisioning</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Factory commands</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Factory commands</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-card-as-a-whole">The card as a whole</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
@@ -199,6 +202,40 @@ either satisfies the gate. Never run it on a card you are still developing
 against.</p>
 </div>
 <p>Profiles are documented in <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p>
+<section id="the-card-as-a-whole">
+<h2>The card as a whole<a class="headerlink" href="#the-card-as-a-whole" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>factory card status   the card's lifecycle and which JCOP modules are loaded
+factory card fuse     IRREVERSIBLY fuse the card
+</pre></div>
+</div>
+<p>Both authenticate to the card manager: <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> for a development card
+on the GlobalPlatform test keys, otherwise <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_ENC</span></code> /
+<code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_DEK</span></code>. <code class="docutils literal notranslate"><span class="pre">status</span></code> changes nothing; it
+reports the lifecycle, which of the four modules are loaded, and whether the
+configuration is sealed (the configuration module is gone).</p>
+<p><code class="docutils literal notranslate"><span class="pre">fuse</span></code> is the manufacturer’s last step. In this order it deletes the JCOP
+sample modules (<code class="docutils literal notranslate"><span class="pre">egovaccelerators</span></code>, <code class="docutils literal notranslate"><span class="pre">fips</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span></code>) and then the
+configuration module, which seals the chip’s configuration; moves the card’s
+lifecycle to INITIALIZED and then SECURED, skipping what the card has already
+reached; and replaces the card-manager key. A module that is already gone is
+skipped. Afterwards it authenticates with the new key and reads the lifecycle
+and the modules again. A fused card still loads and deletes applets for whoever
+holds the card-manager key; SECURED is the card’s normal operating state.</p>
+<p>The new key comes from <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_MAC</span></code> /
+<code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_DEK</span></code>, or <code class="docutils literal notranslate"><span class="pre">--randomize</span></code> generates it. <code class="docutils literal notranslate"><span class="pre">--randomize</span></code>
+requires <code class="docutils literal notranslate"><span class="pre">--out</span> <span class="pre">FILE</span></code>: the key file is written with mode 0600, never over an
+existing file, before anything on the card changes. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> shows the
+plan and needs no current key.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">fuse</span></code> cannot be undone. The configuration stays sealed, the lifecycle
+cannot go back from SECURED, and the card manager answers only to the new
+key. The command prints the card’s state and a warning, then asks you to
+type <code class="docutils literal notranslate"><span class="pre">FUSE-CARD</span></code>; <code class="docutils literal notranslate"><span class="pre">-y</span></code> skips the question, and non-interactive use
+requires <code class="docutils literal notranslate"><span class="pre">-y</span></code>. Keep the new key: without it nobody can administer the
+card again.</p>
+</div>
+</section>
 </section>
 
 
