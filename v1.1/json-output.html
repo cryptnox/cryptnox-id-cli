@@ -285,7 +285,9 @@ probe fails. Nothing in any report contains a PIN, key, or private material —
 <code class="docutils literal notranslate"><span class="pre">result</span></code> (the service’s own result object, passed through unchanged),
 <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code> (each cross-check as <code class="docutils literal notranslate"><span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">false</span></code> or <code class="docutils literal notranslate"><span class="pre">null</span></code> when
 the service reported nothing to compare) and <code class="docutils literal notranslate"><span class="pre">relay</span></code> (commands relayed,
-seconds, proof-of-work bits, the service’s log lines). <code class="docutils literal notranslate"><span class="pre">reset</span></code> and
+seconds, proof-of-work bits, the service’s log lines, and
+<code class="docutils literal notranslate"><span class="pre">open_initialize_updates</span></code>: per security domain, the INITIALIZE UPDATEs the
+operation left without a completed authentication). <code class="docutils literal notranslate"><span class="pre">reset</span></code> and
 <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> add <code class="docutils literal notranslate"><span class="pre">before</span></code> and <code class="docutils literal notranslate"><span class="pre">after</span></code> inventories; <code class="docutils literal notranslate"><span class="pre">attest</span></code> adds
 <code class="docutils literal notranslate"><span class="pre">verification</span></code> with every binding checked on the returned certificate.
 Fields under <code class="docutils literal notranslate"><span class="pre">result</span></code> are the service’s assertions; only <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code>,

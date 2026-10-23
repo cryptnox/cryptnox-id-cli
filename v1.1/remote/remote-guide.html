@@ -248,6 +248,10 @@ does as well. This is why the relay caps authentication attempts per
 operation. For the PIV security domain, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">authenticate</span></code> with the
 card’s own keys clears the count; the card manager’s clears only with an
 authentication to the card manager.</p>
+<p>When an operation leaves INITIALIZE UPDATEs without a completed
+authentication, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says so afterwards with a count per security domain,
+also when the operation failed. With <code class="docutils literal notranslate"><span class="pre">--json</span></code> the counts are in
+<code class="docutils literal notranslate"><span class="pre">relay.open_initialize_updates</span></code>.</p>
 </section>
 <section id="the-default-keys-flag">
 <h2>The <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> flag<a class="headerlink" href="#the-default-keys-flag" title="Link to this heading"></a></h2>
