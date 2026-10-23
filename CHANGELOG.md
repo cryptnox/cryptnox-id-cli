@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/windows/eobo-wrap.ps1` and a Windows logon guide section on
+  enrolling a card for another user through an enrollment agent.
+
 ### Changed
 
 - `factory piv preperso inspect-defaults` reports the profile retry cap (10)
