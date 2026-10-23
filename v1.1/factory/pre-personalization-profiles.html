@@ -257,8 +257,22 @@ profile to an editable YAML file. To capture what a <em>card</em> currently expo
 <p><strong>Mechanisms</strong>: <code class="docutils literal notranslate"><span class="pre">AES128</span></code>, <code class="docutils literal notranslate"><span class="pre">AES192</span></code>, <code class="docutils literal notranslate"><span class="pre">AES256</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA2048</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA3072</span></code>,
 <code class="docutils literal notranslate"><span class="pre">RSA4096</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP256</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP384</span></code>, <code class="docutils literal notranslate"><span class="pre">CS2</span></code>, <code class="docutils literal notranslate"><span class="pre">CS7</span></code>.</p>
 <p><strong>Access modes</strong> (used for <code class="docutils literal notranslate"><span class="pre">contact</span></code>/<code class="docutils literal notranslate"><span class="pre">contactless</span></code> on both containers and
-keys): <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code>, <code class="docutils literal notranslate"><span class="pre">NEVER</span></code>, <code class="docutils literal notranslate"><span class="pre">PIN</span></code>, <code class="docutils literal notranslate"><span class="pre">VCI</span></code> (contact-interface-only, no
-PIN), <code class="docutils literal notranslate"><span class="pre">VCI_PIN</span></code> (contact interface <strong>and</strong> PIN), <code class="docutils literal notranslate"><span class="pre">OCC</span></code>, <code class="docutils literal notranslate"><span class="pre">SM</span></code>.</p>
+keys):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code>: no condition.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NEVER</span></code>: not accessible over that interface.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PIN</span></code>: after the PIN has been verified.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OCC</span></code>: after an on-card biometric comparison.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SM</span></code>: only inside a PIV secure-messaging session (SP 800-73-4).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VCI</span></code>: the same as <code class="docutils literal notranslate"><span class="pre">SM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VCI_PIN</span></code>: <code class="docutils literal notranslate"><span class="pre">SM</span></code> plus the PIN.</p></li>
+</ul>
+<p>Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
+sessions, so anything marked <code class="docutils literal notranslate"><span class="pre">SM</span></code>, <code class="docutils literal notranslate"><span class="pre">VCI</span></code> or <code class="docutils literal notranslate"><span class="pre">VCI_PIN</span></code> on an interface
+cannot be used there with them. In the built-in profiles that is the
+contactless side of most containers. The PIN and PUK are created for contact
+use only: the applet’s FIPS-mode build accepts a PIN over contactless only inside
+secure messaging.</p>
 <p><strong>Key roles</strong> (a bitmask — combine with <code class="docutils literal notranslate"><span class="pre">+</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE+SIGN</span></code>, or
 give a YAML list): <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>, <code class="docutils literal notranslate"><span class="pre">KEY_ESTABLISH</span></code>, <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>.</p>
 <p><strong>Key attributes</strong> (a YAML list): <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code>, <code class="docutils literal notranslate"><span class="pre">PERMIT_EXTERNAL</span></code>,
@@ -279,8 +293,8 @@ whole card. This tool never writes that form.</p>
 <p>The container also cannot be removed afterwards: existing elements cannot
 be changed or removed, only new ones added, and <code class="docutils literal notranslate"><span class="pre">load-config</span></code> stops at
 the first element that already exists. A full reset of the PIV applet
-erases its keys and certificates and is a Cryptnox operation (contact
-Cryptnox support).</p>
+erases its keys and certificates and runs through the Cryptnox remote PIV
+service (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>).</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">from_yaml</span></code> rejects unknown mode/role/mechanism names and validates the
 whole profile before anything is sent to a card:</p>
