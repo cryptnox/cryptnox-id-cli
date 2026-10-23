@@ -127,7 +127,7 @@ Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
 sessions, so anything marked ``SM``, ``VCI`` or ``VCI_PIN`` on an interface
 cannot be used there with them. In the built-in profiles that is the
 contactless side of most containers. The PIN and PUK are created for contact
-use only: the applet's FIPS build accepts a PIN over contactless only inside
+use only: the applet's FIPS-mode build accepts a PIN over contactless only inside
 secure messaging.
 
 **Key roles** (a bitmask — combine with ``+``, e.g. ``AUTHENTICATE+SIGN``, or

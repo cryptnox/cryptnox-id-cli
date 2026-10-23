@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `factory piv preperso inspect-defaults` reports the profile retry cap (10)
+  and the applet's retry limit (15) separately; the JSON key `pin_fips` is
+  now `pin_limits`.
+- `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
+
 ### Added
 
 - Remote operations warn when the service leaves INITIALIZE UPDATEs without a

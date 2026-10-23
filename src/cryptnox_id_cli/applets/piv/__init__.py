@@ -1,4 +1,4 @@
-"""PIV applet support (OpenFIPS201 2.0.0 FIPS).
+"""PIV applet support (OpenFIPS201 2.0.0, FIPS-mode build).
 
 Phase 3 scope is strictly read-only: SELECT, GET DATA, VERIFY status query, and
 discovery. Pre-personalization (factory) and personalization land in later phases.

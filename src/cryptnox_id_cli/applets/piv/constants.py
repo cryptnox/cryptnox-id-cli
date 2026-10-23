@@ -52,12 +52,12 @@ ALGORITHMS: dict[int, str] = {
     0x2E: "PIV-SM-CS7 (AES-256/SHA-384)",
 }
 
-# Algorithms this OpenFIPS201 FIPS build actually implements. A chip whose DF2B
+# Algorithms this OpenFIPS201 FIPS-mode build actually implements. A chip whose DF2B
 # configuration caps RSA below a requested size answers 6F00; the CLI maps that to
 # a size-cap message on GENERATE/import.
 SUPPORTED_ALGORITHMS: frozenset[int] = frozenset(
     {0x07, 0x05, 0x16, 0x08, 0x0A, 0x0C, 0x11, 0x14, 0x27, 0x2E}
 )
 
-# Explicitly removed in this FIPS build (used to warn / never offer).
+# Explicitly removed in this FIPS-mode build (used to warn / never offer).
 REMOVED_ALGORITHMS: frozenset[int] = frozenset({0x06})  # RSA-1024 (+ 3DES) — FIPS-gated
