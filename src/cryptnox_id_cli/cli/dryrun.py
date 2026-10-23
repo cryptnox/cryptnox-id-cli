@@ -34,6 +34,7 @@ PLANS_OWN = frozenset(
         "apdu select",
         "apdu send",
         "apdu transcript",
+        "factory card fuse",
         "factory piv preperso finalize",
         "factory piv preperso load-config",
         "piv admin delete-factory-keyset",
@@ -110,6 +111,7 @@ READ_ONLY = frozenset(
 #: partition test forces every new command to be classified here or above.
 NO_DRY_RUN = frozenset(
     {
+        "factory card status",
         "factory piv preperso set-mgmt-key",
         "fido config min-pin-length",
         "fido config toggle-always-uv",

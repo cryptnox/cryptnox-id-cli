@@ -11,16 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `scripts/windows/eobo-wrap.ps1` and a Windows logon guide section on
   enrolling a card for another user through an enrollment agent.
-
-### Changed
-
-- `factory piv preperso inspect-defaults` reports the profile retry cap (10)
-  and the applet's retry limit (15) separately; the JSON key `pin_fips` is
-  now `pin_limits`.
-- `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
-
-### Added
-
+- `factory card fuse`: the manufacturer's last step. Deletes the JCOP sample
+  modules and then the configuration module, sets the card's lifecycle to
+  SECURED and replaces the card-manager key, from `CARD_MANAGER_NEW_*` or
+  `--randomize --out FILE`. It prints the card's state and a warning, then
+  asks for `FUSE-CARD`; `-y` skips the question.
+- `factory card status`: the card's lifecycle and which JCOP modules are
+  loaded, read over the card-manager channel.
 - Remote operations warn when the service leaves INITIALIZE UPDATEs without a
   completed authentication, with a count per security domain, also after a
   failed operation. The JSON `relay` object lists them as
@@ -28,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `factory piv preperso inspect-defaults` reports the profile retry cap (10)
+  and the applet's retry limit (15) separately; the JSON key `pin_fips` is
+  now `pin_limits`.
+- `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
 - `remote --default-keys` help and warnings updated for the current service.
 
 ### Removed

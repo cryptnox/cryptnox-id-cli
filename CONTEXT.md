@@ -22,6 +22,21 @@ _Avoid_: chip mode
 The ISO 14443 (PICC) interface; the only interface where DESFire answers.
 _Avoid_: NFC mode (phone NFC follows different rules than PC/SC contactless)
 
+**Card manager**:
+The card's issuer security domain (`A000000151000000`). It holds the card's lifecycle
+and administers what is loaded on the card; its key is the card's master key.
+_Avoid_: master applet
+
+**Fuse**:
+The manufacturer's last step on the whole card: the JCOP configuration is sealed,
+the card's lifecycle is set to SECURED and the card-manager key is replaced. It
+cannot be undone. A fused card still loads and deletes applets for whoever holds
+the card-manager key. Finalize is the PIV applet's own lock and is a different step.
+The remote service's `fused` setting means something else: a card manager on a key
+derived per card from Cryptnox's master key.
+_Avoid_: finalize (applet-level), lock (only one part of it), "fused" for a card's
+key tier
+
 ### PIV structure and lifecycle
 
 **Pre-personalization**:
