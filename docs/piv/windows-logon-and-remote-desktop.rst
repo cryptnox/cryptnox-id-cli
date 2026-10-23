@@ -73,7 +73,8 @@ CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.
 Step 1 — get the certificate issued
 -----------------------------------
 
-Two equivalent paths; pick the one your PKI supports.
+Two paths; pick the one your PKI supports. Path A2 is Path A run by an
+administrator for another user.
 
 **Path A — CSR to the CA (key stays on-card).** Submit ``9a.csr.pem`` against
 a smart-card-logon template and import the issued certificate:
@@ -87,6 +88,71 @@ a smart-card-logon template and import the issued certificate:
 one in the CSR, which is what happens when an enrollment tool generated a key
 of its own instead of signing the card's request. A certificate for another
 key would be written without complaint and fail only at logon.
+
+**Path A2: enroll on behalf of another user (enrollment agent).** An
+administrator provisioning a card for another Active Directory user cannot use
+the MMC *Enroll on behalf of* wizard: it generates a new key in software, so
+the issued certificate does not match the key in 9A. Instead, wrap the card's
+CSR in a CMC request that names the user and is signed with the
+administrator's enrollment agent certificate, and submit that. The key stays on
+the card.
+
+The CA needs, once:
+
+* an enrollment agent certificate for the administrator, from the *Enrollment
+  Agent* template (extended key usage *Certificate Request Agent*,
+  ``1.3.6.1.4.1.311.20.2.1``), with its private key in the administrator's
+  certificate store;
+* a smart-card-logon template, schema version 2 or later, with one authorized
+  signature and the application policy *Certificate Request Agent* under
+  *Issuance Requirements*, the subject built from Active Directory with the UPN
+  in the alternative name, Enroll permission for the enrollment agent, private
+  key archival off, and a minimum key size no larger than the card's key
+  (2048);
+* if the CA restricts enrollment agents (CA properties, *Enrollment Agents*),
+  an entry that allows this agent for this template and these users.
+
+On the administrator's Windows machine, find the agent certificate's
+thumbprint:
+
+.. code-block:: powershell
+
+   Get-ChildItem Cert:\CurrentUser\My |
+       Where-Object { $_.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.4.1.311.20.2.1' } |
+       Format-List Subject, Thumbprint, NotAfter
+
+Wrap the CSR from Step 0 with :download:`eobo-wrap.ps1
+<../../scripts/windows/eobo-wrap.ps1>` (Windows PowerShell and the built-in
+CertEnroll COM objects, nothing to install) and check the result:
+
+.. code-block:: powershell
+
+   .\eobo-wrap.ps1 -CsrPath .\9a.csr.pem -RequesterName "CONTOSO\jdoe" -AgentThumbprint <thumbprint>
+   certutil -dump .\eobo-cmc.req
+
+``-MachineStore`` takes the agent certificate from the computer's store instead
+of the user's. ``certutil -dump`` should show the requester name, the card's
+request unchanged inside, and the agent certificate as the signer. Submit the
+request and import the issued certificate:
+
+.. code-block:: console
+
+   $ certreq -submit -config "<CA host>\<CA name>" -attrib "CertificateTemplate:<template>" eobo-cmc.req jdoe.cer
+   $ cryptnox-id piv perso import-cert --slot 9A --cert jdoe.cer --csr 9a.csr.pem
+
+As in Path A, ``--csr`` refuses a certificate issued for another key.
+
+.. note::
+
+   The wrap is tested on Windows: ``certutil -dump`` shows the requester name,
+   the unchanged inner request and the agent's signature. Submission to a CA
+   and logon with the issued certificate are not tested.
+
+The script:
+
+.. literalinclude:: ../../scripts/windows/eobo-wrap.ps1
+   :language: powershell
+   :lines: 4-
 
 **Path B — PKI-issued PKCS#12 (centralized key generation).** If your PKI
 delivers a ``.pfx``/``.p12``, one command imports both the key and the
@@ -141,10 +207,11 @@ Scope and limits
 * Smart-card logon requires a **domain** (Active Directory or hybrid-joined
   Entra ID). Standalone Windows machines do not support smart-card logon
   natively.
-* Enrollment runs through |cli| (CSR or PKCS#12) — Windows-side enrollment
+* Enrollment runs through |cli| (CSR or PKCS#12). Windows-side enrollment
   tools that write directly to the card (certreq onto the card, MMC
-  enrollment) use the Yubico-style management model and do not apply; this
-  card administers over SCP03.
+  enrollment, *Enroll on behalf of*) use the Yubico-style management model and
+  do not apply; this card administers over SCP03. To enroll for another user,
+  use Path A2.
 * The end-to-end logon path (PKINIT against a domain controller) can only be
   proven in a domain lab; the card-side personalization and minidriver
   recognition are verifiable standalone with ``certutil -scinfo``.
