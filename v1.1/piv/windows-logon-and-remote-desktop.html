@@ -213,7 +213,8 @@ CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.<
 </section>
 <section id="step-1-get-the-certificate-issued">
 <h2>Step 1 — get the certificate issued<a class="headerlink" href="#step-1-get-the-certificate-issued" title="Link to this heading"></a></h2>
-<p>Two equivalent paths; pick the one your PKI supports.</p>
+<p>Two paths; pick the one your PKI supports. Path A2 is Path A run by an
+administrator for another user.</p>
 <p><strong>Path A — CSR to the CA (key stays on-card).</strong> Submit <code class="docutils literal notranslate"><span class="pre">9a.csr.pem</span></code> against
 a smart-card-logon template and import the issued certificate:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>certreq<span class="w"> </span>-submit<span class="w"> </span>-attrib<span class="w"> </span><span class="s2">"CertificateTemplate:SmartcardLogon"</span><span class="w"> </span>9a.csr.pem<span class="w"> </span>9a-issued.cer
@@ -224,6 +225,82 @@ a smart-card-logon template and import the issued certificate:</p>
 one in the CSR, which is what happens when an enrollment tool generated a key
 of its own instead of signing the card’s request. A certificate for another
 key would be written without complaint and fail only at logon.</p>
+<p><strong>Path A2: enroll on behalf of another user (enrollment agent).</strong> An
+administrator provisioning a card for another Active Directory user cannot use
+the MMC <em>Enroll on behalf of</em> wizard: it generates a new key in software, so
+the issued certificate does not match the key in 9A. Instead, wrap the card’s
+CSR in a CMC request that names the user and is signed with the
+administrator’s enrollment agent certificate, and submit that. The key stays on
+the card.</p>
+<p>The CA needs, once:</p>
+<ul class="simple">
+<li><p>an enrollment agent certificate for the administrator, from the <em>Enrollment
+Agent</em> template (extended key usage <em>Certificate Request Agent</em>,
+<code class="docutils literal notranslate"><span class="pre">1.3.6.1.4.1.311.20.2.1</span></code>), with its private key in the administrator’s
+certificate store;</p></li>
+<li><p>a smart-card-logon template, schema version 2 or later, with one authorized
+signature and the application policy <em>Certificate Request Agent</em> under
+<em>Issuance Requirements</em>, the subject built from Active Directory with the UPN
+in the alternative name, Enroll permission for the enrollment agent, private
+key archival off, and a minimum key size no larger than the card’s key
+(2048);</p></li>
+<li><p>if the CA restricts enrollment agents (CA properties, <em>Enrollment Agents</em>),
+an entry that allows this agent for this template and these users.</p></li>
+</ul>
+<p>On the administrator’s Windows machine, find the agent certificate’s
+thumbprint:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="nb">Get-ChildItem</span> <span class="n">Cert</span><span class="p">:\</span><span class="n">CurrentUser</span><span class="p">\</span><span class="n">My</span> <span class="p">|</span>
+    <span class="nb">Where-Object</span> <span class="p">{</span> <span class="nv">$_</span><span class="p">.</span><span class="n">EnhancedKeyUsageList</span><span class="p">.</span><span class="n">ObjectId</span> <span class="o">-contains</span> <span class="s1">'1.3.6.1.4.1.311.20.2.1'</span> <span class="p">}</span> <span class="p">|</span>
+    <span class="nb">Format-List</span> <span class="n">Subject</span><span class="p">,</span> <span class="n">Thumbprint</span><span class="p">,</span> <span class="n">NotAfter</span>
+</pre></div>
+</div>
+<p>Wrap the CSR from Step 0 with <a class="reference download internal" download="" href="../_downloads/e0d25f32364678cd05b9f69f6aa56df4/eobo-wrap.ps1"><code class="xref download docutils literal notranslate"><span class="pre">eobo-wrap.ps1</span></code></a> (Windows PowerShell and the built-in
+CertEnroll COM objects, nothing to install) and check the result:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="p">.\</span><span class="n">eobo-wrap</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-CsrPath</span> <span class="p">.\</span><span class="n">9a</span><span class="p">.</span><span class="n">csr</span><span class="p">.</span><span class="n">pem</span> <span class="n">-RequesterName</span> <span class="s2">"CONTOSO\jdoe"</span> <span class="n">-AgentThumbprint</span> <span class="p">&lt;</span><span class="n">thumbprint</span><span class="p">&gt;</span>
+<span class="n">certutil</span> <span class="n">-dump</span> <span class="p">.\</span><span class="n">eobo-cmc</span><span class="p">.</span><span class="n">req</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">-MachineStore</span></code> takes the agent certificate from the computer’s store instead
+of the user’s. <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-dump</span></code> should show the requester name, the card’s
+request unchanged inside, and the agent certificate as the signer. Submit the
+request and import the issued certificate:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>certreq<span class="w"> </span>-submit<span class="w"> </span>-config<span class="w"> </span><span class="s2">"&lt;CA host&gt;\&lt;CA name&gt;"</span><span class="w"> </span>-attrib<span class="w"> </span><span class="s2">"CertificateTemplate:&lt;template&gt;"</span><span class="w"> </span>eobo-cmc.req<span class="w"> </span>jdoe.cer
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>jdoe.cer<span class="w"> </span>--csr<span class="w"> </span>9a.csr.pem
+</pre></div>
+</div>
+<p>As in Path A, <code class="docutils literal notranslate"><span class="pre">--csr</span></code> refuses a certificate issued for another key.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The wrap is tested on Windows: <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-dump</span></code> shows the requester name,
+the unchanged inner request and the agent’s signature. Submission to a CA
+and logon with the issued certificate are not tested.</p>
+</div>
+<p>The script:</p>
+<div class="highlight-powershell notranslate"><div class="highlight"><pre><span></span><span class="k">param</span><span class="p">(</span>
+  <span class="p">[</span><span class="k">Parameter</span><span class="p">(</span><span class="k">Mandatory</span><span class="p">=</span><span class="nv">$true</span><span class="p">)]</span><span class="no">[string]</span><span class="nv">$CsrPath</span><span class="p">,</span>
+  <span class="p">[</span><span class="k">Parameter</span><span class="p">(</span><span class="k">Mandatory</span><span class="p">=</span><span class="nv">$true</span><span class="p">)]</span><span class="no">[string]</span><span class="nv">$RequesterName</span><span class="p">,</span>
+  <span class="p">[</span><span class="k">Parameter</span><span class="p">(</span><span class="k">Mandatory</span><span class="p">=</span><span class="nv">$true</span><span class="p">)]</span><span class="no">[string]</span><span class="nv">$AgentThumbprint</span><span class="p">,</span>
+  <span class="no">[string]</span><span class="nv">$OutPath</span> <span class="p">=</span> <span class="s2">".\eobo-cmc.req"</span><span class="p">,</span>
+  <span class="no">[switch]</span><span class="nv">$MachineStore</span>
+<span class="p">)</span>
+<span class="nv">$ErrorActionPreference</span> <span class="p">=</span> <span class="s1">'Stop'</span>
+<span class="nv">$store</span> <span class="p">=</span> <span class="k">if</span> <span class="p">(</span><span class="nv">$MachineStore</span><span class="p">)</span> <span class="p">{</span> <span class="s2">"LocalMachine"</span> <span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="s2">"CurrentUser"</span> <span class="p">}</span>
+<span class="nv">$agent</span> <span class="p">=</span> <span class="nb">Get-Item</span> <span class="p">(</span><span class="s2">"Cert:\$store\My\"</span> <span class="p">+</span> <span class="p">(</span><span class="nv">$AgentThumbprint</span> <span class="o">-replace</span> <span class="s1">'\s'</span><span class="p">,</span><span class="s1">''</span><span class="p">))</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">-not</span> <span class="nv">$agent</span><span class="p">.</span><span class="n">HasPrivateKey</span><span class="p">)</span> <span class="p">{</span> <span class="k">throw</span> <span class="s2">"Enrollment Agent certificate has no private key in $store\My"</span> <span class="p">}</span>
+<span class="nv">$inner</span> <span class="p">=</span> <span class="nb">New-Object</span> <span class="n">-ComObject</span> <span class="n">X509Enrollment</span><span class="p">.</span><span class="n">CX509CertificateRequestPkcs10</span>
+<span class="nv">$inner</span><span class="p">.</span><span class="n">InitializeDecode</span><span class="p">((</span><span class="nb">Get-Content</span> <span class="nv">$CsrPath</span> <span class="n">-Raw</span><span class="p">),</span> <span class="n">6</span><span class="p">)</span>
+<span class="nv">$cmc</span> <span class="p">=</span> <span class="nb">New-Object</span> <span class="n">-ComObject</span> <span class="n">X509Enrollment</span><span class="p">.</span><span class="n">CX509CertificateRequestCmc</span>
+<span class="nv">$cmc</span><span class="p">.</span><span class="n">InitializeFromInnerRequest</span><span class="p">(</span><span class="nv">$inner</span><span class="p">)</span>
+<span class="nv">$cmc</span><span class="p">.</span><span class="n">RequesterName</span> <span class="p">=</span> <span class="nv">$RequesterName</span>
+<span class="nv">$signer</span> <span class="p">=</span> <span class="nb">New-Object</span> <span class="n">-ComObject</span> <span class="n">X509Enrollment</span><span class="p">.</span><span class="n">CSignerCertificate</span>
+<span class="nv">$signer</span><span class="p">.</span><span class="n">Initialize</span><span class="p">(</span><span class="no">[bool]</span><span class="nv">$MachineStore</span><span class="p">,</span> <span class="n">0</span><span class="p">,</span> <span class="n">1</span><span class="p">,</span> <span class="no">[Convert]</span><span class="p">::</span><span class="n">ToBase64String</span><span class="p">(</span><span class="nv">$agent</span><span class="p">.</span><span class="n">RawData</span><span class="p">))</span>
+<span class="nv">$cmc</span><span class="p">.</span><span class="n">SignerCertificate</span> <span class="p">=</span> <span class="nv">$signer</span>
+<span class="nv">$cmc</span><span class="p">.</span><span class="n">Encode</span><span class="p">()</span>
+<span class="nv">$b64</span> <span class="p">=</span> <span class="nv">$cmc</span><span class="p">.</span><span class="n">RawData</span><span class="p">(</span><span class="n">3</span><span class="p">)</span>
+<span class="no">[IO.File]</span><span class="p">::</span><span class="n">WriteAllText</span><span class="p">(</span><span class="nv">$ExecutionContext</span><span class="p">.</span><span class="n">SessionState</span><span class="p">.</span><span class="n">Path</span><span class="p">.</span><span class="n">GetUnresolvedProviderPathFromPSPath</span><span class="p">(</span><span class="nv">$OutPath</span><span class="p">),</span> <span class="nv">$b64</span><span class="p">)</span>
+<span class="nb">Write-Host</span> <span class="s2">"CMC request written to $OutPath (requester $RequesterName, signed by </span><span class="p">$(</span><span class="nv">$agent</span><span class="p">.</span><span class="n">Subject</span><span class="p">)</span><span class="s2">)"</span>
+</pre></div>
+</div>
 <p><strong>Path B — PKI-issued PKCS#12 (centralized key generation).</strong> If your PKI
 delivers a <code class="docutils literal notranslate"><span class="pre">.pfx</span></code>/<code class="docutils literal notranslate"><span class="pre">.p12</span></code>, one command imports both the key and the
 certificate:</p>
@@ -273,10 +350,11 @@ the PIN at the remote credential prompt.</p></li>
 <li><p>Smart-card logon requires a <strong>domain</strong> (Active Directory or hybrid-joined
 Entra ID). Standalone Windows machines do not support smart-card logon
 natively.</p></li>
-<li><p>Enrollment runs through <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> (CSR or PKCS#12) — Windows-side enrollment
+<li><p>Enrollment runs through <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> (CSR or PKCS#12). Windows-side enrollment
 tools that write directly to the card (certreq onto the card, MMC
-enrollment) use the Yubico-style management model and do not apply; this
-card administers over SCP03.</p></li>
+enrollment, <em>Enroll on behalf of</em>) use the Yubico-style management model and
+do not apply; this card administers over SCP03. To enroll for another user,
+use Path A2.</p></li>
 <li><p>The end-to-end logon path (PKINIT against a domain controller) can only be
 proven in a domain lab; the card-side personalization and minidriver
 recognition are verifiable standalone with <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code>.</p></li>
