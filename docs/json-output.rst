@@ -168,7 +168,9 @@ Remote service operations
 ``result`` (the service's own result object, passed through unchanged),
 ``verified_locally`` (each cross-check as ``true``, ``false`` or ``null`` when
 the service reported nothing to compare) and ``relay`` (commands relayed,
-seconds, proof-of-work bits, the service's log lines). ``reset`` and
+seconds, proof-of-work bits, the service's log lines, and
+``open_initialize_updates``: per security domain, the INITIALIZE UPDATEs the
+operation left without a completed authentication). ``reset`` and
 ``dev-reset`` add ``before`` and ``after`` inventories; ``attest`` adds
 ``verification`` with every binding checked on the returned certificate.
 Fields under ``result`` are the service's assertions; only ``verified_locally``,

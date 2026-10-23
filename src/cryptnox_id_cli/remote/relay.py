@@ -69,6 +69,7 @@ class RelayReport:
     atr: bytes | None = None
     log_lines: list[str] = field(default_factory=list)
     pow_bits: int | None = None
+    open_initialize_updates: dict[str, int] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -191,6 +192,9 @@ def run_operation(
 
             if isinstance(frame, proto.OpResult):
                 report.result = frame.payload
+                report.open_initialize_updates = {
+                    ctx: n for ctx, n in policy.open_initialize_updates.items() if n
+                }
                 if started is not None:
                     report.seconds = clock() - started
                 if not frame.ok:

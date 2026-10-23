@@ -106,6 +106,11 @@ operation. For the PIV security domain, ``piv admin authenticate`` with the
 card's own keys clears the count; the card manager's clears only with an
 authentication to the card manager.
 
+When an operation leaves INITIALIZE UPDATEs without a completed
+authentication, |cli| says so afterwards with a count per security domain,
+also when the operation failed. With ``--json`` the counts are in
+``relay.open_initialize_updates``.
+
 The ``--default-keys`` flag
 ---------------------------
 
