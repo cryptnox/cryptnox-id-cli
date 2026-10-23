@@ -113,8 +113,22 @@ Profile YAML
 ``RSA4096``, ``ECCP256``, ``ECCP384``, ``CS2``, ``CS7``.
 
 **Access modes** (used for ``contact``/``contactless`` on both containers and
-keys): ``ALWAYS``, ``NEVER``, ``PIN``, ``VCI`` (contact-interface-only, no
-PIN), ``VCI_PIN`` (contact interface **and** PIN), ``OCC``, ``SM``.
+keys):
+
+- ``ALWAYS``: no condition.
+- ``NEVER``: not accessible over that interface.
+- ``PIN``: after the PIN has been verified.
+- ``OCC``: after an on-card biometric comparison.
+- ``SM``: only inside a PIV secure-messaging session (SP 800-73-4).
+- ``VCI``: the same as ``SM``.
+- ``VCI_PIN``: ``SM`` plus the PIN.
+
+Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
+sessions, so anything marked ``SM``, ``VCI`` or ``VCI_PIN`` on an interface
+cannot be used there with them. In the built-in profiles that is the
+contactless side of most containers. The PIN and PUK are created for contact
+use only: the applet's FIPS build accepts a PIN over contactless only inside
+secure messaging.
 
 **Key roles** (a bitmask — combine with ``+``, e.g. ``AUTHENTICATE+SIGN``, or
 give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.
@@ -140,8 +154,8 @@ give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.
    The container also cannot be removed afterwards: existing elements cannot
    be changed or removed, only new ones added, and ``load-config`` stops at
    the first element that already exists. A full reset of the PIV applet
-   erases its keys and certificates and is a Cryptnox operation (contact
-   Cryptnox support).
+   erases its keys and certificates and runs through the Cryptnox remote PIV
+   service (:doc:`/remote/remote-guide`).
 
 ``from_yaml`` rejects unknown mode/role/mechanism names and validates the
 whole profile before anything is sent to a card:
