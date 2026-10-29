@@ -19,6 +19,8 @@ class PinStatus:
     blocked: bool
     verified: bool
     retries: int | None  # remaining tries (None if unknown / not configured)
+    #: 6982: the verifier exists but refuses this interface, so ``configured`` says nothing.
+    refused: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -27,7 +29,16 @@ class PinStatus:
             "blocked": self.blocked,
             "verified": self.verified,
             "retries_remaining": self.retries,
+            "refused_on_interface": self.refused,
         }
+
+
+PIN_INTERFACE_REFUSED_HINT = (
+    "the card refuses PIN and PUK commands over this interface (SW=6982). PIN and PUK "
+    "are contact-only on the built-in profiles, which is what a contactless (NFC/PICC) "
+    "reader gets even when the PIN is set. Use a contact reader for anything that asks "
+    "for the PIN."
+)
 
 
 def _pin_status_from_sw(ref: int, resp: Response) -> PinStatus:
@@ -41,6 +52,10 @@ def _pin_status_from_sw(ref: int, resp: Response) -> PinStatus:
         return PinStatus(ref, configured=True, blocked=True, verified=False, retries=0)
     if sw in (0x6A88, 0x6A80, 0x6A82):  # reference not configured
         return PinStatus(ref, configured=False, blocked=False, verified=False, retries=None)
+    if sw == 0x6982:  # verifier exists, not usable over this interface (contactless)
+        return PinStatus(
+            ref, configured=False, blocked=False, verified=False, retries=None, refused=True
+        )
     # Unknown — report not-configured-ish but keep retries None.
     return PinStatus(ref, configured=False, blocked=False, verified=False, retries=None)
 

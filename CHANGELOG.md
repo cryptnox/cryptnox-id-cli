@@ -35,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `remote dev-reset` no longer asks for a development token.
 
+### Fixed
+
+- On a contactless reader, `piv status`, `piv pin status`, `piv validate`
+  and the commands that present the PIN say the PIN is not usable over this
+  interface (the card answers 6982) instead of "not set" or the generic
+  security-status text; `quickstart` stops there instead of planning
+  `set-pin`; JSON gains `refused_on_interface`. Docs: the PIN, the PUK, the
+  PIN-protected keys and the management key (9B) are contact-only; the admin
+  channel works over both interfaces.
+
 ## [1.1.0] - 2026-10-16
 
 ### Added
