@@ -100,6 +100,17 @@ Cryptnox remote PIV service (:doc:`/remote/remote-guide`). A blank/pre-perso
 card needs no such
 step.
 
+.. warning::
+
+   Run the whole block below with the card in a **contact** reader. The PIN,
+   the PUK and the 9A key are contact-only on every built-in profile. Over a
+   contactless (NFC/PICC) reader the first four commands still succeed, since
+   they run inside the admin channel, and ``self-sign-cert`` is the first one
+   to present the PIN. It fails there with ``PIN verification refused (SW=6982)``
+   while ``piv pin status`` reports the PIN as not usable over this interface.
+   Nothing is wrong with the card and the PIN you set is kept: move the card
+   to a contact reader and continue from ``self-sign-cert``.
+
 .. code-block:: console
 
    $ cryptnox-id factory piv preperso load-config --profile ssh --default-keys
@@ -109,7 +120,7 @@ step.
         --out 9a.pub.pem --default-keys
    $ cryptnox-id piv perso self-sign-cert --slot 9A --subject "CN=Test User" \
         --public-key 9a.pub.pem --out 9a.crt.pem
-   $ cryptnox-id piv perso import-cert --slot 9A --cert 9a.crt.pem
+   $ cryptnox-id piv perso import-cert --slot 9A --cert 9a.crt.pem --default-keys
    $ cryptnox-id piv perso write-standard-objects --default-keys
 
 .. warning::

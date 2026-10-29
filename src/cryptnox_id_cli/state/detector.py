@@ -9,7 +9,7 @@ from cryptnox_id_cli.applets.genuine.genuine import GenuinenessApplet
 from cryptnox_id_cli.applets.piv import inventory
 from cryptnox_id_cli.applets.piv import objects as piv_obj
 from cryptnox_id_cli.applets.piv.constants import REF_PIV_PIN, REF_PUK
-from cryptnox_id_cli.applets.piv.piv import PivApplet
+from cryptnox_id_cli.applets.piv.piv import PIN_INTERFACE_REFUSED_HINT, PivApplet
 from cryptnox_id_cli.state.model import (
     CardPresence,
     CardState,
@@ -108,6 +108,11 @@ class StateDetector:
         with contextlib.suppress(CryptnoxError):
             st.piv_pin = piv.pin_status(REF_PIV_PIN)
             st.piv_puk = piv.pin_status(REF_PUK)
+        verifier_refused = bool(
+            (st.piv_pin and st.piv_pin.refused) or (st.piv_puk and st.piv_puk.refused)
+        )
+        if verifier_refused:
+            st.notes.append("PIN/PUK state not readable: " + PIN_INTERFACE_REFUSED_HINT)
 
         present: dict[str, bool] = {}
         for name in _PROBE_OBJECTS:
@@ -126,7 +131,8 @@ class StateDetector:
         any_object = any(present.values())
         mandatory_present = all(present.get(n) for n in _MANDATORY)
 
-        if not any_verifier and not any_object:
+        # 6982 means the verifier exists (a missing one answers 6A88).
+        if not any_verifier and not any_object and not verifier_refused:
             st.piv = PivState.PRE_PERSONALIZED
         elif mandatory_present and st.piv_pin and st.piv_pin.configured:
             st.piv = PivState.PERSONALIZED

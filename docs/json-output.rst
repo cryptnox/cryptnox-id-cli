@@ -100,13 +100,21 @@ just theirs. The section shapes:
    {
      "state": "PivPersonalized",
      "apt": {"aid": "...", "label": "OpenFIPS201", "url": "..."},
-     "pin": {"configured": true, "retries": 6},
-     "puk": {"configured": true, "retries": 6},
+     "pin": {"ref": "80", "configured": true, "blocked": false, "verified": false,
+             "retries_remaining": 6, "refused_on_interface": false},
+     "puk": {"ref": "81", "configured": true, "blocked": false, "verified": false,
+             "retries_remaining": 6, "refused_on_interface": false},
      "objects_present": ["chuid", "ccc", "auth-cert"],
      "notes": []
    }
 
 ``apt`` / ``pin`` / ``puk`` are ``null`` when not available.
+``refused_on_interface`` is ``true`` when the card answered the PIN or PUK probe
+with 6982, which a contactless reader gets because the built-in profiles make
+both contact-only; ``configured`` and ``retries_remaining`` are then unknown,
+not false. The same ``pin`` / ``puk`` objects appear in ``info --json`` and
+``piv status --json``; ``piv pin status --json`` adds a top-level ``note``
+string when either is refused.
 
 **mifare** — one of:
 

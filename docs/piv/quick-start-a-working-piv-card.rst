@@ -8,9 +8,11 @@ and sign with. About ten minutes, one command if you let it.
 Prerequisites
 -------------
 
-* A **contact** smart-card reader. Administration and everything behind the
-  PIN work over the contact interface only; over contactless the card gives
-  out just the data that needs no PIN, such as the CHUID.
+* A **contact** smart-card reader. The PIN, the PUK and the PIN-protected
+  keys work over the contact interface only, and this guide presents the PIN
+  partway through. Administration works over both interfaces; apart from it,
+  a contactless reader gets just the data that needs no PIN, such as the
+  CHUID.
 * |cli| installed, and ``yubico-piv-tool`` if you want to run the verification
   step (any recent version).
 * The card's SCP03 administration keys. As shipped, every card uses the
@@ -240,8 +242,8 @@ If something fails
      - The PIV structure is missing — run step 0
    * - yubico-piv-tool sees no card
      - Pass the reader explicitly: ``-r <substring>``
-   * - Admin command fails over NFC
-     - PIV administration is contact-only — move the card to a contact reader
+   * - A PIN step fails with ``6982`` over NFC
+     - The PIN is contact-only — move the card to a contact reader
    * - SCP03 mutual authentication fails
      - Wrong admin keys — ``--default-keys`` is for development cards only
 

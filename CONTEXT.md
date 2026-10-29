@@ -15,7 +15,9 @@ Functions share the plastic but not state, keys, or admin channels.
 _Avoid_: applet (DESFire is not a JavaCard applet), app, mode
 
 **Contact interface**:
-The wired ISO 7816 interface; the only interface where PIV administration works.
+The wired ISO 7816 interface; the only interface where the PIN, the PUK, the
+PIN-protected keys and the management key (9B) work. The admin channel works over
+both interfaces.
 _Avoid_: chip mode
 
 **Contactless interface**:

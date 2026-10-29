@@ -17,6 +17,7 @@ from typing import Any, NamedTuple
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli import CLI_NAME, trust
 from cryptnox_id_cli.applets.piv import constants as pivc
@@ -32,7 +33,7 @@ from cryptnox_id_cli.applets.piv.objects import (
     object_by_name,
     wrap_certificate,
 )
-from cryptnox_id_cli.applets.piv.piv import PivApplet
+from cryptnox_id_cli.applets.piv.piv import PIN_INTERFACE_REFUSED_HINT, PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
 from cryptnox_id_cli.applets.piv.ssd import (
     CRYPTNOX_KEY_VERSION,
@@ -150,14 +151,15 @@ def status(app: AppContext) -> None:
             c.print("  Structure: finalized (SECURED), no further pre-personalization")
         else:
             c.print("  Structure: not finalized")
-        if st.piv_pin:
-            extra = f", {st.piv_pin.retries} tries left" if st.piv_pin.retries is not None else ""
-            blocked = " [red](blocked)[/red]" if st.piv_pin.blocked else ""
-            c.print(f"  PIN (80): {'set' if st.piv_pin.configured else 'not set'}{extra}{blocked}")
-        if st.piv_puk:
-            extra = f", {st.piv_puk.retries} tries left" if st.piv_puk.retries is not None else ""
-            blocked = " [red](blocked)[/red]" if st.piv_puk.blocked else ""
-            c.print(f"  PUK (81): {'set' if st.piv_puk.configured else 'not set'}{extra}{blocked}")
+        for label, vs in (("PIN (80)", st.piv_pin), ("PUK (81)", st.piv_puk)):
+            if not vs:
+                continue
+            if vs.refused:
+                c.print(f"  {label}: [yellow]not usable over this interface[/yellow] (SW=6982)")
+                continue
+            extra = f", {vs.retries} tries left" if vs.retries is not None else ""
+            blocked = " [red](blocked)[/red]" if vs.blocked else ""
+            c.print(f"  {label}: {'set' if vs.configured else 'not set'}{extra}{blocked}")
         if st.piv_objects:
             table = app.out.table("Object", "Present")
             for name, present in st.piv_objects.items():
@@ -648,7 +650,7 @@ def objects_read(app: AppContext, object_name: str, out_: str | None) -> None:
                 prompt_label="PIV PIN",
             )
             resp = piv.verify_pin(secret)
-            _check_pin_verify(resp)
+            _check_pin_verify(resp, session)
             # PIN-gated content (printed, fingerprints, facial) is cardholder data
             # the applet itself protects; it must not land in the "secrets redacted"
             # APDU transcript. Hold the GET DATA lines, register the payload, then
@@ -700,18 +702,27 @@ def pin_status(app: AppContext) -> None:
         piv = _select(session)
         pin_st = piv.pin_status(pivc.REF_PIV_PIN)
         puk_st = piv.pin_status(pivc.REF_PUK)
+        refused = pin_st.refused or puk_st.refused
+        hint = _interface_hint(session) if refused else None
 
     def human(c: Console) -> None:
         for label, st in (("PIN (80)", pin_st), ("PUK (81)", puk_st)):
-            if not st.configured:
+            if st.refused:
+                c.print(f"  {label}: [yellow]not usable over this interface[/yellow] (SW=6982)")
+            elif not st.configured:
                 c.print(f"  {label}: [dim]not configured[/dim]")
             elif st.blocked:
                 c.print(f"  {label}: [red]blocked[/red]")
             else:
                 tries = f"{st.retries} tries left" if st.retries is not None else "configured"
                 c.print(f"  {label}: [green]{tries}[/green]")
+        if hint:
+            c.print(f"[yellow]*[/yellow] {hint[0].upper()}{hint[1:]}")
 
-    app.out.result({"pin": pin_st.to_dict(), "puk": puk_st.to_dict()}, human)
+    payload: dict[str, object] = {"pin": pin_st.to_dict(), "puk": puk_st.to_dict()}
+    if hint:
+        payload["note"] = hint
+    app.out.result(payload, human)
 
 
 @pin.command("verify")
@@ -728,8 +739,11 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
     )
     with app.open_session() as session:
         resp = _select(session).verify_pin(secret)
+        message = _interface_hint(session) if resp.sw == 0x6982 else None
     info = describe_sw(resp.sw1, resp.sw2)
-    payload: dict[str, object] = {"verified": resp.ok, "sw": info.sw_hex(), "message": info.message}
+    if message is None:
+        message = info.message
+    payload: dict[str, object] = {"verified": resp.ok, "sw": info.sw_hex(), "message": message}
     if not resp.ok and info.retries is not None:
         payload["retries_remaining"] = info.retries
 
@@ -737,7 +751,7 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
         if resp.ok:
             c.print("[green]PIN verified.[/green]")
         else:
-            c.print(f"[red]PIN not verified:[/red] {info.message} (SW={info.sw_hex()})")
+            c.print(f"[red]PIN not verified:[/red] {message} (SW={info.sw_hex()})")
 
     app.out.result(payload, human)
 
@@ -1603,9 +1617,25 @@ def _write_standard(adm: PivAdmin, keys, names: tuple[str, ...]) -> list[dict[st
     return results
 
 
-def _check_pin_verify(resp) -> None:
+def _interface_hint(session=None) -> str:
+    """The 6982-on-PIN explanation, naming the reader when it advertises contactless."""
+    hint = PIN_INTERFACE_REFUSED_HINT
+    if session is not None:
+        name = getattr(session, "reader_name", None)
+        atr = None
+        with contextlib.suppress(Exception):
+            atr = session.atr
+        if is_contactless_interface(name, atr):
+            where = f"Reader '{escape(name)}'" if name else "This reader"
+            hint = f"{hint} {where} advertises a contactless interface."
+    return hint
+
+
+def _check_pin_verify(resp, session=None) -> None:
     """Raise on a failed PIN verification, naming the PUK-unblock recovery path
     once the PIN is actually blocked rather than a generic status word.
+
+    ``session`` lets the 6982 message name a contactless reader.
 
     Only ``63C0`` (retry counter exhausted) proves a blocked PIN. ``6983`` is
     reported for a blocked verifier *and* when the PIN cannot be used for the
@@ -1629,6 +1659,10 @@ def _check_pin_verify(resp) -> None:
             "try - and if it reports 0 tries remaining, recover with `piv pin unblock` "
             "(needs the PUK)."
         )
+    if resp.sw == 0x6982:
+        raise CryptnoxError(
+            f"PIN verification refused (SW={info.sw_hex()}): {_interface_hint(session)}"
+        )
     raise StatusWordError(resp.sw1, resp.sw2, context="VERIFY PIN")
 
 
@@ -1636,7 +1670,7 @@ def _sign_with_session(session, ref: int, mech: int, pin: bytes, build):
     """Verify the PIN and run ``build(signer)`` against an already-open session."""
     piv = _select(session)
     verified = piv.verify_pin(pin)
-    _check_pin_verify(verified)
+    _check_pin_verify(verified, session)
 
     def signer(digest: bytes) -> bytes:
         k = keyimport.rsa_modulus_len(mech)
@@ -1816,7 +1850,7 @@ def _post_import_smoke(
     )
     piv = _select(session)
     verified = piv.verify_pin(pin_secret)
-    _check_pin_verify(verified)
+    _check_pin_verify(verified, session)
     message = os.urandom(32)
     hash_alg = keyimport.digest_for_mechanism(mech)
     digest = hashlib.new(hash_alg.name, message).digest()
@@ -2707,12 +2741,17 @@ def validate(app: AppContext, profile: str | None) -> None:
     objs = st.piv_objects
     checks: list[dict[str, object]] = []
 
-    def add(name: str, ok: bool, detail: str = "") -> None:
-        checks.append({"check": name, "ok": ok, "detail": detail})
+    def add(name: str, ok: bool, detail: str = "", *, unknown: bool = False) -> None:
+        check: dict[str, object] = {"check": name, "ok": ok, "detail": detail}
+        if unknown:
+            check["unknown"] = True
+        checks.append(check)
 
     add("PIV applet selectable", st.piv_apt is not None, st.piv.label)
-    add("PIN configured", bool(st.piv_pin and st.piv_pin.configured))
-    add("PUK configured", bool(st.piv_puk and st.piv_puk.configured))
+    refused_detail = "not usable over this interface (SW=6982); use a contact reader"
+    for label, vs in (("PIN configured", st.piv_pin), ("PUK configured", st.piv_puk)):
+        refused = bool(vs and vs.refused)
+        add(label, bool(vs and vs.configured), refused_detail if refused else "", unknown=refused)
     add("CHUID present", bool(objs.get("chuid")))
     add("CCC present", bool(objs.get("ccc")))
     add("Discovery present", bool(objs.get("discovery")))
@@ -2729,7 +2768,12 @@ def validate(app: AppContext, profile: str | None) -> None:
     def human(c: Console) -> None:
         table = app.out.table("Check", "Result", "Detail")
         for ch in checks:
-            mark = "[green]pass[/green]" if ch["ok"] else "[yellow]absent[/yellow]"
+            if ch["ok"]:
+                mark = "[green]pass[/green]"
+            elif ch.get("unknown"):
+                mark = "[yellow]unknown[/yellow]"
+            else:
+                mark = "[yellow]absent[/yellow]"
             table.add_row(str(ch["check"]), mark, str(ch["detail"]))
         c.print(table)
         c.print(f"\n[dim]{payload['note']}[/dim]")
@@ -2913,6 +2957,10 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     and the applet's own key-object listing (the non-destructive (slot, mechanism)
     probe stands in when the listing is withheld)."""
     st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
+    if (st.piv_pin and st.piv_pin.refused) or (st.piv_puk and st.piv_puk.refused):
+        raise CryptnoxError(
+            "quickstart cannot tell whether the PIN and PUK are set: " + _interface_hint(session)
+        )
     piv = _select(session)
     key_objects = None
     verifiers = None

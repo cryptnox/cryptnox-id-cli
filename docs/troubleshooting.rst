@@ -14,7 +14,8 @@ Quick hits:
 
 * **FIDO commands fail on Windows** — run from an Administrator terminal.
 * **DESFire not answering** — use a DESFire-capable *contactless* reader.
-* **PIV admin/perso fails over NFC** — administration is contact-only.
+* **A PIN step fails over NFC** — the PIN, the PUK and the PIN-protected keys are
+  contact-only; administration works over both interfaces.
 * **yubico-piv-tool sees nothing** — pass your reader: ``-r <substring>``.
 * **Two readers hold a card** — the CLI refuses to guess; pass ``--reader``.
 
@@ -71,6 +72,20 @@ This JCOP 4.5 card accepts only **one application APDU per applet-directed SCP03
 session**. The CLI opens a fresh SCP03 channel per admin/perso command (and uses
 ISO command chaining when one logical command must span blocks), so you should
 not hit this in normal use — only when scripting raw ``apdu`` calls.
+
+**``PIN verification refused (SW=6982)`` on the first command that asks for the
+PIN, and ``piv status`` / ``piv pin status`` say the PIN is not usable over this
+interface, right after ``set-pin`` succeeded.**
+You are on a contactless (NFC/PICC) reader. The PIN and PUK verifiers are
+**contact-only** on every built-in profile, and so are the 9A/9C/9D keys;
+only the admin channel (``load-config``, ``set-pin``, ``set-puk``,
+``generate-key``, ``import-cert``, ``write-standard-objects``) works over
+both interfaces, which is why pre-personalization and personalization got
+that far. (One exception: on-card RSA generation that needs the
+management-key fallback, since 9B is contact-only too.) The PIN you set is
+on the card. Move it to a contact reader and continue with the step that
+failed. Over NFC the card offers the PIN-less functions only: the CHUID, the
+card-authentication certificate and the 9E card-authentication key.
 
 **``6985`` (conditions not satisfied) on ``generate-csr`` / signing.**
 The slot's key has the wrong role. Signing needs a **SIGN-role** slot such as
