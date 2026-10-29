@@ -153,7 +153,8 @@
   <section id="piv-commands">
 <h1>PIV commands<a class="headerlink" href="#piv-commands" title="Link to this heading"></a></h1>
 <p>Operator and personalization commands for the PIV function (SP 800-73).
-Administration runs over an SCP03 secure channel and is <strong>contact-only</strong>;
+Administration runs over an SCP03 secure channel and works over both
+interfaces (the PIN, the PUK and the PIN-protected keys are <strong>contact-only</strong>);
 admin keys come from <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> (the test keys every card ships with)
 or, once replaced (<a class="reference internal" href="piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a>), the <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> /
 <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment variables. PIN values come

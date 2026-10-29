@@ -244,6 +244,17 @@ cannot be loaded over it: existing key objects keep their role, and
 Cryptnox remote PIV service (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>). A blank/pre-perso
 card needs no such
 step.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Run the whole block below with the card in a <strong>contact</strong> reader. The PIN,
+the PUK and the 9A key are contact-only on every built-in profile. Over a
+contactless (NFC/PICC) reader the first four commands still succeed, since
+they run inside the admin channel, and <code class="docutils literal notranslate"><span class="pre">self-sign-cert</span></code> is the first one
+to present the PIN. It fails there with <code class="docutils literal notranslate"><span class="pre">PIN</span> <span class="pre">verification</span> <span class="pre">refused</span> <span class="pre">(SW=6982)</span></code>
+while <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">status</span></code> reports the PIN as not usable over this interface.
+Nothing is wrong with the card and the PIN you set is kept: move the card
+to a contact reader and continue from <code class="docutils literal notranslate"><span class="pre">self-sign-cert</span></code>.</p>
+</div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ssh<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-puk<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-pin<span class="w"> </span>--default-keys
@@ -251,7 +262,7 @@ step.</p>
 <span class="w">     </span>--out<span class="w"> </span>9a.pub.pem<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>self-sign-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Test User"</span><span class="w"> </span><span class="se">\</span>
 <span class="w">     </span>--public-key<span class="w"> </span>9a.pub.pem<span class="w"> </span>--out<span class="w"> </span>9a.crt.pem
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a.crt.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a.crt.pem<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>write-standard-objects<span class="w"> </span>--default-keys
 </pre></div>
 </div>

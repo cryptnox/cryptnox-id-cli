@@ -161,7 +161,8 @@ says what to fix.</p>
 <ul class="simple">
 <li><p><strong>FIDO commands fail on Windows</strong> — run from an Administrator terminal.</p></li>
 <li><p><strong>DESFire not answering</strong> — use a DESFire-capable <em>contactless</em> reader.</p></li>
-<li><p><strong>PIV admin/perso fails over NFC</strong> — administration is contact-only.</p></li>
+<li><p><strong>A PIN step fails over NFC</strong> — the PIN, the PUK and the PIN-protected keys are
+contact-only; administration works over both interfaces.</p></li>
 <li><p><strong>yubico-piv-tool sees nothing</strong> — pass your reader: <code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">&lt;substring&gt;</span></code>.</p></li>
 <li><p><strong>Two readers hold a card</strong> — the CLI refuses to guess; pass <code class="docutils literal notranslate"><span class="pre">--reader</span></code>.</p></li>
 </ul>
@@ -210,6 +211,19 @@ This JCOP 4.5 card accepts only <strong>one application APDU per applet-directed
 session</strong>. The CLI opens a fresh SCP03 channel per admin/perso command (and uses
 ISO command chaining when one logical command must span blocks), so you should
 not hit this in normal use — only when scripting raw <code class="docutils literal notranslate"><span class="pre">apdu</span></code> calls.</p>
+<p><strong>``PIN verification refused (SW=6982)`` on the first command that asks for the
+PIN, and ``piv status`` / ``piv pin status`` say the PIN is not usable over this
+interface, right after ``set-pin`` succeeded.</strong>
+You are on a contactless (NFC/PICC) reader. The PIN and PUK verifiers are
+<strong>contact-only</strong> on every built-in profile, and so are the 9A/9C/9D keys;
+only the admin channel (<code class="docutils literal notranslate"><span class="pre">load-config</span></code>, <code class="docutils literal notranslate"><span class="pre">set-pin</span></code>, <code class="docutils literal notranslate"><span class="pre">set-puk</span></code>,
+<code class="docutils literal notranslate"><span class="pre">generate-key</span></code>, <code class="docutils literal notranslate"><span class="pre">import-cert</span></code>, <code class="docutils literal notranslate"><span class="pre">write-standard-objects</span></code>) works over
+both interfaces, which is why pre-personalization and personalization got
+that far. (One exception: on-card RSA generation that needs the
+management-key fallback, since 9B is contact-only too.) The PIN you set is
+on the card. Move it to a contact reader and continue with the step that
+failed. Over NFC the card offers the PIN-less functions only: the CHUID, the
+card-authentication certificate and the 9E card-authentication key.</p>
 <p><strong>``6985`` (conditions not satisfied) on ``generate-csr`` / signing.</strong>
 The slot’s key has the wrong role. Signing needs a <strong>SIGN-role</strong> slot such as
 <strong>9C</strong> (or a 9A provisioned with the <code class="docutils literal notranslate"><span class="pre">ssh</span></code> / <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile); a

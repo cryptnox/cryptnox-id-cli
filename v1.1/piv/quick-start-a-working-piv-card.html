@@ -157,9 +157,11 @@ and sign with. About ten minutes, one command if you let it.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>A <strong>contact</strong> smart-card reader. Administration and everything behind the
-PIN work over the contact interface only; over contactless the card gives
-out just the data that needs no PIN, such as the CHUID.</p></li>
+<li><p>A <strong>contact</strong> smart-card reader. The PIN, the PUK and the PIN-protected
+keys work over the contact interface only, and this guide presents the PIN
+partway through. Administration works over both interfaces; apart from it,
+a contactless reader gets just the data that needs no PIN, such as the
+CHUID.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> installed, and <code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code> if you want to run the verification
 step (any recent version).</p></li>
 <li><p>The card’s SCP03 administration keys. As shipped, every card uses the
@@ -384,8 +386,8 @@ every write goes over SCP03 via <code class="docutils literal notranslate"><span
 <tr class="row-even"><td><p>yubico-piv-tool sees no card</p></td>
 <td><p>Pass the reader explicitly: <code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">&lt;substring&gt;</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p>Admin command fails over NFC</p></td>
-<td><p>PIV administration is contact-only — move the card to a contact reader</p></td>
+<tr class="row-odd"><td><p>A PIN step fails with <code class="docutils literal notranslate"><span class="pre">6982</span></code> over NFC</p></td>
+<td><p>The PIN is contact-only — move the card to a contact reader</p></td>
 </tr>
 <tr class="row-even"><td><p>SCP03 mutual authentication fails</p></td>
 <td><p>Wrong admin keys — <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> is for development cards only</p></td>
