@@ -10,6 +10,11 @@ on:
     branches:
       - main
 
+# Deploys from main queue up: two runs pushing gh-pages at once reject the second.
+concurrency:
+  group: ${{ github.event_name == 'push' && 'docs-deploy' || format('docs-{0}', github.ref) }}
+  cancel-in-progress: false
+
 jobs:
   build-docs:
     runs-on: ubuntu-latest
