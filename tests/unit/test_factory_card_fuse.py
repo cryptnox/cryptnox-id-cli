@@ -110,6 +110,9 @@ class _CardManager:
         self.key = DEFAULT_GP_KEY
         self.lifecycle = cm.OP_READY
         self.loaded = set(MODULE_AIDS)
+        # A real D600 leaves its JCOP modules out of GET STATUS; DELETE still finds them.
+        self.lists_modules = True
+        self.delete_keeps: set[bytes] = set()
         self.refuse: dict[str, int] = {}
         self.opened: list[bytes] = []
         self.sent: list[str] = []
@@ -153,6 +156,7 @@ class _FakeAdmin:
             entries = b"".join(
                 bytes([0xE3, len(a) + 6, 0x4F, len(a)]) + a + bytes.fromhex("9F700101")
                 for a in sorted(STATE.loaded)
+                if STATE.lists_modules
             )
             if not entries:
                 return Response(b"", 0x6A, 0x88)
@@ -160,7 +164,8 @@ class _FakeAdmin:
         if apdu.ins == 0xE4:
             aid = apdu.data[2:]
             if aid in STATE.loaded:
-                STATE.loaded.discard(aid)
+                if aid not in STATE.delete_keeps:
+                    STATE.loaded.discard(aid)
                 return Response(b"\x00", 0x90, 0x00)
             return Response(b"", 0x6A, 0x88)
         if apdu.ins == 0xF0:
@@ -213,7 +218,7 @@ def test_fuse_runs_the_factory_sequence(card):
     assert all(s["result"] in ("deleted", "set", "locked") for s in payload["steps"])
     assert payload["before"]["lifecycle"] == "OP_READY"
     assert payload["after"]["lifecycle"] == "SECURED"
-    assert payload["after"]["jcop_modules"] == {m.key: False for m in cm.FUSE_MODULES}
+    assert payload["after"]["jcop_modules"] == {m.key: "not listed" for m in cm.FUSE_MODULES}
     assert payload["configuration_sealed"] is True
     assert payload["new_key_kcvs"] == [ssd.kcv_des(TEST_KEY).hex().upper()] * 3
     assert payload["card_kcvs_match"] is True
@@ -273,7 +278,7 @@ def test_fuse_asks_for_the_phrase_and_a_wrong_answer_changes_nothing(card, monke
     result = run(["factory", "card", "fuse", "--default-keys"], input="fuse-card\n")
     assert result.exit_code != 0
     assert "Lifecycle: OP_READY" in result.output
-    assert "piv sample module (D276000085304A434F5076): present" in result.output
+    assert "piv sample module (D276000085304A434F5076): listed" in result.output
     assert "cannot be undone" in result.output
     assert "Type FUSE-CARD to continue" in result.output
     assert _changes(card) == []
@@ -391,7 +396,7 @@ def test_status_reports_lifecycle_modules_and_the_sealed_configuration(card):
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert payload["lifecycle"] == "OP_READY"
-    assert payload["jcop_modules"]["configuration"] is True
+    assert payload["jcop_modules"]["configuration"] == "listed"
     assert payload["configuration_sealed"] is False
     assert "fused" not in payload
     assert _changes(card) == []
@@ -405,4 +410,38 @@ def test_status_after_a_fuse_reports_secured_and_sealed(card, monkeypatch):
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert payload["lifecycle"] == "SECURED"
+    assert payload["jcop_modules"]["configuration"] == "not listed"
+    assert payload["configuration_sealed"] is None  # not listed proves nothing
+
+
+# ------------------------------------------------- a card that hides them --- #
+def test_status_on_a_card_that_does_not_list_its_modules(card):
+    card.lists_modules = False
+    result = run(["--json", "factory", "card", "status", "--default-keys"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["jcop_modules"] == {m.key: "not listed" for m in cm.FUSE_MODULES}
+    assert payload["configuration_sealed"] is None
+    human = run(["factory", "card", "status", "--default-keys"])
+    assert "may still be loaded" in human.output
+    assert "only the fuse's DELETE can tell" in human.output
+
+
+def test_fuse_deletes_modules_the_card_does_not_list(card):
+    card.lists_modules = False
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["before"]["jcop_modules"]["configuration"] == "not listed"
+    assert [s["result"] for s in payload["steps"][:4]] == ["deleted"] * 4
     assert payload["configuration_sealed"] is True
+    assert card.loaded == set()
+
+
+def test_fuse_fails_its_check_when_the_configuration_module_is_still_listed(card):
+    card.delete_keeps = {cm.CONFIG_MODULE_AID}
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code != 0
+    first, _ = json.JSONDecoder().raw_decode(result.stdout)  # the result, then the error
+    assert first["configuration_sealed"] is False
+    assert "post-check failed" in result.output
