@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The package ships the text of the GNU GPL version 3, which the LGPL
+  incorporates, next to the LGPL and the commercial licence.
 - `factory piv preperso inspect-defaults` reports the profile retry cap (10)
   and the applet's retry limit (15) separately; the JSON key `pin_fips` is
   now `pin_limits`.
