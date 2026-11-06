@@ -69,9 +69,9 @@ def test_structure_missing_and_profile_without_the_object_creates_it_after_load_
 def test_object_missing_in_an_existing_structure_points_at_create_key_object():
     """The 6E27 loop: a structure can only grow, so load-config must never be re-run
     over it. Without the flag the error names the targeted fix."""
-    with pytest.raises(CryptnoxError, match="--create-key-object") as info:
+    with pytest.raises(CryptnoxError, match="piv perso create-key-object --slot") as info:
         _plan_quickstart(_facts(key_object_present=False), OPTS)
-    assert "load-config" not in str(info.value).split("--create-key-object")[0]
+    assert "load-config" not in str(info.value).split("create-key-object")[0]
 
 
 def test_object_missing_in_an_existing_structure_creates_only_the_object():
@@ -277,25 +277,32 @@ def test_quickstart_accepts_explicit_rsa_for_ms_logon_9a(monkeypatch):
     assert result.exit_code == 0, result.output
 
 
-def test_quickstart_rejects_rsa_outside_the_ms_logon_9a_shape():
-    """Only ms-logon's 9A has an RSA key object, so anything else would fail on the card.
-    Fail early and say which combination works rather than letting it get that far.
-    The shape is profile AND slot: each single-condition variant must reject too, or a
-    regression to checking only one of them would slip through."""
-    # both wrong (default profile, 9C)
-    result = _invoke(["quickstart", "--slot", "9C", "--algorithm", "RSA2048"])
-    assert result.exit_code == 2
-    assert "ms-logon" in result.output
-    # right slot, wrong profile
-    result = _invoke(["quickstart", "--slot", "9A", "--algorithm", "RSA2048"])
-    assert result.exit_code == 2
-    assert "ms-logon" in result.output
-    # right profile, wrong slot (ms-logon has no RSA object on 9C)
-    result = _invoke(
-        ["quickstart", "--profile", "ms-logon", "--slot", "9C", "--algorithm", "RSA2048"]
+def test_quickstart_rejects_rsa_outside_the_ms_logon_9a_shape(monkeypatch):
+    """Only ms-logon's 9A gets an RSA key object from a built-in profile, so RSA anywhere
+    else is refused unless the card already has the object. The shape is profile AND
+    slot: each single-condition variant must reject too, or a regression to checking
+    only one of them would slip through."""
+    missing = _facts(key_object_present=False)
+    for args in (
+        ["--slot", "9C"],  # both wrong
+        ["--slot", "9A"],  # right slot, wrong profile
+        ["--profile", "ms-logon", "--slot", "9C"],  # right profile, wrong slot
+    ):
+        result, _ = _invoke_capturing_mechanism(
+            ["quickstart", *args, "--algorithm", "RSA2048", "--dry-run"], monkeypatch, missing
+        )
+        assert result.exit_code == 2, args
+        assert "ms-logon" in result.output
+
+
+def test_quickstart_accepts_rsa_where_the_card_has_the_object(monkeypatch):
+    """A card that already carries the RSA object (added with create-key-object, say)."""
+    result, _ = _invoke_capturing_mechanism(
+        ["quickstart", "--slot", "9A", "--algorithm", "RSA2048", "--dry-run"],
+        monkeypatch,
+        _facts(key_object_present=True),
     )
-    assert result.exit_code == 2
-    assert "ms-logon" in result.output
+    assert result.exit_code == 0, result.output
 
 
 def test_quickstart_rsa_without_the_key_object_points_at_create_key_object(monkeypatch):
@@ -317,7 +324,7 @@ def test_quickstart_rsa_without_the_key_object_points_at_create_key_object(monke
     )
     assert result.exit_code != 0
     assert isinstance(result.exception, CryptnoxError)
-    assert "--create-key-object" in str(result.exception)
+    assert "create-key-object --slot 9A --algorithm RSA2048" in str(result.exception)
     # Pin that it was the RSA (slot, mechanism) object that was looked up and found missing,
     # otherwise this test is indistinguishable from the plain ECC structure-missing one.
     assert seen["mech"] == perso_mod.ALGORITHMS["RSA2048"]
@@ -388,6 +395,132 @@ def test_facts_fall_back_to_the_probe_when_the_listing_is_withheld(mock_connecti
         _session(mock_connection, {**withheld, probe: "|6A86"}), 0x9C, 0x11
     )
     assert facts.key_object_present is False and facts.structure_present is False
+
+
+def test_facts_read_whether_the_key_signs(mock_connection):
+    """9A holds an AUTHENTICATE-only ECC key and a SIGN+AUTHENTICATE RSA key."""
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    key_9a_rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
+    exchanges = {
+        _ext(inv.ID_KEY, 0): f"{KEY_9A_ECC}|9000",
+        _ext(inv.ID_KEY, 1): f"{key_9a_rsa_sign}|9000",
+        _ext(inv.ID_VERIFIER): f"{VERIFIER_PIN}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.key_object_can_sign is False
+    assert facts.signing_siblings == ("RSA2048",)
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x07)
+    assert facts.key_object_can_sign is True
+    assert facts.signing_siblings == ()
+
+
+def test_facts_leave_the_role_unknown_when_the_listing_is_withheld(mock_connection):
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.applets.piv import keyimport
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    probe = keyimport.probe_apdu(0x9A, 0x11).to_bytes().hex().upper()
+    withheld = {_ext(inv.ID_KEY): "|6986", _ext(inv.ID_VERIFIER): "|6986", probe: "|6982"}
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, withheld), 0x9A, 0x11)
+    assert facts.key_object_present is True and facts.key_object_can_sign is None
+
+
+def test_facts_carry_the_finalized_state(mock_connection):
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    secured = "531880010F8101008201008301008401008501008601008701FF"
+    exchanges = {_ext(inv.ID_KEY): f"{KEY_9A_ECC}|9000", _ext(inv.ID_STATUS): f"{secured}|9000"}
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.applet_secured is True
+    facts, _ = _collect_quickstart_facts(
+        _session(mock_connection, {_ext(inv.ID_KEY): f"{KEY_9A_ECC}|9000"}), 0x9A, 0x11
+    )
+    assert facts.applet_secured is False
+
+
+def _ecc_cert_object() -> str:
+    import datetime
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+
+    from cryptnox_id_cli.util import tlv
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "old 9A")])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    der = cert.public_bytes(serialization.Encoding.DER)
+    return tlv.build(0x53, tlv.build(0x70, der) + tlv.build(0x71, b"\x00")).hex().upper()
+
+
+@pytest.mark.parametrize(("ecc_role", "replaced"), [("01", True), ("05", False)])
+def test_facts_judge_the_certificate_by_its_key(mock_connection, ecc_role, replaced):
+    """The 9A certificate is for the ECC key. Working on the RSA object, it counts as
+    present unless that ECC key cannot sign (the repair case, where it is replaced)."""
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    ecc = KEY_9A_ECC.replace("8F0101", f"8F01{ecc_role}")
+    rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
+    exchanges = {
+        _ext(inv.ID_KEY, 0): f"{ecc}|9000",
+        _ext(inv.ID_KEY, 1): f"{rsa_sign}|9000",
+        "00CB3FFF055C035FC10500": f"{_ecc_cert_object()}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x07)
+    assert facts.cert_present is False and facts.other_cert == "ECCP256"
+    assert facts.other_cert_replaceable is replaced
+    assert facts.listing_withheld is False
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.cert_present is True and facts.other_cert is None
+
+
+def test_facts_treat_a_certificate_for_a_missing_key_as_replaceable(mock_connection):
+    """The 9A certificate is ECC P-256, but 9A holds only an RSA object: the certificate
+    belongs to no key on the card, so quickstart may replace it."""
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
+    exchanges = {
+        _ext(inv.ID_KEY): f"{rsa_sign}|9000",
+        "00CB3FFF055C035FC10500": f"{_ecc_cert_object()}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.key_object_present is False and facts.cert_present is False
+    assert facts.other_cert == "ECCP256" and facts.other_cert_replaceable is True
+
+
+def test_facts_with_a_withheld_listing_never_call_a_certificate_replaceable(mock_connection):
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.applets.piv import keyimport
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    probe = keyimport.probe_apdu(0x9A, 0x07).to_bytes().hex().upper()
+    exchanges = {
+        _ext(inv.ID_KEY): "|6986",
+        _ext(inv.ID_VERIFIER): "|6986",
+        probe: "|6982",
+        "00CB3FFF055C035FC10500": f"{_ecc_cert_object()}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x07)
+    assert facts.listing_withheld is True
+    assert facts.other_cert == "ECCP256" and facts.other_cert_replaceable is False
 
 
 def test_quickstart_csr_requires_csr_out():
@@ -520,3 +653,20 @@ def test_quickstart_mismatch_aborts_before_any_write(monkeypatch):
     assert isinstance(result.exception, CryptnoxError)
     assert "does not match" in str(result.exception)
     assert "4 tries" in str(result.exception)
+
+
+def test_facts_with_a_withheld_listing_replace_a_certificate_whose_key_is_absent(mock_connection):
+    from cryptnox_id_cli.applets.piv import inventory as inv
+    from cryptnox_id_cli.applets.piv import keyimport
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    probe = keyimport.probe_apdu(0x9A, 0x11).to_bytes().hex().upper()
+    exchanges = {
+        _ext(inv.ID_KEY): "|6986",
+        _ext(inv.ID_VERIFIER): "|6986",
+        probe: "|6A86",
+        "00CB3FFF055C035FC10500": f"{_ecc_cert_object()}|9000",
+    }
+    facts, _ = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9A, 0x11)
+    assert facts.key_object_present is False
+    assert facts.other_cert == "ECCP256" and facts.other_cert_replaceable is True

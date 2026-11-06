@@ -150,8 +150,8 @@ _SW_TABLE: dict[int, tuple[str, str]] = {
     ),
     0x6985: (
         "CONDITIONS_NOT_SATISFIED",
-        "Conditions of use not satisfied. The applet may be in the wrong lifecycle state "
-        "for this command.",
+        "Conditions of use not satisfied: the applet's state or the key's role does not "
+        "allow this command.",
     ),
     0x6A80: (
         "WRONG_DATA",
@@ -222,11 +222,13 @@ class StatusWordError(CryptnoxError):
     code = "status_word"
     exit_code = 6
 
-    def __init__(self, sw1: int, sw2: int, *, context: str | None = None) -> None:
+    def __init__(
+        self, sw1: int, sw2: int, *, context: str | None = None, hint: str | None = None
+    ) -> None:
         self.info = describe_sw(sw1, sw2)
         self.context = context
         prefix = f"{context}: " if context else ""
-        super().__init__(f"{prefix}{self.info.message} (SW={self.info.sw_hex()})")
+        super().__init__(f"{prefix}{hint or self.info.message} (SW={self.info.sw_hex()})")
 
     def to_dict(self) -> dict[str, object]:
         return {

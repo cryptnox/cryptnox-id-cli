@@ -29,20 +29,53 @@ needs a **SIGN-capable** slot. This guide is written and tested against
 
 .. note::
 
-   ``cryptnox-default``'s 9C is **not recommended here**, and hasn't been
-   tested for macOS login at all. 9C carries the PIV spec's
+   9C is **not the first choice here**: it pairs and unlocks the screen,
+   but full login with it has not been tested. 9C carries the PIV spec's
    ``nonRepudiation``/always-reauth convention (confirmed elsewhere on this
    card: a fresh re-login is required before every single signature, which
    breaks SSH/TLS via OpenSC — see :doc:`/piv/ssh-public-key-authentication`'s
-   :ref:`ssh-why-it-fails-cryptnox-default`). That's a PIV-spec-level
-   behavior, not an OpenSC quirk, so Apple's ``pivtoken`` driver may hit the
-   same problem — genuinely unknown, not assumed safe. Use 9A.
+   :ref:`ssh-why-it-fails-cryptnox-default`). Use a 9A that can sign; on a
+   ``cryptnox-default`` card, see the next section.
 
 ``cryptnox-default`` is one named profile among several, not necessarily
 what any given card has — check with ``factory piv preperso export-config``
 or whoever personalized the card. Unlike Windows AD, macOS local pairing
 doesn't require a specific EKU or UPN in the certificate — a plain client
 certificate from :doc:`/piv/quick-start-a-working-piv-card` is enough.
+
+Cards on the cryptnox-default profile
+-------------------------------------
+
+On ``cryptnox-default`` the 9A key can authenticate but not sign. Pairing the
+9A identity then fails: ``sc_auth pair`` stops with CryptoTokenKit error -3,
+and the CryptoTokenKit log shows "SmartCard returned error 6985".
+``cryptnox-id piv inventory`` lists the role of every key object; a 9A with
+only ``AUTHENTICATE`` cannot be used here. A key's role cannot be changed, so
+there are two ways on:
+
+* **Use 9C.** The 9C identity pairs and unlocks the screen, asking for the PIN
+  at each signature, which is the 9C convention. Full login with 9C has not
+  been tested.
+* **Add a signing key object to 9A.** A slot holds one key object per
+  algorithm, so add one for an algorithm 9A does not have yet, with the SIGN
+  role, then generate its key and certificate:
+
+  .. code-block:: console
+
+     $ cryptnox-id piv perso create-key-object --slot 9A --algorithm RSA2048 \
+          --role SIGN+AUTHENTICATE --default-keys
+     $ cryptnox-id piv perso generate-key --slot 9A --algorithm RSA2048 \
+          --out 9a.pub.pem --default-keys
+     $ cryptnox-id piv perso self-sign-cert --slot 9A --algorithm RSA2048 \
+          --public-key 9a.pub.pem --subject "CN=Mac Login" --out 9a.pem
+     $ cryptnox-id piv perso import-cert --slot 9A --cert 9a.pem --default-keys
+     $ cryptnox-id piv perso smoke-test --slot 9A --algorithm RSA2048
+
+  The key object is permanent, and a finalized card refuses it. The old 9A
+  key stays on the card, unused; the new certificate replaces the old one.
+  Remove the old pairing with ``sc_auth unpair``, then pair the new identity
+  as in Step 1. ``ECCP384`` works the same way in place of ``RSA2048``.
+  Pairing with an RSA-2048 or P-384 9A has not been tested on a Mac.
 
 Prerequisites
 ---------------

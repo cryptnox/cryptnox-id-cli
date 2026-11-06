@@ -86,8 +86,9 @@ returns ``6985`` for sign operations).
    ms-logon`` on slot 9A, the one built-in profile/slot combination with an
    RSA key object, where it defaults to RSA-2048 because the Windows inbox PIV
    minidriver does not enumerate EC keys (see
-   :doc:`/piv/windows-logon-and-remote-desktop`). ``--algorithm RSA2048`` is
-   accepted there and rejected elsewhere.
+   :doc:`/piv/windows-logon-and-remote-desktop`). Elsewhere ``--algorithm
+   RSA2048`` is accepted only when the card already has an RSA-2048 key object
+   for the slot.
 
    A slot can be generated on-card with any mechanism it has a **key object**
    for, and the pre-personalization profile decides which those are. Every key
@@ -237,7 +238,9 @@ If something fails
    * - Symptom
      - Cause / fix
    * - ``6985`` when signing or self-signing
-     - Wrong slot role — sign operations need the SIGN slot (9C)
+     - Wrong slot role: sign operations need a key with the SIGN role (9C on
+       ``cryptnox-default``); the error names the role, and ``piv perso
+       create-key-object`` adds a signing key object for another algorithm
    * - ``set-pin`` fails ``6A88``/``6A82``
      - The PIV structure is missing — run step 0
    * - yubico-piv-tool sees no card

@@ -89,16 +89,29 @@ profile changes only 9A's ``role`` (``AUTHENTICATE`` -> ``AUTHENTICATE,
 SIGN``); everything else is identical to ``cryptnox-default``. See
 :doc:`/factory/pre-personalization-profiles` for the full built-in profile list.
 
-This only applies at **pre-personalization** — it defines the key's role at
-the structural level, not something a later ``piv perso`` step can change.
-If your card already has a different profile applied (e.g. it already went
-through :doc:`/piv/quick-start-a-working-piv-card` on 9C), this profile
-cannot be loaded over it: existing key objects keep their role, and
-``--create-key-object`` creates new ones with the default profile's roles
-(AUTHENTICATE only on 9A). A full reset of the PIV applet runs through the
-Cryptnox remote PIV service (:doc:`/remote/remote-guide`). A blank/pre-perso
-card needs no such
-step.
+The profile applies at **pre-personalization**: it sets the key's role at
+the structural level, and an existing key object keeps its role. If your card
+already has a different profile applied (e.g. it already went through
+:doc:`/piv/quick-start-a-working-piv-card` on 9C), this profile cannot be
+loaded over it. Give 9A a second key object for another algorithm with the
+SIGN role instead, then give it a key and a certificate, with the card in a
+contact reader:
+
+.. code-block:: console
+
+   $ cryptnox-id piv perso create-key-object --slot 9A --algorithm ECCP384 \
+        --role SIGN+AUTHENTICATE --default-keys
+   $ cryptnox-id piv perso generate-key --slot 9A --algorithm ECCP384 \
+        --out 9a.pub.pem --default-keys
+   $ cryptnox-id piv perso self-sign-cert --slot 9A --algorithm ECCP384 \
+        --subject "CN=Test User" --public-key 9a.pub.pem --out 9a.crt.pem
+   $ cryptnox-id piv perso import-cert --slot 9A --cert 9a.crt.pem --default-keys
+   $ cryptnox-id piv perso smoke-test --slot 9A --algorithm ECCP384
+
+The object is permanent, and the first 9A key stays on the card, unused (see
+:doc:`/piv/piv-commands`). ``generate-key --create-key-object`` is not the
+way here: it copies the default profile's role, AUTHENTICATE only on 9A. The
+block below is for a blank or pre-personalized card; skip it on this path.
 
 .. warning::
 
@@ -132,9 +145,8 @@ step.
 .. note::
 
    ``piv perso smoke-test`` defaults to ``--slot 9C``. On this profile 9C
-   was never populated, so the plain command fails with a **misleading**
-   ``Authentication method blocked`` / "PIN or PUK is likely blocked" error —
-   the PIN is not actually blocked; there's simply no key on 9C. Always run
+   was never populated, so the plain command fails with "the ECCP256 key
+   object in slot 9C holds no key yet". Always run
    ``piv perso smoke-test --slot 9A`` here.
 
 With that done, the card has a SIGN-capable, PIN-protected key on 9A and

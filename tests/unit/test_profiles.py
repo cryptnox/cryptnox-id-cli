@@ -109,9 +109,9 @@ def test_ssh_yaml_roundtrip_preserves_payload():
 
 
 def test_role_parsing_forms():
-    assert profiles._role("SIGN") == 0x04
-    assert profiles._role("sign+authenticate") == 0x05
-    assert profiles._role(["SIGN", "AUTHENTICATE"]) == 0x05
-    assert profiles._role(0x05) == 0x05
+    assert profiles.parse_role("SIGN") == 0x04
+    assert profiles.parse_role("sign+authenticate") == 0x05
+    assert profiles.parse_role(["SIGN", "AUTHENTICATE"]) == 0x05
+    assert profiles.parse_role(0x05) == 0x05
     with pytest.raises(profiles.ProfileError):
-        profiles._role("SIGN+NOPE")
+        profiles.parse_role("SIGN+NOPE")
