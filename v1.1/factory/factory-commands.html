@@ -211,15 +211,18 @@ factory card fuse     IRREVERSIBLY fuse the card
 <p>Both authenticate to the card manager: <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> for a development card
 on the GlobalPlatform test keys, otherwise <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_ENC</span></code> /
 <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_DEK</span></code>. <code class="docutils literal notranslate"><span class="pre">status</span></code> changes nothing; it
-reports the lifecycle, which of the four modules are loaded, and whether the
-configuration is sealed (the configuration module is gone).</p>
+reports the lifecycle and which of the four modules the card lists. A card can
+leave these modules out of its listing while they are still loaded, so “not
+listed” is no proof that a module is gone, and <code class="docutils literal notranslate"><span class="pre">status</span></code> reports the sealed
+state as unknown unless the configuration module is listed.</p>
 <p><code class="docutils literal notranslate"><span class="pre">fuse</span></code> is the manufacturer’s last step. In this order it deletes the JCOP
 sample modules (<code class="docutils literal notranslate"><span class="pre">egovaccelerators</span></code>, <code class="docutils literal notranslate"><span class="pre">fips</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span></code>) and then the
 configuration module, which seals the chip’s configuration; moves the card’s
 lifecycle to INITIALIZED and then SECURED, skipping what the card has already
-reached; and replaces the card-manager key. A module that is already gone is
-skipped. Afterwards it authenticates with the new key and reads the lifecycle
-and the modules again. A fused card still loads and deletes applets for whoever
+reached; and replaces the card-manager key. A DELETE is sent for every module,
+listed or not, and one that is already gone answers so. The configuration
+counts as sealed when its DELETE answered that it was deleted or not present.
+Afterwards it authenticates with the new key and reads the lifecycle again. A fused card still loads and deletes applets for whoever
 holds the card-manager key; SECURED is the card’s normal operating state.</p>
 <p>The new key comes from <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_ENC</span></code> / <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_MAC</span></code> /
 <code class="docutils literal notranslate"><span class="pre">CARD_MANAGER_NEW_DEK</span></code>, or <code class="docutils literal notranslate"><span class="pre">--randomize</span></code> generates it. <code class="docutils literal notranslate"><span class="pre">--randomize</span></code>
