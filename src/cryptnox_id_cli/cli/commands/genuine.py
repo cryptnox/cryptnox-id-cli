@@ -23,6 +23,7 @@ from cryptnox_id_cli.applets.genuine.verify import verify_genuineness
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.crypto import x509util
 from cryptnox_id_cli.transport.errors import AppletNotFoundError
+from cryptnox_id_cli.transport.pcsc import is_contactless_interface
 
 _ISD_SSD_NOTE = (
     "Not checked: ISD / PIV-SSD key genuineness (KDF-derived per-card keys) - this "
@@ -65,6 +66,23 @@ def _load_dir_anchors(path: str) -> tuple[list[bytes], list[bytes]]:
     return roots, inters
 
 
+FIDO2_ATTESTATION_HINT = (
+    "production cards with FIDO2 do not carry it; their FIDO2 attestation shows "
+    "that the card is genuine"
+)
+
+
+def _not_found(session) -> tuple[str, str]:  # noqa: ANN001
+    """Why SELECT found no applet: the contactless interface, or a card without it."""
+    try:
+        atr = session.atr
+    except Exception:  # noqa: BLE001 - a card that left the field still gets the answer
+        atr = None
+    if is_contactless_interface(session.reader_name, atr):
+        return "contactless", "it is contact-only; use a contact reader"
+    return "not_on_card", f"not on this card: {FIDO2_ATTESTATION_HINT}"
+
+
 @command.command("info")
 @click.pass_obj
 def info(app: AppContext) -> None:
@@ -74,12 +92,10 @@ def info(app: AppContext) -> None:
         try:
             gen.select()
         except AppletNotFoundError:
+            reason, text = _not_found(session)
             app.out.result(
-                {"present": False},
-                lambda c: c.print(
-                    "[yellow]Genuineness applet not found[/yellow] "
-                    "(it is contact-only — absent over a contactless reader)."
-                ),
+                {"present": False, "reason": reason},
+                lambda c: c.print(f"[yellow]Genuineness applet not found[/yellow] ({text})."),
             )
             return
         blob = gen.get_info()
@@ -144,12 +160,10 @@ def verify(app: AppContext, nonce_hex: str | None, anchors_dir: str | None) -> N
         try:
             gen.select()
         except AppletNotFoundError:
+            reason, text = _not_found(session)
             app.out.result(
-                {"present": False, "genuine": False},
-                lambda c: c.print(
-                    "[yellow]Genuineness applet not found[/yellow] "
-                    "(contact-only — use a contact reader)."
-                ),
+                {"present": False, "genuine": False, "reason": reason},
+                lambda c: c.print(f"[yellow]Genuineness applet not found[/yellow] ({text})."),
             )
             return
         leaf_der = gen.get_cert(gc.CERT_LEAF)

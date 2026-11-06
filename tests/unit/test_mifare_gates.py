@@ -14,6 +14,7 @@ transactional data-plane operations, not file-system destruction.
 from __future__ import annotations
 
 import click
+import pytest
 from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.mifare import desfire as df
@@ -30,11 +31,22 @@ class _FakeSession:
         return False
 
 
+def _version(sw_major: int, hw_major: int = 0x00) -> df.DesfireVersion:
+    hw = bytes([0x04, 0x01, 0x01, hw_major, 0x00, 0x18, 0x05])
+    sw = bytes([0x04, 0x01, 0x01, sw_major, 0x00, 0x18, 0x05])
+    return df.parse_version(hw + sw + bytes(7) + bytes(5) + b"\x01\x26")
+
+
 class _FakeDtx:
     """Just enough DesfireTransport surface for the gated commands; never a real card."""
 
+    sw_major = 0x33
+
     def __init__(self, session):
         pass
+
+    def get_version(self):
+        return _version(self.sw_major)
 
     def select_application(self, aid):
         pass
@@ -239,3 +251,36 @@ def test_every_zero_key_option_names_the_publicly_known_factory_default():
 
 def test_module_docstring_no_longer_claims_read_only():
     assert "read-only" not in (mifare_cmd.__doc__ or "")
+
+
+@pytest.mark.parametrize(("sw_major", "generation"), [(0x02, "EV2"), (0x01, "EV1")])
+@pytest.mark.parametrize("command", ["setup", "read"])
+def test_sdm_refuses_a_desfire_before_ev3(monkeypatch, sw_major, generation, command):
+    _wire(monkeypatch)
+    monkeypatch.setattr(_FakeDtx, "sw_major", sw_major)
+    monkeypatch.setattr(
+        click, "confirm", lambda *a, **k: pytest.fail("asked before checking the generation")
+    )
+    args = ["--aid", "CC0102", "--file-id", "02"]
+    if command == "setup":
+        args += ["--url", "https://example.com/t", "--zero-key"]
+    result = _run(["mifare", "sdm", command, *args])
+    assert result.exit_code != 0
+    assert f"DESFire is {generation}" in result.output and "needs DESFire EV3" in result.output
+
+
+@pytest.mark.parametrize(
+    ("hw_major", "sw_major", "generation"),
+    [
+        (0x42, 0x02, "EV2"),  # the tri-card
+        (0x12, 0x01, "EV2"),
+        (0x22, 0x02, "EV2"),
+        (0x33, 0x03, "EV3"),
+        (0x01, 0x01, "EV1"),
+        (0x00, 0x03, "EV3"),
+        (0x07, 0x07, None),
+    ],
+)
+def test_version_names_the_generation(hw_major, sw_major, generation):
+    assert _version(sw_major, hw_major).generation == generation
+    assert _version(sw_major, hw_major).to_dict()["generation"] == generation

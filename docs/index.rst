@@ -50,7 +50,7 @@ driven by one tool: |cli|.
    :maxdepth: 2
    :caption: MIFARE DESFire
 
-   Quick start <mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun>
+   Quick start (EV3) <mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun>
    Guide <mifare/mifare-desfire-guide>
    Commands <mifare/mifare-desfire-commands>
 

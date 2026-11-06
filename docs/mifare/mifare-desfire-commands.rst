@@ -2,8 +2,9 @@ MIFARE DESFire commands
 =======================
 
 Contactless MIFARE DESFire commands (DESFire-capable reader required). Keys
-are AES-128, supplied via ``--zero-key`` (factory default of a new
-application) or ``--key-env NAME`` — never on the command line.
+are AES-128, except a factory 2K3DES PICC master key for ``format`` and
+``keys picc-to-aes``, supplied via ``--zero-key`` (factory default) or
+``--key-env NAME``, never on the command line.
 
 Inspection
 ----------
@@ -72,7 +73,11 @@ Destructive
 
 .. code-block:: text
 
-   mifare app delete    delete an application and every file in it — permanent
+   mifare app delete    delete an application and every file in it, permanently;
+                        the memory is freed only by mifare format
                         (confirmation required unless --yes)
-   mifare format        FormatPICC: erase ALL applications (gated; AES PICC
-                        master key required)
+   mifare format        FormatPICC: erase ALL applications (gated; the PICC
+                        master key, AES or 2K3DES)
+   mifare keys picc-to-aes
+                        replace a 2K3DES PICC master key with an AES-128 key
+                        (confirmation required unless --yes; no way back)

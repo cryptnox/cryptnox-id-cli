@@ -130,6 +130,7 @@ NO_DRY_RUN = frozenset(
         "mifare format",
         "mifare keys authenticate",
         "mifare keys change",
+        "mifare keys picc-to-aes",
         "mifare record clear",
         "mifare record create",
         "mifare record write",

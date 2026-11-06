@@ -8,7 +8,8 @@ The Cryptnox ID card carries three independent functions on one chip:
   PIV tooling (yubico-piv-tool, OpenSC, OS smart-card stacks).
 * **FIDO2 / CTAP 2.1** — passkeys over NFC for WebAuthn sign-in.
 * **MIFARE DESFire** — contactless applications: access control, closed-loop
-  counters, and EV3 Secure Dynamic Messaging (self-authenticating NFC tags).
+  counters, and, on cards with DESFire EV3, Secure Dynamic Messaging
+  (self-authenticating NFC tags).
 
 |product| (the |cli| command) manages all three from one terminal.
 

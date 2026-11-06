@@ -103,7 +103,12 @@ def command(app: AppContext) -> None:
                 elif st.genuine == GenuinenessState.NEEDS_CONTACT_READER:
                     add("Genuineness applet", "info", "contact-only; unreachable over contactless")
                 elif st.genuine == GenuinenessState.NOT_PRESENT:
-                    add("Genuineness applet", "info", "not present on this card")
+                    add(
+                        "Genuineness applet",
+                        "info",
+                        "not present on this card (production cards with FIDO2 use FIDO2 "
+                        "attestation instead)",
+                    )
                 else:
                     add("Genuineness applet", "warn", st.genuine.label)
             finally:

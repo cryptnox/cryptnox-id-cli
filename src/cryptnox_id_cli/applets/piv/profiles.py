@@ -35,6 +35,7 @@ MODES = {
     "PIN": pp.MODE_PIN,
     "OCC": pp.MODE_OCC,
     "SM": pp.MODE_SM,
+    "SM_PIN": pp.MODE_SM_PIN,
     "VCI": pp.MODE_VCI,
     "VCI_PIN": pp.MODE_VCI_PIN,
     "ALWAYS": pp.MODE_ALWAYS,
@@ -101,6 +102,18 @@ class PivProfile:
     puk: PinPolicy
     containers: list[ContainerDef] = field(default_factory=list)
     keys: list[KeyDef] = field(default_factory=list)
+    #: the source file named a mode VCI or VCI_PIN, whose bytes changed after 1.1
+    names_vci: bool = False
+
+    def vci_warning(self) -> str | None:
+        """The warning for a profile file that uses the VCI mode names, else ``None``."""
+        if not self.names_vci:
+            return None
+        return (
+            f"profile '{self.name}' uses VCI or VCI_PIN, which mean the applet's VCI modes "
+            "(0x60, 0x61). Files written by version 1.1 used these names for 0x40 and 0x41, "
+            "now called SM and SM_PIN; change such a file before loading it."
+        )
 
     def can_sign(self, ref: int) -> bool:
         """Whether any key object this profile creates on ``ref`` can sign."""
@@ -355,6 +368,12 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
         )
     except (KeyError, ValueError) as exc:
         raise ProfileError(f"invalid profile: {exc}") from exc
+    modes = [
+        str(o.get(side, "")).upper()
+        for o in [*d.get("containers", []), *d.get("keys", [])]
+        for side in ("contact", "contactless")
+    ]
+    prof.names_vci = any(m in ("VCI", "VCI_PIN") for m in modes)
     return prof
 
 
@@ -373,19 +392,19 @@ def _cryptnox_default() -> PivProfile:
     A = pp.MODE_ALWAYS
     N = pp.MODE_NEVER
     P = pp.MODE_PIN
-    VCI = pp.MODE_VCI
-    VCIP = pp.MODE_VCI_PIN
+    SM = pp.MODE_SM
+    SMP = pp.MODE_SM_PIN
     containers = [
         ContainerDef(bytes.fromhex("5FC102"), "chuid", A, A),
-        ContainerDef(bytes.fromhex("5FC107"), "ccc", A, VCI),
-        ContainerDef(bytes.fromhex("5FC105"), "auth-cert", A, VCI),
+        ContainerDef(bytes.fromhex("5FC107"), "ccc", A, SM),
+        ContainerDef(bytes.fromhex("5FC105"), "auth-cert", A, SM),
         ContainerDef(bytes.fromhex("5FC101"), "card-auth-cert", A, A),
-        ContainerDef(bytes.fromhex("5FC10A"), "sign-cert", A, VCI),
-        ContainerDef(bytes.fromhex("5FC10B"), "keymgmt-cert", A, VCI),
-        ContainerDef(bytes.fromhex("5FC106"), "security-object", A, VCI),
-        ContainerDef(bytes.fromhex("5FC103"), "fingerprints", P, VCIP),
-        ContainerDef(bytes.fromhex("5FC108"), "facial", P, VCIP),
-        ContainerDef(bytes.fromhex("5FC109"), "printed", P, VCIP),
+        ContainerDef(bytes.fromhex("5FC10A"), "sign-cert", A, SM),
+        ContainerDef(bytes.fromhex("5FC10B"), "keymgmt-cert", A, SM),
+        ContainerDef(bytes.fromhex("5FC106"), "security-object", A, SM),
+        ContainerDef(bytes.fromhex("5FC103"), "fingerprints", P, SMP),
+        ContainerDef(bytes.fromhex("5FC108"), "facial", P, SMP),
+        ContainerDef(bytes.fromhex("5FC109"), "printed", P, SMP),
     ]
     keys = [
         KeyDef(

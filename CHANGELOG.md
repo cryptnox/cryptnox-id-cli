@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `mifare keys picc-to-aes`: replace a 2K3DES PICC master key (the factory
+  default) with an AES-128 key, confirmed by authenticating with the new key.
 - `scripts/windows/eobo-wrap.ps1` and a Windows logon guide section on
   enrolling a card for another user through an enrollment agent.
 - `factory card fuse`: the manufacturer's last step. Deletes the JCOP sample
@@ -34,6 +36,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The package ships the text of the GNU GPL version 3, which the LGPL
   incorporates, next to the LGPL and the commercial licence.
+- Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
+  `0x61`), and `SM_PIN` (`0x41`) is new. The built-in profiles write the same
+  bytes as before, now named `SM` and `SM_PIN`. Files written by 1.1
+  (`init-config`, the docs example) use `VCI_PIN` for `0x41` and must say
+  `SM_PIN` instead; `load-config` warns when a file uses `VCI` or `VCI_PIN`.
+- `mifare sdm setup` and `sdm read` refuse a card whose DESFire is EV1 or EV2,
+  and `mifare version` names the generation.
+- `mifare app delete` warns that the card does not return the deleted
+  application's memory; only `mifare format` frees it.
+- `mifare format` works with a 2K3DES PICC master key as well as an AES one
+  (factory cards ship with 2K3DES); `--zero-key` covers both factory defaults.
+- `genuine` says why the applet was not found: a contactless interface, or a
+  card without it (production cards with FIDO2), pointing at FIDO2
+  attestation; JSON gains `reason`. `info` and `doctor` say the same.
+- `piv pin unblock` help says it also works on a PIN that is not blocked.
+- The APDU transcript withholds the DESFire authentication tokens and the card's
+  AuthenticateISO challenge.
 - `factory piv preperso inspect-defaults` reports the profile retry cap (10)
   and the applet's retry limit (15) separately; the JSON key `pin_fips` is
   now `pin_limits`.

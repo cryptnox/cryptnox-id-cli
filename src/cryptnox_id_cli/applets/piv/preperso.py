@@ -55,15 +55,17 @@ TAG_PIN_RULE_SEQUENCE = 0x94
 TAG_PIN_RULE_REPEAT = 0x95
 TAG_PIN_RESTRICT_UPDATE = 0x96
 
-# Access-mode bytes. A mode is a bitmap EXCEPT ALWAYS which is the special 0x3F.
+# Access-mode bytes. A mode is a bitmap EXCEPT ALWAYS.
 MODE_NEVER = 0x00
 MODE_PIN = 0x01
 MODE_OCC = 0x04
 MODE_SM = 0x40
+MODE_VCI = 0x60
 MODE_USER_ADMIN = 0x80
+# The applet tests ALWAYS by the low five bits (0x1F); 0x3F is what issued cards carry.
 MODE_ALWAYS = 0x3F
-MODE_VCI = MODE_SM  # 0x40 (contactless read gated to a PIV-SM session)
-MODE_VCI_PIN = MODE_SM | MODE_PIN  # 0x41
+MODE_SM_PIN = MODE_SM | MODE_PIN
+MODE_VCI_PIN = MODE_VCI | MODE_PIN
 
 # Key roles and attributes (bitmaps).
 ROLE_AUTHENTICATE = 0x01

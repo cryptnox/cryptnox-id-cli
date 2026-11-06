@@ -1,7 +1,9 @@
 Quick start: prove a card is genuine
 ====================================
 
-On a **contact** reader (the genuineness applet does not answer contactless):
+On a **contact** reader (the genuineness applet does not answer contactless).
+Production cards with FIDO2 do not carry the applet; see
+:doc:`/genuine/genuineness-guide` for what shows those cards are genuine.
 
 .. code-block:: console
 

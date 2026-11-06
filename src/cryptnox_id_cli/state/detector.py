@@ -214,7 +214,7 @@ class StateDetector:
             st.notes.append(f"Genuineness select error: {exc}")
             return
         if not present:
-            if st.desfire == DesfireState.REACHABLE:
+            if st.desfire in (DesfireState.REACHABLE, DesfireState.NO_ANSWER_CONTACTLESS):
                 st.genuine = GenuinenessState.NEEDS_CONTACT_READER
                 st.notes.append(
                     "Genuineness applet is contact-only; it does not answer over a "
@@ -222,6 +222,11 @@ class StateDetector:
                 )
             else:
                 st.genuine = GenuinenessState.NOT_PRESENT
+                if st.fido in (FidoState.SELECTABLE, FidoState.PERSONALIZED):
+                    st.notes.append(
+                        "No genuineness applet: production cards with FIDO2 do not carry it; "
+                        "their FIDO2 attestation shows that the card is genuine."
+                    )
             return
 
         with contextlib.suppress(CryptnoxError):
