@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SECURED and replaces the card-manager key, from `CARD_MANAGER_NEW_*` or
   `--randomize --out FILE`. It prints the card's state and a warning, then
   asks for `FUSE-CARD`; `-y` skips the question.
-- `factory card status`: the card's lifecycle and which JCOP modules are
-  loaded, read over the card-manager channel.
+- `factory card status`: the card's lifecycle and which JCOP modules the card
+  lists, read over the card-manager channel. A card can leave them out of the
+  listing, so the sealed state is unknown unless the configuration module is
+  listed.
 - Remote operations warn when the service leaves INITIALIZE UPDATEs without a
   completed authentication, with a count per security domain, also after a
   failed operation. The JSON `relay` object lists them as

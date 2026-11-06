@@ -159,15 +159,22 @@ def read_status(send: Send, scope: int) -> list[StatusEntry] | None:
 @dataclass(frozen=True)
 class CardState:
     lifecycle: int | None
+    #: What GET STATUS lists. JCOP cards can leave their own modules out of it, so a
+    #: module missing here may still be loaded; only a DELETE answers that.
     loaded: frozenset[bytes] | None
 
-    def present(self, aid: bytes) -> bool | None:
-        return None if self.loaded is None else aid in self.loaded
+    def listed(self, aid: bytes) -> bool:
+        return self.loaded is not None and aid in self.loaded
+
+    def listing(self, aid: bytes) -> str:
+        if self.loaded is None:
+            return "unknown"
+        return "listed" if aid in self.loaded else "not listed"
 
     def to_dict(self) -> dict[str, object]:
         return {
             "lifecycle": lifecycle_name(self.lifecycle),
-            "jcop_modules": {m.key: self.present(m.aid) for m in FUSE_MODULES},
+            "jcop_modules": {m.key: self.listing(m.aid) for m in FUSE_MODULES},
         }
 
 

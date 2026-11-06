@@ -555,8 +555,9 @@ def _card_manager_domain(session) -> tuple[SecurityDomainInfo, int, int]:  # noq
 
 
 def _configuration_sealed(state: cm.CardState) -> bool | None:
-    config = state.present(cm.CONFIG_MODULE_AID)
-    return None if config is None else not config
+    """``False`` when the configuration module is listed; otherwise unknown, because a
+    card may leave it out of GET STATUS while it is still loaded."""
+    return False if state.listed(cm.CONFIG_MODULE_AID) else None
 
 
 def _yes_no(value: bool | None) -> str:
@@ -565,11 +566,10 @@ def _yes_no(value: bool | None) -> str:
 
 def _print_card_state(c: Console, state: cm.CardState) -> None:
     c.print(f"  Lifecycle: {cm.lifecycle_name(state.lifecycle)}")
-    c.print("  JCOP modules (the fuse deletes these):")
+    c.print("  JCOP modules the fuse deletes, as GET STATUS lists them:")
     for m in cm.FUSE_MODULES:
-        present = state.present(m.aid)
-        word = "unknown" if present is None else ("present" if present else "absent")
-        c.print(f"    {m.label} ({m.aid.hex().upper()}): {word}")
+        c.print(f"    {m.label} ({m.aid.hex().upper()}): {state.listing(m.aid)}")
+    c.print("    [dim]A module that is not listed may still be loaded.[/dim]")
 
 
 @card_group.command("status")
@@ -602,7 +602,9 @@ def card_status(app: AppContext, default_keys: bool) -> None:
     def human(c: Console) -> None:
         c.print(f"Card manager {domain.aid_hex} ({scp_label(domain.scp_version)}):")
         _print_card_state(c, state)
-        c.print(f"  Configuration sealed: {_yes_no(_configuration_sealed(state))}")
+        sealed = _configuration_sealed(state)
+        note = "" if sealed is not None else " (only the fuse's DELETE can tell)"
+        c.print(f"  Configuration sealed: {_yes_no(sealed)}{note}")
 
     app.out.result(payload, human)
 
@@ -791,7 +793,10 @@ def card_fuse(
         except CryptnoxError as exc:
             verify_error = str(exc)
 
-    sealed = _configuration_sealed(after) if after else None
+    config_step = next(s for s in steps if s["step"] == f"delete {cm.FUSE_MODULES[-1].label}")
+    sealed = config_step["result"] in ("deleted", "absent") and not (
+        after is not None and after.listed(cm.CONFIG_MODULE_AID)
+    )
     secured = after is not None and after.lifecycle == cm.SECURED
     payload = {
         "aid": domain.aid_hex,
@@ -814,6 +819,11 @@ def card_fuse(
         if after is not None:
             c.print("After:")
             _print_card_state(c, after)
+        word = "yes" if sealed else "[red]no[/red]"
+        c.print(
+            f"  Configuration sealed: {word} (its DELETE answered "
+            f"{config_step['result']}, SW={config_step['sw']})"
+        )
         agree = "card agrees" if card_kcvs_match else "[red]card echoed different values[/red]"
         c.print(f"  New key check values: {' '.join(kcv_hex)} (ENC MAC DEK); {agree}")
         auth = "yes" if verify_error is None else f"[red]no[/red] ({verify_error})"

@@ -71,16 +71,19 @@ The card as a whole
 Both authenticate to the card manager: ``--default-keys`` for a development card
 on the GlobalPlatform test keys, otherwise ``CARD_MANAGER_ENC`` /
 ``CARD_MANAGER_MAC`` / ``CARD_MANAGER_DEK``. ``status`` changes nothing; it
-reports the lifecycle, which of the four modules are loaded, and whether the
-configuration is sealed (the configuration module is gone).
+reports the lifecycle and which of the four modules the card lists. A card can
+leave these modules out of its listing while they are still loaded, so "not
+listed" is no proof that a module is gone, and ``status`` reports the sealed
+state as unknown unless the configuration module is listed.
 
 ``fuse`` is the manufacturer's last step. In this order it deletes the JCOP
 sample modules (``egovaccelerators``, ``fips``, ``piv``) and then the
 configuration module, which seals the chip's configuration; moves the card's
 lifecycle to INITIALIZED and then SECURED, skipping what the card has already
-reached; and replaces the card-manager key. A module that is already gone is
-skipped. Afterwards it authenticates with the new key and reads the lifecycle
-and the modules again. A fused card still loads and deletes applets for whoever
+reached; and replaces the card-manager key. A DELETE is sent for every module,
+listed or not, and one that is already gone answers so. The configuration
+counts as sealed when its DELETE answered that it was deleted or not present.
+Afterwards it authenticates with the new key and reads the lifecycle again. A fused card still loads and deletes applets for whoever
 holds the card-manager key; SECURED is the card's normal operating state.
 
 The new key comes from ``CARD_MANAGER_NEW_ENC`` / ``CARD_MANAGER_NEW_MAC`` /
