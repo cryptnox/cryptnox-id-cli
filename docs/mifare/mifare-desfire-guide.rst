@@ -70,6 +70,11 @@ key; the CLI authenticates and sends a MAC-protected ``DeleteApplication``:
 
    $ cryptnox-id mifare app delete --aid CC0102 --zero-key
 
+The card does not return the memory a deleted application used:
+``mifare free-memory`` stays lower until the card is formatted with
+``mifare format`` (see `Format the PICC (destructive)`_ below for the key it
+needs).
+
 Value files
 -----------
 
@@ -106,8 +111,9 @@ Keys
 
 DESFire AES keys come from ``--zero-key`` (the all-zero factory default of a
 new application) or ``--key-env NAME`` (hex in an environment variable) —
-never on the command line. Keys are AES-128; legacy DES/3DES is intentionally
-not supported.
+never on the command line. Application keys are AES-128. The one 2K3DES key
+this tool uses is a factory PICC master key, for ``mifare format`` and
+``mifare keys picc-to-aes``.
 
 Rotate a key (same-key change — authenticate with the key being changed):
 
@@ -136,7 +142,9 @@ Secure Dynamic Messaging (SDM / SUN)
 ------------------------------------
 
 DESFire EV3 cards can mirror an encrypted UID + read counter and a MAC into a
-free-read file on every read — a self-authenticating NFC tag. The
+free-read file on every read: a self-authenticating NFC tag. DESFire EV2 does
+not support SDM, and ``mifare sdm`` refuses a card whose ``mifare version``
+reports EV1 or EV2. The
 :doc:`/mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun` walks through it end to end; the short form:
 
 .. code-block:: console
@@ -168,12 +176,21 @@ authenticates with the PICC master key:
 
    $ cryptnox-id mifare format --zero-key --i-understand-this-erases-all-applications
 
-.. note::
+``FormatPICC`` authenticates with the **PICC master key**. On factory cards
+that key is 2K3DES (all zero); ``format`` reads the key type and authenticates
+accordingly, so ``--zero-key`` works on a factory card and on one whose PICC
+master key is the all-zero AES key. A 3K3DES PICC master key is not supported.
 
-   ``FormatPICC`` authenticates with the **PICC master key**. On factory cards
-   that key is 2K3DES, and this CLI is AES-only by design — ``format`` checks
-   the key type first and refuses with a clear message until the PICC master
-   key has been provisioned to AES.
+To move the PICC master key to AES-128, so the card's other AES commands can
+use it:
+
+.. code-block:: console
+
+   $ cryptnox-id mifare keys picc-to-aes --zero-key --new-key-env NEW_PICC_KEY
+
+``--new-key-env`` names an environment variable holding the new key in hex.
+The command authenticates with the new key afterwards to confirm it. This
+tool has no way back to 2K3DES.
 
 Scope
 -----
@@ -182,5 +199,5 @@ Covered: read-only inspection; standard data files (plain, MAC-protected and
 fully encrypted transfer, chunked writes); value files; record files
 (linear/cyclic) — all with transaction commit; same-key and cross-key
 ``ChangeKey``; SDM/SUN configuration and host-side verification; ``FormatPICC``
-(AES PICC master key required). Legacy DES/3DES authentication is intentionally
-not supported.
+with an AES or 2K3DES PICC master key, and moving a 2K3DES PICC master key to
+AES. Other DES/3DES keys are not supported.

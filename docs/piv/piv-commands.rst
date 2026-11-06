@@ -44,8 +44,9 @@ PIN
    piv pin status      PIN/PUK configured? retries left? (non-decrementing)
    piv pin verify      verify the PIN (a wrong PIN consumes one retry)
    piv pin change      change the PIN (cardholder; needs the current PIN)
-   piv pin unblock     unblock a blocked PIN via the PUK (RESET RETRY COUNTER;
-                       a wrong PUK consumes a PUK retry — see warning below)
+   piv pin unblock     set a new PIN with the PUK (RESET RETRY COUNTER; works on
+                       a PIN that is not blocked too; a wrong PUK consumes a PUK
+                       retry, see warning below)
 
 PUK
 ---
@@ -56,8 +57,10 @@ PUK
 
 ``piv pin change`` and ``piv puk change`` are cardholder operations — they prove
 knowledge of the current value in-band (no SCP03 admin channel), unlike the
-``piv perso set-pin`` / ``set-puk`` issuance commands. ``piv pin unblock`` resets a
-blocked PIN's retry counter using the PUK. Current/new values come from masked
+``piv perso set-pin`` / ``set-puk`` issuance commands. ``piv pin unblock`` sets a
+new PIN and resets its retry counter using the PUK. It works on a PIN that is not
+blocked as well, which makes it a test that the PUK is right, and a correct PUK
+also resets the PUK's own retry counter. Current/new values come from masked
 prompts or the ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_PUK``
 / ``CRYPTNOX_PIV_NEW_PUK`` environment variables — never the command line.
 

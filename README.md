@@ -30,7 +30,7 @@ One card, four applets, reachable over two interfaces:
 |----------|-----------|-------|
 | **PIV** (SP 800-73 keys + X.509 certificates) | Contact; contactless only for what needs no PIN | PIN, PUK and the PIN-protected keys are contact-only; administration works over both interfaces |
 | **FIDO2 / CTAP 2.1** (passkeys / WebAuthn) | Contactless (NFC) | Windows requires an Administrator terminal |
-| **MIFARE DESFire** (incl. EV3 Secure Dynamic Messaging) | Contactless (NFC) | Needs a DESFire-capable reader |
+| **MIFARE DESFire** (Secure Dynamic Messaging on EV3 cards) | Contactless (NFC) | Needs a DESFire-capable reader |
 | **Genuineness** (factory attestation) | Contact | Read-only; proves the card is genuine Cryptnox hardware |
 
 ### Smart card readers

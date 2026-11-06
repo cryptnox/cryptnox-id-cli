@@ -103,7 +103,7 @@ Profile YAML
      - oid: 5FC109
        name: printed
        contact: PIN
-       contactless: VCI_PIN
+       contactless: SM_PIN
    keys:
      - ref: "9C"
        name: sign
@@ -124,15 +124,17 @@ keys):
 - ``PIN``: after the PIN has been verified.
 - ``OCC``: after an on-card biometric comparison.
 - ``SM``: only inside a PIV secure-messaging session (SP 800-73-4).
-- ``VCI``: the same as ``SM``.
-- ``VCI_PIN``: ``SM`` plus the PIN.
+- ``SM_PIN``: ``SM`` plus the PIN.
+- ``VCI``: ``SM``, and the session also meets the virtual contact interface
+  condition (SP 800-73-4).
+- ``VCI_PIN``: ``VCI`` plus the PIN.
 
 Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
-sessions, so anything marked ``SM``, ``VCI`` or ``VCI_PIN`` on an interface
-cannot be used there with them. In the built-in profiles that is the
+sessions, so anything marked ``SM``, ``SM_PIN``, ``VCI`` or ``VCI_PIN`` on an
+interface cannot be used there with them. In the built-in profiles that is the
 contactless side of most containers. The PIN and PUK are created for contact
-use only: the applet's FIPS-mode build accepts a PIN over contactless only inside
-secure messaging.
+use only: the applet's FIPS-mode build accepts a PIN over contactless only
+inside secure messaging.
 
 **Key roles** (a bitmask — combine with ``+``, e.g. ``AUTHENTICATE+SIGN``, or
 give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.

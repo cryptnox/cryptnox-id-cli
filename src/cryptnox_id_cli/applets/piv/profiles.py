@@ -35,6 +35,7 @@ MODES = {
     "PIN": pp.MODE_PIN,
     "OCC": pp.MODE_OCC,
     "SM": pp.MODE_SM,
+    "SM_PIN": pp.MODE_SM_PIN,
     "VCI": pp.MODE_VCI,
     "VCI_PIN": pp.MODE_VCI_PIN,
     "ALWAYS": pp.MODE_ALWAYS,
@@ -373,19 +374,19 @@ def _cryptnox_default() -> PivProfile:
     A = pp.MODE_ALWAYS
     N = pp.MODE_NEVER
     P = pp.MODE_PIN
-    VCI = pp.MODE_VCI
-    VCIP = pp.MODE_VCI_PIN
+    SM = pp.MODE_SM
+    SMP = pp.MODE_SM_PIN
     containers = [
         ContainerDef(bytes.fromhex("5FC102"), "chuid", A, A),
-        ContainerDef(bytes.fromhex("5FC107"), "ccc", A, VCI),
-        ContainerDef(bytes.fromhex("5FC105"), "auth-cert", A, VCI),
+        ContainerDef(bytes.fromhex("5FC107"), "ccc", A, SM),
+        ContainerDef(bytes.fromhex("5FC105"), "auth-cert", A, SM),
         ContainerDef(bytes.fromhex("5FC101"), "card-auth-cert", A, A),
-        ContainerDef(bytes.fromhex("5FC10A"), "sign-cert", A, VCI),
-        ContainerDef(bytes.fromhex("5FC10B"), "keymgmt-cert", A, VCI),
-        ContainerDef(bytes.fromhex("5FC106"), "security-object", A, VCI),
-        ContainerDef(bytes.fromhex("5FC103"), "fingerprints", P, VCIP),
-        ContainerDef(bytes.fromhex("5FC108"), "facial", P, VCIP),
-        ContainerDef(bytes.fromhex("5FC109"), "printed", P, VCIP),
+        ContainerDef(bytes.fromhex("5FC10A"), "sign-cert", A, SM),
+        ContainerDef(bytes.fromhex("5FC10B"), "keymgmt-cert", A, SM),
+        ContainerDef(bytes.fromhex("5FC106"), "security-object", A, SM),
+        ContainerDef(bytes.fromhex("5FC103"), "fingerprints", P, SMP),
+        ContainerDef(bytes.fromhex("5FC108"), "facial", P, SMP),
+        ContainerDef(bytes.fromhex("5FC109"), "printed", P, SMP),
     ]
     keys = [
         KeyDef(

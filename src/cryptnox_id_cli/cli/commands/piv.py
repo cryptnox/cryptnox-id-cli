@@ -814,7 +814,11 @@ def pin_change(app: AppContext, old_pin: str | None, new_pin: str | None) -> Non
 @click.option("--new-pin", help="(discouraged) new PIN on the CLI; prefer prompt/env.")
 @click.pass_obj
 def pin_unblock(app: AppContext, puk_value: str | None, new_pin: str | None) -> None:
-    """Unblock a blocked PIV PIN via the PUK (RESET RETRY COUNTER, INS 2C)."""
+    """Set a new PIN and reset its retry counter using the PUK (RESET RETRY COUNTER).
+
+    Works on a PIN that is not blocked too, so it doubles as a test that the PUK is
+    right. A correct PUK also resets the PUK's own retry counter.
+    """
     app.out.warn("a wrong PUK decrements the PUK counter; a blocked PUK is unrecoverable.")
     puk = resolve_secret(
         redactor=app.redactor,

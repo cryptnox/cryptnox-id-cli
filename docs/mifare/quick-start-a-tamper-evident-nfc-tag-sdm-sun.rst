@@ -8,8 +8,10 @@ an incrementing read counter into the file content, plus a MAC over them. A
 backend that knows the key can prove each read came from the genuine card — and
 detect replayed or cloned URLs — without any session or pairing.
 
-This guide configures SDM on a Cryptnox card and verifies the whole loop with
-|cli|. It follows the public NXP application note `AN12196
+This guide configures SDM on a Cryptnox card whose DESFire function is EV3 and
+verifies the whole loop with |cli|. Cards with DESFire EV2 do not support SDM:
+the card refuses SDM files, and ``mifare sdm`` stops with a message naming the
+generation. It follows the public NXP application note `AN12196
 <https://www.nxp.com/docs/en/application-note/AN12196.pdf>`_.
 
 Prerequisites
@@ -17,7 +19,8 @@ Prerequisites
 
 * A **DESFire-capable contactless reader** (the ACS ACR1252 is verified; some
   contactless readers do not pass native DESFire commands through).
-* A Cryptnox card with the DESFire EV3 function — check with:
+* A Cryptnox card with the DESFire EV3 function. ``mifare version`` names the
+  generation:
 
 .. code-block:: console
 

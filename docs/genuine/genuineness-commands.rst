@@ -3,8 +3,9 @@ Genuineness commands
 
 All ``genuine`` commands are **read-only** and **contact-only** — the
 attestation applet does not answer over a contactless reader (SELECT returns
-6A82 there). What is checked, what deliberately is not, and how trust anchors
-work are covered in :doc:`/genuine/genuineness-guide`.
+6A82 there). Production cards with FIDO2 do not carry the applet at all, and
+``genuine`` says so on a contact reader. What is checked, what deliberately is
+not, and how trust anchors work are covered in :doc:`/genuine/genuineness-guide`.
 
 Inspection
 ----------

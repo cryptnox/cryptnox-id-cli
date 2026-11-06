@@ -222,6 +222,11 @@ class StateDetector:
                 )
             else:
                 st.genuine = GenuinenessState.NOT_PRESENT
+                if st.fido in (FidoState.SELECTABLE, FidoState.PERSONALIZED):
+                    st.notes.append(
+                        "No genuineness applet: production cards with FIDO2 do not carry it; "
+                        "their FIDO2 attestation shows that the card is genuine."
+                    )
             return
 
         with contextlib.suppress(CryptnoxError):

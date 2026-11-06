@@ -11,6 +11,16 @@ The applet is **contact-only** — it does not answer over a contactless reader
 (SELECT returns ``6A82`` there) — and all ``genuine`` commands are
 **read-only**: the applet is inspected, never provisioned, by this tool.
 
+.. note::
+
+   Production cards with FIDO2 do not carry the genuineness applet, and
+   ``genuine`` reports it as not on the card. On those cards the FIDO2
+   attestation shows that the card is genuine: the attestation certificate a
+   relying party receives at registration chains to the root that the FIDO
+   Alliance Metadata Service lists for the card's AAGUID
+   (``1d1b4e33-76a1-47fb-97a0-14b10d0933f1``). ``fido info`` shows whether the
+   card reports a Cryptnox AAGUID; |cli| does not verify the attestation chain.
+
 What is checked — and what deliberately is not
 ------------------------------------------------
 

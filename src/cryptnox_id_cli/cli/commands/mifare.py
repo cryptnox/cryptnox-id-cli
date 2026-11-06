@@ -18,6 +18,11 @@ from rich.console import Console
 
 from cryptnox_id_cli.applets.mifare import desfire as df
 from cryptnox_id_cli.applets.mifare.desfire import DesfireTransport
+from cryptnox_id_cli.applets.mifare.ev1 import (
+    authenticate_iso,
+    change_picc_key_to_aes,
+    format_picc_iso,
+)
 from cryptnox_id_cli.applets.mifare.ev2 import (
     authenticate_ev2_first,
     change_file_settings,
@@ -50,6 +55,8 @@ def version(app: AppContext) -> None:
         c.print("[bold]MIFARE DESFire[/bold]")
         c.print(f"  Vendor:   {info['vendor']}")
         c.print(f"  Hardware: v{info['hardware_version']}  software: v{info['software_version']}")
+        if info["generation"]:
+            c.print(f"  Generation: DESFire {info['generation']}")
         c.print(f"  Storage:  {info['storage_bytes']} bytes")
         c.print(f"  UID:      {info['uid']}")
         c.print(f"  Protocol: {info['protocol']}  batch: {info['batch']}  {info['production']}")
@@ -158,6 +165,37 @@ def _resolve_aes_key(app: AppContext, zero_key: bool, key_env: str | None) -> by
     return key
 
 
+def _resolve_picc_key(app: AppContext, zero_key: bool, key_env: str | None) -> bytes:
+    """The PICC master key from --zero-key or an env var: 16 bytes, AES-128 or 2K3DES."""
+    if zero_key and key_env:
+        raise click.UsageError("--zero-key and --key-env are mutually exclusive; pass only one.")
+    if zero_key:
+        key = bytes(16)
+    elif key_env:
+        value = os.environ.get(key_env)
+        if not value:
+            raise CryptnoxError(f"environment variable {key_env} is not set.")
+        key = from_hex(value)
+        if len(key) != 16:
+            raise CryptnoxError("the PICC master key must be 16 bytes (AES-128 or 2K3DES).")
+    else:
+        raise click.UsageError("provide --zero-key (factory default) or --key-env NAME")
+    app.redactor.register(key)
+    return key
+
+
+_PICC_KEY_TYPES = {0x00: "DES/2K3DES", 0x40: "3K3DES", 0x80: "AES"}
+
+
+def _picc_key_type(dtx: DesfireTransport) -> int:
+    dtx.select_application(bytes(3))  # AID 000000 = PICC (master application) level
+    _settings, key_type, _max_keys = dtx.get_key_settings()
+    if key_type not in (0x00, 0x80):
+        kind = _PICC_KEY_TYPES.get(key_type, f"0x{key_type:02X}")
+        raise CryptnoxError(f"the PICC master key is {kind}; this tool handles AES and 2K3DES.")
+    return key_type
+
+
 def _aid3(aid: str) -> bytes:
     aid_bytes = from_hex(aid)
     if len(aid_bytes) != 3:
@@ -206,7 +244,10 @@ def app_create(app: AppContext, aid: str, num_keys: int, key_type: str) -> None:
 def app_delete(app: AppContext, aid: str, key_no: int, zero_key: bool, key_env: str | None) -> None:
     """Delete an application and ALL its files (authenticates first if a key is given)."""
     aid_bytes = _aid3(aid)
-    app.out.warn(f"this permanently deletes application {aid.upper()} and all its files.")
+    app.out.warn(
+        f"this permanently deletes application {aid.upper()} and all its files. The card "
+        "does not return the memory they used; only `mifare format` frees it."
+    )
     if not app.yes and not click.confirm(f"Delete application {aid.upper()}?", default=False):
         raise click.Abort()
     with app.open_session() as session:
@@ -535,9 +576,9 @@ def read(
 @click.option(
     "--zero-key",
     is_flag=True,
-    help="PICC master key is the all-zero AES key (publicly known factory default).",
+    help="PICC master key is all-zero, AES or 2K3DES (publicly known factory default).",
 )
-@click.option("--key-env", help="Env var with the PICC master AES key (hex).")
+@click.option("--key-env", help="Env var with the PICC master key, AES or 2K3DES (hex).")
 @click.option(
     "--i-understand-this-erases-all-applications",
     "understood",
@@ -560,25 +601,73 @@ def format_command(
             )
         if click.prompt("Type FORMAT-PICC to continue") != "FORMAT-PICC":
             raise click.Abort()
-    key = _resolve_aes_key(app, zero_key, key_env)
+    key = _resolve_picc_key(app, zero_key, key_env)
     with app.open_session() as session:
         dtx = DesfireTransport(session)
-        dtx.select_application(bytes(3))  # AID 000000 = PICC (master application) level
-        _settings, key_type, _max_keys = dtx.get_key_settings()
-        if key_type != 0x80:  # not AES -> AuthenticateEV2First cannot be used
-            kind = {0x00: "DES/2K3DES", 0x40: "3K3DES"}.get(key_type, f"0x{key_type:02X}")
-            raise CryptnoxError(
-                f"the PICC master key is {kind}, not AES. FormatPICC must authenticate with "
-                "the PICC master key, and this AES-only CLI cannot use a legacy DES/3DES key. "
-                "Formatting is only possible once the PICC master key is provisioned to AES."
-            )
-        ev2 = authenticate_ev2_first(dtx, key_no, key)
-        format_picc(dtx, ev2)
+        if _picc_key_type(dtx) == 0x80:
+            format_picc(dtx, authenticate_ev2_first(dtx, key_no, key))
+        else:
+            format_picc_iso(dtx, authenticate_iso(dtx, key_no, key))
     app.out.result(
         {"formatted": True},
         lambda c: c.print(
             "[green]PICC formatted.[/green] All applications and files erased; "
             "the PICC master key is unchanged."
+        ),
+    )
+
+
+@keys_group.command("picc-to-aes")
+@click.option(
+    "--zero-key",
+    is_flag=True,
+    help="The CURRENT 2K3DES PICC master key is all-zero (publicly known factory default).",
+)
+@click.option("--key-env", help="Env var with the CURRENT 2K3DES PICC master key (hex).")
+@click.option("--new-key-env", help="Env var with the NEW 16-byte AES key (hex).")
+@click.option(
+    "--new-zero-key",
+    is_flag=True,
+    help="Make the new AES key all-zero (publicly known; development cards only).",
+)
+@click.option("--key-version", default=0, show_default=True, type=int)
+@click.pass_obj
+def keys_picc_to_aes(
+    app: AppContext,
+    zero_key: bool,
+    key_env: str | None,
+    new_key_env: str | None,
+    new_zero_key: bool,
+    key_version: int,
+) -> None:
+    """Replace a 2K3DES PICC master key with an AES-128 key.
+
+    The AES key is what `mifare format` and the other AES commands authenticate with.
+    This tool has no way back to 2K3DES.
+    """
+    if bool(new_key_env) == new_zero_key:
+        raise click.UsageError("provide exactly one of --new-key-env NAME or --new-zero-key")
+    current = _resolve_picc_key(app, zero_key, key_env)
+    new_key = _resolve_aes_key(app, new_zero_key, new_key_env)
+    if new_zero_key:
+        app.out.warn("the new AES key is the publicly known all-zero key; anyone can use it.")
+    with app.open_session() as session:
+        dtx = DesfireTransport(session)
+        if _picc_key_type(dtx) != 0x00:
+            raise CryptnoxError("the PICC master key is already AES.")
+        app.out.warn(
+            "this replaces the PICC master key; keep the new key safe, it is needed to format "
+            "the card or change its settings."
+        )
+        if not app.yes and not click.confirm("Replace the PICC master key?", default=False):
+            raise click.Abort()
+        change_picc_key_to_aes(dtx, authenticate_iso(dtx, 0, current), new_key, version=key_version)
+        dtx.select_application(bytes(3))
+        authenticate_ev2_first(dtx, 0, new_key)
+    app.out.result(
+        {"picc_master_key": "AES", "key_version": key_version, "new_key_authenticates": True},
+        lambda c: c.print(
+            "[green]PICC master key is now AES-128[/green]; the new key authenticates."
         ),
     )
 
@@ -874,6 +963,16 @@ def sdm_group() -> None:
     """
 
 
+def _require_sdm(dtx: DesfireTransport) -> None:
+    version = dtx.get_version()
+    if version.generation in ("EV1", "EV2"):
+        raise CryptnoxError(
+            f"this card's DESFire is {version.generation} (software version "
+            f"{version.sw_major}.{version.sw_minor}); Secure Dynamic Messaging needs "
+            "DESFire EV3."
+        )
+
+
 @sdm_group.command("setup")
 @click.option("--aid", required=True, help="Application AID, 3 bytes hex (app needs >=3 keys).")
 @click.option("--file-id", required=True, type=str, help="File number, hex (e.g. 02).")
@@ -902,17 +1001,18 @@ def sdm_setup(
     mac_off = picc_off + 32 + len(sep)  # PICCData mirror is 32 ASCII hex chars
     template = prefix + b"0" * 32 + sep + b"0" * 16  # CMAC mirror is 16 ASCII hex chars
     size = max(len(template), 96)
-    app.out.warn("creates + configures an SDM file (EV3); needs an app with >=3 AES keys.")
-    if not app.yes and not click.confirm(
-        f"Set up SDM on file {file_no:02X} of {aid.upper()}?", default=False
-    ):
-        raise click.Abort()
 
     def le3(n: int) -> bytes:
         return n.to_bytes(3, "little")
 
     with app.open_session() as session:
         dtx = DesfireTransport(session)
+        _require_sdm(dtx)
+        app.out.warn("creates + configures an SDM file (EV3); needs an app with >=3 AES keys.")
+        if not app.yes and not click.confirm(
+            f"Set up SDM on file {file_no:02X} of {aid.upper()}?", default=False
+        ):
+            raise click.Abort()
         dtx.select_application(aid_bytes)
         # SDM must be enabled at creation (FileOption bit 0x40); plain comm, free read/write,
         # key-0 change-settings. Then write the template (free, plain, chunked under one frame).
@@ -965,6 +1065,7 @@ def sdm_read(app: AppContext, aid: str, file_id: str) -> None:
     file_no = int(file_id, 16)
     with app.open_session() as session:
         dtx = DesfireTransport(session)
+        _require_sdm(dtx)
         dtx.select_application(aid_bytes)
         text = dtx.read_data_plain(file_no, 0, 0).decode("ascii", "replace")
     m_picc = re.search(r"picc=([0-9A-Fa-f]{32})", text)
