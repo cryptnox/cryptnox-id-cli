@@ -91,6 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">macOS smart-card login</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#how-it-has-to-look">How it has to look</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cards-on-the-cryptnox-default-profile">Cards on the cryptnox-default profile</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#step-0-fix-macos-s-ccid-driver">Step 0 — fix macOS’s CCID driver</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#step-1-pair-the-certificate-to-the-account">Step 1 — pair the certificate to the account</a></li>
@@ -177,20 +178,52 @@ needs a <strong>SIGN-capable</strong> slot. This guide is written and tested aga
 — the same key used in <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>/<a class="reference internal" href="tls-client-authentication.html"><span class="doc">TLS client authentication</span></a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>’s 9C is <strong>not recommended here</strong>, and hasn’t been
-tested for macOS login at all. 9C carries the PIV spec’s
+<p>9C is <strong>not the first choice here</strong>: it pairs and unlocks the screen,
+but full login with it has not been tested. 9C carries the PIV spec’s
 <code class="docutils literal notranslate"><span class="pre">nonRepudiation</span></code>/always-reauth convention (confirmed elsewhere on this
 card: a fresh re-login is required before every single signature, which
 breaks SSH/TLS via OpenSC — see <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>’s
-<a class="reference internal" href="ssh-public-key-authentication.html#ssh-why-it-fails-cryptnox-default"><span class="std std-ref">Why it fails on cryptnox-default</span></a>). That’s a PIV-spec-level
-behavior, not an OpenSC quirk, so Apple’s <code class="docutils literal notranslate"><span class="pre">pivtoken</span></code> driver may hit the
-same problem — genuinely unknown, not assumed safe. Use 9A.</p>
+<a class="reference internal" href="ssh-public-key-authentication.html#ssh-why-it-fails-cryptnox-default"><span class="std std-ref">Why it fails on cryptnox-default</span></a>). Use a 9A that can sign; on a
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> card, see the next section.</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is one named profile among several, not necessarily
 what any given card has — check with <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code>
 or whoever personalized the card. Unlike Windows AD, macOS local pairing
 doesn’t require a specific EKU or UPN in the certificate — a plain client
 certificate from <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> is enough.</p>
+</section>
+<section id="cards-on-the-cryptnox-default-profile">
+<h2>Cards on the cryptnox-default profile<a class="headerlink" href="#cards-on-the-cryptnox-default-profile" title="Link to this heading"></a></h2>
+<p>On <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> the 9A key can authenticate but not sign. Pairing the
+9A identity then fails: <code class="docutils literal notranslate"><span class="pre">sc_auth</span> <span class="pre">pair</span></code> stops with CryptoTokenKit error -3,
+and the CryptoTokenKit log shows “SmartCard returned error 6985”.
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span> <span class="pre">piv</span> <span class="pre">inventory</span></code> lists the role of every key object; a 9A with
+only <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code> cannot be used here. A key’s role cannot be changed, so
+there are two ways on:</p>
+<ul>
+<li><p><strong>Use 9C.</strong> The 9C identity pairs and unlocks the screen, asking for the PIN
+at each signature, which is the 9C convention. Full login with 9C has not
+been tested.</p></li>
+<li><p><strong>Add a signing key object to 9A.</strong> A slot holds one key object per
+algorithm, so add one for an algorithm 9A does not have yet, with the SIGN
+role, then generate its key and certificate:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>create-key-object<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--role<span class="w"> </span>SIGN+AUTHENTICATE<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--out<span class="w"> </span>9a.pub.pem<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>self-sign-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>--public-key<span class="w"> </span>9a.pub.pem<span class="w"> </span>--subject<span class="w"> </span><span class="s2">"CN=Mac Login"</span><span class="w"> </span>--out<span class="w"> </span>9a.pem
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>import-cert<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--cert<span class="w"> </span>9a.pem<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>smoke-test<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048
+</pre></div>
+</div>
+<p>The key object is permanent, and a finalized card refuses it. The old 9A
+key stays on the card, unused; the new certificate replaces the old one.
+Remove the old pairing with <code class="docutils literal notranslate"><span class="pre">sc_auth</span> <span class="pre">unpair</span></code>, then pair the new identity
+as in Step 1. <code class="docutils literal notranslate"><span class="pre">ECCP384</span></code> works the same way in place of <code class="docutils literal notranslate"><span class="pre">RSA2048</span></code>.
+Pairing with an RSA-2048 or P-384 9A has not been tested on a Mac.</p>
+</li>
+</ul>
 </section>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>

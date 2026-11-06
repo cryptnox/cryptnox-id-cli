@@ -225,10 +225,14 @@ on the card. Move it to a contact reader and continue with the step that
 failed. Over NFC the card offers the PIN-less functions only: the CHUID, the
 card-authentication certificate and the 9E card-authentication key.</p>
 <p><strong>``6985`` (conditions not satisfied) on ``generate-csr`` / signing.</strong>
-The slot’s key has the wrong role. Signing needs a <strong>SIGN-role</strong> slot such as
-<strong>9C</strong> (or a 9A provisioned with the <code class="docutils literal notranslate"><span class="pre">ssh</span></code> / <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile); a
-default-profile 9A is AUTHENTICATE-only and refuses <code class="docutils literal notranslate"><span class="pre">GENERAL</span> <span class="pre">AUTHENTICATE</span></code>
-signing. See <a class="reference internal" href="factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p>
+The slot’s key has the wrong role. Signing needs a key whose role includes
+<strong>SIGN</strong>, such as <strong>9C</strong> (or a 9A provisioned with the <code class="docutils literal notranslate"><span class="pre">ssh</span></code> / <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>
+profile); a default-profile 9A is AUTHENTICATE-only and refuses <code class="docutils literal notranslate"><span class="pre">GENERAL</span>
+<span class="pre">AUTHENTICATE</span></code> signing. The error names the key’s role, and <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code>
+lists the role of every key object. A role cannot be changed; to give the slot
+a signing key, add a key object for another algorithm with <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span>
+<span class="pre">create-key-object</span></code> (see <a class="reference internal" href="piv/piv-commands.html"><span class="doc">PIV commands</span></a>). See
+<a class="reference internal" href="factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p>
 <p><strong>``6986`` on ``piv inventory``.</strong>
 The applet’s <code class="docutils literal notranslate"><span class="pre">restrict-enumeration</span></code> config flag is set, so the structure
 listing needs the admin role. Version, state and config are still readable.</p>

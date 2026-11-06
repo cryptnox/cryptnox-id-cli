@@ -295,6 +295,7 @@ that command alone.</p>
 <h2>Personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)<a class="headerlink" href="#personalization-piv-perso" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv perso set-pin                 set the initial PIN (over SCP03)
 piv perso set-puk                 set the initial PUK (over SCP03)
+piv perso create-key-object       add a key object for a (slot, algorithm) pair, with a role
 piv perso generate-key            on-card key generation (per the slot's key objects)
 piv perso import-key              inject an externally generated private key
 piv perso import-p12              one-command PKCS#12 (.p12/.pfx) key + certificate import
@@ -314,8 +315,25 @@ piv perso smoke-test              verify PIN + one on-card signature
 <section id="notes">
 <h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Signing needs a <strong>SIGN-role</strong> slot — 9C on this card; 9A (AUTHENTICATE role)
-returns <code class="docutils literal notranslate"><span class="pre">6985</span></code> for sign operations.</p></li>
+<li><p>Signing needs a key whose role includes <strong>SIGN</strong>. On <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>, 9C
+signs and 9A (AUTHENTICATE only) returns <code class="docutils literal notranslate"><span class="pre">6985</span></code>; <code class="docutils literal notranslate"><span class="pre">generate-csr</span></code>,
+<code class="docutils literal notranslate"><span class="pre">self-sign-cert</span></code> and <code class="docutils literal notranslate"><span class="pre">smoke-test</span></code> then name the key’s role, which
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> lists for every key object, and point at another key on
+the same slot that can sign when there is one.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">create-key-object</span></code> adds a key object for one slot and algorithm,
+with the role (<code class="docutils literal notranslate"><span class="pre">--role</span> <span class="pre">SIGN+AUTHENTICATE</span></code>, say) and access modes you give
+(default <code class="docutils literal notranslate"><span class="pre">PIN</span></code> over contact, <code class="docutils literal notranslate"><span class="pre">NEVER</span></code> over contactless). The object is
+permanent: it cannot be changed or deleted, and a finalized card refuses new
+ones. A slot holds one object per algorithm, so a 9A that cannot sign gets a
+signing key from a second object for another algorithm, for example
+<code class="docutils literal notranslate"><span class="pre">--slot</span> <span class="pre">9A</span> <span class="pre">--algorithm</span> <span class="pre">RSA2048</span> <span class="pre">--role</span> <span class="pre">SIGN+AUTHENTICATE</span></code>; the first object
+stays on the card, unused. The applet refuses a key object with both
+<code class="docutils literal notranslate"><span class="pre">SIGN</span></code> and <code class="docutils literal notranslate"><span class="pre">KEY_ESTABLISH</span></code>, and so does the command. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> shows
+the object and sends nothing.
+<code class="docutils literal notranslate"><span class="pre">generate-key</span> <span class="pre">--create-key-object</span></code> and <code class="docutils literal notranslate"><span class="pre">import-key</span> <span class="pre">--create-key-object</span></code>
+copy the role from <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> and name it; on 9A or 9C they ask
+before creating a key that cannot sign. <code class="docutils literal notranslate"><span class="pre">quickstart</span></code> copies the role and
+the RSA-CRT attribute from the profile it was given.</p></li>
 <li><p>On-card generation works for whichever <strong>mechanisms the slot has a key object
 for</strong>, which is decided by the pre-personalization profile, not by the applet.
 On <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> every key object is ECC (P-256/P-384), so RSA has to be
@@ -336,15 +354,20 @@ generation therefore runs twice on such a card.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to ECC P-256, except with <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code>
 on slot 9A, the one built-in shape with an RSA key object and the Windows
 one, where it defaults to RSA-2048 because Windows does not enumerate EC
-keys. <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code> is accepted there and rejected elsewhere. For
-other cards known to carry an RSA object, use <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">generate-key</span></code>
-directly.</p></li>
+keys. Elsewhere <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code> is accepted only when the card already
+has that RSA key object for the slot.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> reads the applet’s key-object listing before planning. A
 card with no structure at all needs <code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code> (or a
 <code class="docutils literal notranslate"><span class="pre">load-config</span></code>); a card whose structure lacks the key object for the
 requested slot and mechanism gets that one object created with
 <code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code>, never a second <code class="docutils literal notranslate"><span class="pre">load-config</span></code> over the existing
-structure, which the applet refuses with <code class="docutils literal notranslate"><span class="pre">6E27</span></code>.</p></li>
+structure, which the applet refuses with <code class="docutils literal notranslate"><span class="pre">6E27</span></code>. Before writing anything it
+refuses a certificate step that would end in <code class="docutils literal notranslate"><span class="pre">6985</span></code>: an existing key
+without the SIGN role (when the card lists its key objects), or a key object
+the profile would create without it. A certificate in the slot counts for
+the key it was issued to. When it belongs to the slot’s other key and that
+key cannot sign, quickstart generates the requested key and replaces the
+certificate, and says so; any other certificate it refuses to overwrite.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-cert</span></code> writes the certificate it is given. <code class="docutils literal notranslate"><span class="pre">--csr</span> <span class="pre">FILE</span></code>
 refuses one whose public key is not the CSR’s, with no PIN; <code class="docutils literal notranslate"><span class="pre">--verify-pin</span></code>
 has the slot sign a challenge and refuses unless the certificate’s key

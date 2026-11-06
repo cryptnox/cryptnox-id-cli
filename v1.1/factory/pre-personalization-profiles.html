@@ -165,7 +165,11 @@ OpenFIPS201 <code class="docutils literal notranslate"><span class="pre">PUT</sp
 <dl>
 <dt><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code></dt><dd><p>Byte-exact to the applet’s own reference profile: an AES-256 admin key,
 ten containers (CHUID/CCC/certs/security-object/fingerprints/facial/printed),
-and five ECC-P256 key slots (9A/9C/9D/9E, plus the AES-only admin key 9B).</p>
+and five ECC-P256 key slots (9A/9C/9D/9E, plus the AES-only admin key 9B).
+Its 9A key can authenticate but not sign, and macOS login, SSH, TLS client
+authentication and Windows logon all sign with 9A. <code class="docutils literal notranslate"><span class="pre">load-config</span></code> and
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--include-preperso</span></code> warn about this for any profile whose
+9A cannot sign; for those uses pick <code class="docutils literal notranslate"><span class="pre">ssh</span></code> or <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">developer</span></code> / <code class="docutils literal notranslate"><span class="pre">npivp-lab</span></code></dt><dd><p>The same structure as <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> — only the <code class="docutils literal notranslate"><span class="pre">mode</span></code> label
 differs (<code class="docutils literal notranslate"><span class="pre">developer-not-for-production</span></code> / <code class="docutils literal notranslate"><span class="pre">lab</span></code>), for cards that

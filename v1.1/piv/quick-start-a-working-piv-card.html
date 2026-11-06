@@ -223,8 +223,9 @@ returns <code class="docutils literal notranslate"><span class="pre">6985</span>
 <span class="pre">ms-logon</span></code> on slot 9A, the one built-in profile/slot combination with an
 RSA key object, where it defaults to RSA-2048 because the Windows inbox PIV
 minidriver does not enumerate EC keys (see
-<a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>). <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> is
-accepted there and rejected elsewhere.</p>
+<a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>). Elsewhere <code class="docutils literal notranslate"><span class="pre">--algorithm</span>
+<span class="pre">RSA2048</span></code> is accepted only when the card already has an RSA-2048 key object
+for the slot.</p>
 <p>A slot can be generated on-card with any mechanism it has a <strong>key object</strong>
 for, and the pre-personalization profile decides which those are. Every key
 object in <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is ECC, so RSA must be imported on such a
@@ -378,7 +379,9 @@ every write goes over SCP03 via <code class="docutils literal notranslate"><span
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">6985</span></code> when signing or self-signing</p></td>
-<td><p>Wrong slot role — sign operations need the SIGN slot (9C)</p></td>
+<td><p>Wrong slot role: sign operations need a key with the SIGN role (9C on
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>); the error names the role, and <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span>
+<span class="pre">create-key-object</span></code> adds a signing key object for another algorithm</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">set-pin</span></code> fails <code class="docutils literal notranslate"><span class="pre">6A88</span></code>/<code class="docutils literal notranslate"><span class="pre">6A82</span></code></p></td>
 <td><p>The PIV structure is missing — run step 0</p></td>
