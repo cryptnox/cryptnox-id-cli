@@ -75,6 +75,16 @@ ATTR_PERMIT_MUTUAL = 0x08
 ATTR_IMPORTABLE = 0x10
 ATTR_RSA_CRT = 0x20
 
+_RSA_MECHANISMS = frozenset({0x06, 0x07, 0x05, 0x16})
+
+
+def key_signs(role: int, mechanism: int) -> bool:
+    """Whether the applet answers a GENERAL AUTHENTICATE signature request with this key."""
+    # The applet tests KEY_ESTABLISH first; RSA key transport is then the signing operation.
+    if role & ROLE_KEY_ESTABLISH:
+        return mechanism in _RSA_MECHANISMS
+    return bool(role & ROLE_SIGN)
+
 
 def _object_id_bytes(object_id: int | bytes | Sequence[int]) -> bytes:
     if isinstance(object_id, int):

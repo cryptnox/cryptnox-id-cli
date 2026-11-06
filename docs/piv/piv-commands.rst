@@ -165,6 +165,7 @@ Personalization (``piv perso``)
 
    piv perso set-pin                 set the initial PIN (over SCP03)
    piv perso set-puk                 set the initial PUK (over SCP03)
+   piv perso create-key-object       add a key object for a (slot, algorithm) pair, with a role
    piv perso generate-key            on-card key generation (per the slot's key objects)
    piv perso import-key              inject an externally generated private key
    piv perso import-p12              one-command PKCS#12 (.p12/.pfx) key + certificate import
@@ -182,8 +183,25 @@ Personalization (``piv perso``)
 Notes
 -----
 
-* Signing needs a **SIGN-role** slot — 9C on this card; 9A (AUTHENTICATE role)
-  returns ``6985`` for sign operations.
+* Signing needs a key whose role includes **SIGN**. On ``cryptnox-default``, 9C
+  signs and 9A (AUTHENTICATE only) returns ``6985``; ``generate-csr``,
+  ``self-sign-cert`` and ``smoke-test`` then name the key's role, which
+  ``piv inventory`` lists for every key object, and point at another key on
+  the same slot that can sign when there is one.
+* ``piv perso create-key-object`` adds a key object for one slot and algorithm,
+  with the role (``--role SIGN+AUTHENTICATE``, say) and access modes you give
+  (default ``PIN`` over contact, ``NEVER`` over contactless). The object is
+  permanent: it cannot be changed or deleted, and a finalized card refuses new
+  ones. A slot holds one object per algorithm, so a 9A that cannot sign gets a
+  signing key from a second object for another algorithm, for example
+  ``--slot 9A --algorithm RSA2048 --role SIGN+AUTHENTICATE``; the first object
+  stays on the card, unused. The applet refuses a key object with both
+  ``SIGN`` and ``KEY_ESTABLISH``, and so does the command. ``--dry-run`` shows
+  the object and sends nothing.
+  ``generate-key --create-key-object`` and ``import-key --create-key-object``
+  copy the role from ``cryptnox-default`` and name it; on 9A or 9C they ask
+  before creating a key that cannot sign. ``quickstart`` copies the role and
+  the RSA-CRT attribute from the profile it was given.
 * On-card generation works for whichever **mechanisms the slot has a key object
   for**, which is decided by the pre-personalization profile, not by the applet.
   On ``cryptnox-default`` every key object is ECC (P-256/P-384), so RSA has to be
@@ -204,15 +222,20 @@ Notes
 * ``piv quickstart`` defaults to ECC P-256, except with ``--profile ms-logon``
   on slot 9A, the one built-in shape with an RSA key object and the Windows
   one, where it defaults to RSA-2048 because Windows does not enumerate EC
-  keys. ``--algorithm RSA*`` is accepted there and rejected elsewhere. For
-  other cards known to carry an RSA object, use ``piv perso generate-key``
-  directly.
+  keys. Elsewhere ``--algorithm RSA*`` is accepted only when the card already
+  has that RSA key object for the slot.
 * ``piv quickstart`` reads the applet's key-object listing before planning. A
   card with no structure at all needs ``--include-preperso`` (or a
   ``load-config``); a card whose structure lacks the key object for the
   requested slot and mechanism gets that one object created with
   ``--include-preperso``, never a second ``load-config`` over the existing
-  structure, which the applet refuses with ``6E27``.
+  structure, which the applet refuses with ``6E27``. Before writing anything it
+  refuses a certificate step that would end in ``6985``: an existing key
+  without the SIGN role (when the card lists its key objects), or a key object
+  the profile would create without it. A certificate in the slot counts for
+  the key it was issued to. When it belongs to the slot's other key and that
+  key cannot sign, quickstart generates the requested key and replaces the
+  certificate, and says so; any other certificate it refuses to overwrite.
 * ``piv perso import-cert`` writes the certificate it is given. ``--csr FILE``
   refuses one whose public key is not the CSR's, with no PIN; ``--verify-pin``
   has the slot sign a challenge and refuses unless the certificate's key

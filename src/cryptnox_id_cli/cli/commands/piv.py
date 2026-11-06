@@ -1350,9 +1350,10 @@ def perso_generate_key(
 ) -> None:
     """Generate a key pair ON-CARD; the private key never leaves the card.
 
-    Replaces any key already in the slot IRREVERSIBLY. When the slot's certificate
-    container is occupied this asks for confirmation first (``--yes`` skips); a key
-    without a certificate cannot be detected and is replaced without a prompt.
+    Replaces the slot's key for this algorithm IRREVERSIBLY. When the slot's
+    certificate is for that key, or cannot be matched to a key, this asks for
+    confirmation first (``--yes`` skips); a key without a certificate cannot be
+    detected and is replaced without a prompt.
     """
     import hashlib
 
@@ -1369,7 +1370,10 @@ def perso_generate_key(
         # certified key is never replaced silently - the old private key is destroyed
         # irreversibly and every copy of that certificate goes orphan.
         cert_name = SLOT_CERT_OBJECT.get(ref)
-        if cert_name is not None and _read_cert_der(_select(session), cert_name) is not None:
+        cert_der = _read_cert_der(_select(session), cert_name) if cert_name else None
+        cert_mech = _certificate_mechanism(cert_der) if cert_der is not None else None
+        # A certificate for the slot's key of another algorithm leaves this key alone.
+        if cert_der is not None and cert_mech in (None, mech):
             app.out.warn(
                 f"slot {slot} already holds a certificate; generating a new key DESTROYS "
                 "the current private key irreversibly and orphans that certificate."
@@ -1378,6 +1382,11 @@ def perso_generate_key(
                 f"Replace the certified key in slot {slot}?", default=False
             ):
                 raise click.Abort()
+        elif cert_mech is not None:
+            app.out.note(
+                f"slot {slot}'s certificate is for its {_ALGORITHM_NAMES.get(cert_mech)} key, "
+                "which this leaves alone; a certificate for the new key would replace it."
+            )
         adm = PivAdmin(session)
         if create_key_object:
             _select(session)
@@ -1681,10 +1690,109 @@ def _sign_with_session(session, ref: int, mech: int, pin: bytes, build):
         else:
             resp = session.transmit(apdu, context="GENERAL AUTHENTICATE (sign)")
         if not resp.ok:
-            raise StatusWordError(resp.sw1, resp.sw2, context="GENERAL AUTHENTICATE (sign)")
+            refused = resp.sw in (0x6983, 0x6985, 0x6A86)
+            hint = _sign_refusal(session, ref, mech, resp.sw) if refused else None
+            raise StatusWordError(
+                resp.sw1, resp.sw2, context="GENERAL AUTHENTICATE (sign)", hint=hint
+            )
         return perso_mod.parse_sign_response(resp.data)
 
     return build(signer)
+
+
+# Tried in order when suggesting a second key object for a slot that cannot sign.
+_SIGN_ALTERNATIVES = ("RSA2048", "ECCP384", "ECCP256")
+_ALGORITHM_NAMES = {mech: name for name, mech in perso_mod.ALGORITHMS.items()}
+_SIGNING_SLOTS = (pivc.KEYREF_PIV_AUTH, pivc.KEYREF_DIGITAL_SIGNATURE)
+
+_FINALIZED_NO_NEW_KEYS = (
+    "the applet is finalized (SECURED): key objects can no longer be created. "
+    "Import into an existing object. A full reset of the PIV applet runs through the "
+    f"Cryptnox remote PIV service: `{CLI_NAME} remote reset`."
+)
+
+
+def _signing_siblings(listing, ref: int, mech: int) -> list[str]:  # noqa: ANN001
+    """CLI names of the slot's other asymmetric key objects that can sign."""
+    return [
+        _ALGORITHM_NAMES[k.mechanism]
+        for k in listing
+        if k.ref == ref
+        and k.mechanism != mech
+        and k.mechanism in _ALGORITHM_NAMES
+        and preperso_mod.key_signs(k.role, k.mechanism)
+    ]
+
+
+def _sign_refusal(session, ref: int, mech: int, sw: int) -> str | None:  # noqa: ANN001
+    """Why a slot refused to sign, from the applet's keyless status and key listing."""
+    slot = f"{ref:02X}"
+    alg = _ALGORITHM_NAMES.get(mech, hex(mech))
+    piv = PivApplet(session)
+    try:
+        listing = inventory_mod.read_keys(piv)
+        status = inventory_mod.read_status(piv)
+    except CryptnoxError:
+        listing, status = None, None
+    obj = next((k for k in listing or [] if k.ref == ref and k.mechanism == mech), None)
+    # The applet reports an empty key (6983) before it checks the role.
+    if sw == 0x6983 and (obj is None or preperso_mod.key_signs(obj.role, obj.mechanism)):
+        return (
+            f"the {alg} key object in slot {slot} holds no key yet. Generate one with "
+            f"`{CLI_NAME} piv perso generate-key --slot {slot} --algorithm {alg}` or import one."
+        )
+    if listing is None:
+        if sw == 0x6A86:
+            return (
+                f"slot {slot} has no {alg} key that can sign. "
+                "The usual cause is an --algorithm the slot has no key for; this card withholds "
+                "its key listing, so the slot's keys cannot be read."
+            )
+        text = (
+            f"slot {slot} refused to sign. The usual cause is a key whose role does not "
+            "include SIGN; this card withholds its key listing, so the role cannot be read."
+        )
+        if ref != pivc.KEYREF_DIGITAL_SIGNATURE:
+            text += " Slot 9C signs on every built-in profile."
+        return text
+    if obj is None and sw == 0x6A86:
+        text = f"slot {slot} has no {alg} key object."
+        siblings = _signing_siblings(listing, ref, mech)
+        if siblings:
+            text += (
+                f" Its {siblings[0]} key can sign: pass --algorithm {siblings[0]}, and that "
+                "key's public key where the command takes one."
+            )
+        return text
+    if obj is None or preperso_mod.key_signs(obj.role, obj.mechanism):
+        return None
+    roles = "+".join(inventory_mod.role_names(obj.role)) or "none"
+    text = (
+        f"the {obj.mechanism_name} key in slot {slot} has the role {roles}, which cannot "
+        "sign, and a key's role cannot be changed."
+    )
+    siblings = _signing_siblings(listing, ref, mech)
+    if siblings:
+        name = siblings[0]
+        return (
+            f"{text} Slot {slot} also holds a {name} key that can sign: pass --algorithm "
+            f"{name}, and that key's public key where the command takes one."
+        )
+    taken = {k.mechanism for k in listing if k.ref == ref}
+    free = next((a for a in _SIGN_ALTERNATIVES if perso_mod.ALGORITHMS[a] not in taken), None)
+    options = [] if ref == pivc.KEYREF_DIGITAL_SIGNATURE else ["sign with slot 9C"]
+    if free and not (status is not None and status.secured):
+        options.append(
+            "add a signing key object for another algorithm on this slot (permanent): "
+            f"`{CLI_NAME} piv perso create-key-object --slot {slot} --algorithm {free} "
+            f"--role SIGN+AUTHENTICATE`, then generate the key and certificate with "
+            f"--algorithm {free}"
+        )
+    if len(options) == 2:
+        text += f" Either {options[0]}, or {options[1]}."
+    elif options:
+        text += f" {options[0][0].upper()}{options[0][1:]}."
+    return text
 
 
 # Friendly diagnoses for CHANGE REFERENCE DATA ADMIN rejections during key import.
@@ -1738,43 +1846,83 @@ def _warn_key_file_permissions(app: AppContext, path: str) -> None:
         app.out.warn(f"{path} is group/world-readable; consider chmod 600.")
 
 
+def _key_template(
+    ref: int, mech: int, profile: prof_mod.PivProfile | None = None
+) -> tuple[int, int, int, int]:
+    """(contact, contactless, role, attributes) for a new key object on ``ref``: the
+    profile's entry for the slot, else cryptnox-default's, else a role by slot type."""
+    for source in (profile, prof_mod.builtin("cryptnox-default")):
+        on_slot = [k for k in source.keys if k.ref == ref] if source else []
+        if on_slot:
+            rsa = mech in perso_mod.RSA_MECHANISMS
+            k = next((k for k in on_slot if k.mechanism == mech), None) or next(
+                (k for k in on_slot if (k.mechanism in perso_mod.RSA_MECHANISMS) == rsa),
+                on_slot[0],
+            )
+            return k.contact, k.contactless, k.role, k.attributes
+    if ref == pivc.KEYREF_DIGITAL_SIGNATURE:
+        role = preperso_mod.ROLE_SIGN
+    elif ref == pivc.KEYREF_KEY_MANAGEMENT or ref >= pivc.KEYREF_RETIRED_FIRST:
+        role = preperso_mod.ROLE_KEY_ESTABLISH
+    else:
+        role = preperso_mod.ROLE_AUTHENTICATE
+    return preperso_mod.MODE_PIN, preperso_mod.MODE_NEVER, role, preperso_mod.ATTR_IMPORTABLE
+
+
 def _create_key_object(
-    app: AppContext, adm: PivAdmin, keys, ref: int, mech: int, rsa_crt: bool, slot: str
+    app: AppContext,
+    adm: PivAdmin,
+    keys,
+    ref: int,
+    mech: int,
+    rsa_crt: bool,
+    slot: str,
+    *,
+    profile: prof_mod.PivProfile | None = None,
+    confirmed: bool = False,
 ) -> None:
     """Dev/eval fallback: create the missing (slot, mechanism) key object via PUT
-    DATA ADMIN, copying modes/role from the builtin profile's slot template."""
-    profile = prof_mod.builtin("cryptnox-default")
-    template = next((k for k in profile.keys if k.ref == ref), None)
-    if template is not None:
-        contact, contactless, role = template.contact, template.contactless, template.role
-    else:
-        contact, contactless = preperso_mod.MODE_PIN, preperso_mod.MODE_NEVER
-        if ref == pivc.KEYREF_DIGITAL_SIGNATURE:
-            role = preperso_mod.ROLE_SIGN
-        elif ref == pivc.KEYREF_KEY_MANAGEMENT or ref >= pivc.KEYREF_RETIRED_FIRST:
-            role = preperso_mod.ROLE_KEY_ESTABLISH
-        else:
-            role = preperso_mod.ROLE_AUTHENTICATE
+    DATA ADMIN, copying modes/role from the profile's slot template."""
+    if not confirmed:
+        status = inventory_mod.read_status(PivApplet(adm.card))
+        if status is not None and status.secured:
+            raise CryptnoxError(_FINALIZED_NO_NEW_KEYS)
+    contact, contactless, role, _ = _key_template(ref, mech, profile)
     attrs = preperso_mod.ATTR_IMPORTABLE
     if keyimport.rsa_modulus_len(mech) and rsa_crt:
         attrs |= preperso_mod.ATTR_RSA_CRT
+    roles = prof_mod.role_name(role)
     app.out.warn(
-        "creating the key object (PUT DATA ADMIN) - a structural change normally "
-        "done at pre-personalization. It is permanent, also if the chip then refuses "
-        "this key size."
+        f"creating the key object (PUT DATA ADMIN) with the role {roles} - a structural "
+        "change normally done at pre-personalization. It is permanent, also if the chip "
+        "then refuses this key size."
     )
+    if ref in _SIGNING_SLOTS and not preperso_mod.key_signs(role, mech) and not confirmed:
+        crt = " --rsa-crt" if attrs & preperso_mod.ATTR_RSA_CRT else ""
+        app.out.warn(
+            f"a key with the role {roles} cannot sign. For a signing key on slot {slot}, "
+            f"use `{CLI_NAME} piv perso create-key-object --slot {slot} --algorithm "
+            f"{_ALGORITHM_NAMES.get(mech, hex(mech))} --role SIGN+AUTHENTICATE{crt}` instead."
+        )
+        if not app.yes and not click.confirm("Create it anyway?", default=False):
+            raise click.Abort()
     op = preperso_mod.create_key(ref, contact, contactless, mech, role, attrs)
+    _send_create_key(adm, keys, op, slot)
+
+
+def _send_create_key(adm: PivAdmin, keys, op: bytes, slot: str) -> None:  # noqa: ANN001
     adm.select()
     adm.open(keys)
     resp = adm.send(
         preperso_mod.put_data_admin_apdu(preperso_mod.build_bulk([op])),
         context=f"CREATE KEY {slot}",
     )
-    if resp.sw == 0x6985:
+    if resp.sw == 0x6986:
+        raise CryptnoxError(_FINALIZED_NO_NEW_KEYS)
+    if resp.sw == 0x6E27:
         raise CryptnoxError(
-            "the applet is finalized (SECURED): key objects can no longer be created. "
-            "Import into an existing object. A full reset of the PIV applet runs through the "
-            "Cryptnox remote PIV service: `cryptnox-id remote reset`."
+            f"slot {slot} already has a key object for this algorithm, and a key object "
+            "cannot be changed."
         )
     if not resp.ok:
         raise StatusWordError(resp.sw1, resp.sw2, context=f"CREATE KEY {slot}")
@@ -1877,6 +2025,125 @@ def _post_import_smoke(
             "key material landed?"
         ) from exc
     return {"signed": True, "verified": True}
+
+
+@perso.command("create-key-object")
+@click.option("--slot", required=True, help="Key slot hex, e.g. 9A.")
+@click.option("--algorithm", required=True, help="ECCP256/ECCP384/RSA2048/RSA3072/RSA4096.")
+@click.option(
+    "--role",
+    required=True,
+    help="SIGN, AUTHENTICATE, KEY_ESTABLISH, or a '+'-joined set such as SIGN+AUTHENTICATE.",
+)
+@click.option(
+    "--contact", default="PIN", show_default=True, help="Access mode over the contact interface."
+)
+@click.option(
+    "--contactless",
+    default="NEVER",
+    show_default=True,
+    help="Access mode over the contactless interface.",
+)
+@click.option(
+    "--rsa-crt", is_flag=True, help="RSA only: hold the key in CRT form (what import-key sends)."
+)
+@click.option(
+    "--default-keys",
+    is_flag=True,
+    help="Use the default GlobalPlatform TEST keys "
+    "(publicly known - fine for dev/eval, never for deployment).",
+)
+@click.option("--dry-run", is_flag=True, help="Show the key object; send nothing.")
+@click.pass_obj
+def perso_create_key_object(
+    app: AppContext,
+    slot: str,
+    algorithm: str,
+    role: str,
+    contact: str,
+    contactless: str,
+    rsa_crt: bool,
+    default_keys: bool,
+    dry_run: bool,
+) -> None:
+    """Add a key object for one (slot, algorithm) pair, with the role you choose.
+
+    A key object is permanent: it cannot be changed or deleted, and a finalized card
+    refuses new ones. A slot can hold one object per algorithm, so a slot whose key
+    cannot sign gets a signing key by adding an object for another algorithm.
+    """
+    ref = int(slot, 16)
+    slot = f"{ref:02X}"
+    mech = _resolve_asym_mech(algorithm)
+    try:
+        keyimport.validate_slot_mechanism(ref, mech)
+        role_bits = prof_mod.parse_role(role.replace("-", "_"))
+        contact_mode = prof_mod.parse_mode(contact)
+        contactless_mode = prof_mod.parse_mode(contactless)
+    except CryptnoxError as exc:
+        raise click.BadParameter(str(exc)) from exc
+    if not role_bits:
+        raise click.BadParameter("give at least one role", param_hint="--role")
+    if role_bits & preperso_mod.ROLE_SIGN and role_bits & preperso_mod.ROLE_KEY_ESTABLISH:
+        raise click.BadParameter(
+            "the applet refuses a key object with both SIGN and KEY_ESTABLISH",
+            param_hint="--role",
+        )
+    if rsa_crt and not keyimport.rsa_modulus_len(mech):
+        raise click.BadParameter("applies to RSA algorithms only", param_hint="--rsa-crt")
+    attrs = preperso_mod.ATTR_IMPORTABLE | (preperso_mod.ATTR_RSA_CRT if rsa_crt else 0)
+    alg = algorithm.upper()
+    payload: dict[str, object] = {
+        "slot": slot,
+        "algorithm": alg,
+        "roles": inventory_mod.role_names(role_bits),
+        "mode_contact": inventory_mod.describe_mode(contact_mode),
+        "mode_contactless": inventory_mod.describe_mode(contactless_mode),
+        "attributes": inventory_mod.attribute_names(attrs),
+    }
+    planning = dry_run or app.dry_run
+    keys = None if planning else resolve_scp03_keys(app.redactor, default_keys=default_keys)
+    with app.open_session() as session:
+        status = inventory_mod.read_status(_select(session))
+        if status is not None and status.secured:
+            raise CryptnoxError(_FINALIZED_NO_NEW_KEYS)
+        probe = session.transmit(keyimport.probe_apdu(ref, mech), context=f"probe {slot}")
+        if probe.sw != 0x6A86:
+            raise CryptnoxError(
+                f"slot {slot} already has a key object for {alg}, and a key object cannot be "
+                "changed. Choose another algorithm for the new object."
+            )
+        if not planning:
+            app.out.warn(
+                f"this adds a key object for {alg} to slot {slot} for good: it cannot be "
+                "changed or deleted later."
+            )
+            if ref in _SIGNING_SLOTS and not preperso_mod.key_signs(role_bits, mech):
+                app.out.warn(
+                    f"a key with the role {prof_mod.role_name(role_bits)} cannot sign, which "
+                    f"slot {slot} is normally used for."
+                )
+            if not app.yes and not click.confirm("Create the key object?", default=False):
+                raise click.Abort()
+            op = preperso_mod.create_key(
+                ref, contact_mode, contactless_mode, mech, role_bits, attrs
+            )
+            _send_create_key(PivAdmin(session), keys, op, slot)
+
+    payload["created"] = not planning
+    next_step = f"{CLI_NAME} piv perso generate-key --slot {slot} --algorithm {alg}"
+    roles_text = "+".join(inventory_mod.role_names(role_bits))
+
+    def human(c: Console) -> None:
+        verb = "[bold]DRY RUN[/bold] - would create" if planning else "[green]Created[/green]"
+        c.print(f"{verb} key object {slot} {alg}: role {roles_text}")
+        c.print(f"  Contact: {payload['mode_contact']}; contactless: {payload['mode_contactless']}")
+        if planning:
+            c.print("\n  [dim]Nothing was sent to the card.[/dim]")
+        else:
+            c.print(f"  Next: {next_step}")
+
+    app.out.result(payload, human)
 
 
 @perso.command("import-key")
@@ -2452,6 +2719,17 @@ def perso_self_sign_cert(
     )
 
 
+def _certificate_mechanism(cert_der: bytes) -> int | None:
+    """The key mechanism a certificate is for, or ``None`` when this applet has none."""
+    from cryptography import x509
+    from cryptography.exceptions import UnsupportedAlgorithm
+
+    try:
+        return _mechanism_for_public_key(x509.load_der_x509_certificate(cert_der).public_key())
+    except (CryptnoxError, ValueError, UnsupportedAlgorithm):
+        return None
+
+
 def _mechanism_for_public_key(public_key) -> int:  # noqa: ANN001
     """The applet mechanism a certificate's public key implies."""
     from cryptography.hazmat.primitives.asymmetric import ec, rsa
@@ -2790,6 +3068,10 @@ class QuickstartOptions:
     include_preperso: bool
     #: the pre-perso profile creates the (slot, mechanism) key object itself
     profile_provides_key_object: bool = True
+    #: the key object quickstart would create (profile or create step) has the SIGN role
+    new_object_can_sign: bool = True
+    new_object_roles: str = "SIGN+AUTHENTICATE"
+    profile_name: str = "cryptnox-default"
 
 
 @dataclass(frozen=True)
@@ -2803,6 +3085,16 @@ class CardFacts:
     cert_present: bool
     chuid_present: bool
     ccc_present: bool
+    #: the existing (slot, mechanism) key object can sign; None when unknown
+    key_object_can_sign: bool | None = None
+    #: CLI names of the slot's other key objects that can sign
+    signing_siblings: tuple[str, ...] = ()
+    applet_secured: bool = False
+    #: algorithm of a slot certificate that is not for the requested key ("unrecognised")
+    other_cert: str | None = None
+    #: that certificate's key cannot sign or is not on the card, so replacing it loses nothing
+    other_cert_replaceable: bool = False
+    listing_withheld: bool = False
 
 
 @dataclass(frozen=True)
@@ -2812,16 +3104,79 @@ class PlannedStep:
     reason: str | None = None
 
 
+def _refuse_unsignable_certificate(
+    facts: CardFacts, opts: QuickstartOptions, certificate_runs: bool
+) -> None:
+    """Stop before any write when the certificate step is bound to end in 6985."""
+    if not certificate_runs:
+        return
+    slot = f"{opts.slot:02X}"
+    if not facts.structure_present or not facts.key_object_present:
+        if not opts.new_object_can_sign:
+            raise CryptnoxError(
+                f"the key object quickstart would create on slot {slot} (roles from profile "
+                f"'{opts.profile_name}') cannot sign, so the certificate step would fail after "
+                "a permanent change to the card. Use --profile ssh or ms-logon, a SIGN-capable "
+                "slot such as 9C, or --cert-mode none."
+            )
+    elif facts.key_object_can_sign is False:
+        text = f"the key in slot {slot} cannot sign, so the certificate step would fail."
+        if facts.signing_siblings:
+            name = facts.signing_siblings[0]
+            raise CryptnoxError(
+                f"{text} Slot {slot} also holds a {name} key that can sign: "
+                f"pass --algorithm {name}."
+            )
+        options = ["--cert-mode none"]
+        if opts.slot != pivc.KEYREF_DIGITAL_SIGNATURE:
+            options.insert(0, "slot 9C")
+        if not facts.applet_secured:
+            options.append(
+                "a signing key object for another algorithm, added with "
+                f"`{CLI_NAME} piv perso create-key-object`"
+            )
+        raise CryptnoxError(f"{text} Use {', or '.join(options)}.")
+
+
+def _refuse_other_certificate(slot: str, other: str) -> None:
+    if other == "unrecognised":
+        raise CryptnoxError(
+            f"slot {slot} holds a certificate quickstart cannot match to a key it may "
+            "replace, and the certificate step would overwrite it. Use --cert-mode none, or "
+            "replace it yourself with `piv perso import-cert`."
+        )
+    raise CryptnoxError(
+        f"slot {slot}'s certificate is for its {other} key, and quickstart's certificate step "
+        f"would replace it. Pass --algorithm {other} to work on that key, or use "
+        "--cert-mode none."
+    )
+
+
 def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedStep]:
     """Pure planner: which steps run for this card state. Raises when the card
     needs pre-personalization and the caller did not opt into it."""
     steps: list[PlannedStep] = []
+    slot = f"{opts.slot:02X}"
+    # A present certificate marks the slot as done: never silently replace a
+    # certified key. Without a certificate the key is regenerated (nothing
+    # references it yet).
+    fresh_slot = not facts.cert_present
+    certificate_runs = opts.cert_mode != "none" and fresh_slot
+    if (not facts.structure_present or not facts.key_object_present) and facts.applet_secured:
+        raise CryptnoxError(
+            f"quickstart would add a key object to slot {slot}, but the applet is "
+            "finalized (SECURED), so none can be added. Choose an algorithm the slot already "
+            "has a key for."
+        )
+    if certificate_runs and facts.other_cert and not facts.other_cert_replaceable:
+        _refuse_other_certificate(slot, facts.other_cert)
+    _refuse_unsignable_certificate(facts, opts, certificate_runs)
     if not facts.structure_present:
         if not opts.include_preperso:
             raise CryptnoxError(
                 "the PIV structure (containers, verifiers, key objects) is missing on "
                 f"this card. Lay it down first:\n  {CLI_NAME} factory piv preperso "
-                "load-config --profile cryptnox-default\nor re-run quickstart with "
+                f"load-config --profile {opts.profile_name}\nor re-run quickstart with "
                 "--include-preperso (dev/eval cards)."
             )
         steps.append(PlannedStep("preperso-load-config", True, "structure missing"))
@@ -2837,13 +3192,18 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
         # A structure can only grow: load-config over it ends in 6E27 (object exists),
         # so the missing (slot, mechanism) object is added on its own.
         if not opts.include_preperso:
-            raise CryptnoxError(
-                f"this card has a PIV structure, but no key object for slot {opts.slot:02X} "
-                "with this mechanism. Add one with\n  "
-                f"{CLI_NAME} piv perso generate-key --slot {opts.slot:02X} --algorithm <name> "
-                "--create-key-object\nor re-run quickstart with --include-preperso (dev/eval "
-                "cards), which creates the object and leaves the rest of the structure alone."
+            alg = _ALGORITHM_NAMES.get(opts.mechanism, "<name>")
+            text = (
+                f"this card has a PIV structure, but no key object for slot {slot} with this "
+                f"mechanism. Add one (permanent) with\n  {CLI_NAME} piv perso create-key-object "
+                f"--slot {slot} --algorithm {alg} --role {opts.new_object_roles}\nor re-run "
+                "quickstart with --include-preperso (dev/eval cards), which creates it with the "
+                f"role from profile '{opts.profile_name}' and leaves the rest of the structure "
+                "alone."
             )
+            if not opts.new_object_can_sign and opts.slot in _SIGNING_SLOTS:
+                text += " That role cannot sign; for a signing key use --role SIGN+AUTHENTICATE."
+            raise CryptnoxError(text)
         steps.append(PlannedStep("preperso-load-config", False, "structure present"))
         steps.append(
             PlannedStep("create-key-object", True, "no key object for this slot and mechanism")
@@ -2865,10 +3225,6 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
             None if not facts.puk_configured else "PUK already set",
         )
     )
-    # A present certificate marks the slot as done: never silently replace a
-    # certified key. Without a certificate the key is regenerated (nothing
-    # references it yet).
-    fresh_slot = not facts.cert_present
     steps.append(
         PlannedStep(
             "generate-key",
@@ -2879,9 +3235,10 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
     if opts.cert_mode == "none":
         steps.append(PlannedStep("certificate", False, "--cert-mode none"))
     else:
-        steps.append(
-            PlannedStep("certificate", fresh_slot, None if fresh_slot else "already present")
-        )
+        reason = None if fresh_slot else "already present"
+        if fresh_slot and facts.other_cert:
+            reason = f"replaces the slot's {facts.other_cert} certificate"
+        steps.append(PlannedStep("certificate", fresh_slot, reason))
     steps.append(
         PlannedStep(
             "write-chuid",
@@ -2969,19 +3326,45 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
         verifiers = inventory_mod.read_verifiers(piv)
     pin_configured = bool(st.piv_pin and st.piv_pin.configured)
     puk_configured = bool(st.piv_puk and st.piv_puk.configured)
+    key_object_can_sign: bool | None = None
+    signing_siblings: tuple[str, ...] = ()
     if key_objects is None:
         probe = session.transmit(keyimport.probe_apdu(ref, mech), context="probe quickstart")
         key_object_present = probe.sw != 0x6A86
         structure_present = key_object_present or pin_configured or puk_configured
     else:
-        key_object_present = any(k.ref == ref and k.mechanism == mech for k in key_objects)
+        match = next((k for k in key_objects if k.ref == ref and k.mechanism == mech), None)
+        key_object_present = match is not None
+        if match is not None:
+            key_object_can_sign = preperso_mod.key_signs(match.role, match.mechanism)
+        signing_siblings = tuple(_signing_siblings(key_objects, ref, mech))
         structure_present = bool(key_objects) or bool(verifiers)
     # "Certificate present" means a PARSEABLE certificate: a created-but-unused
     # container is zero-length per SP 800-73 4.1.1, and factory containers can
     # hold non-certificate placeholder data - neither should stop quickstart
     # from provisioning the slot.
     obj_name = SLOT_CERT_OBJECT.get(ref)
-    cert_present = obj_name is not None and _read_cert_der(piv, obj_name) is not None
+    cert_der = _read_cert_der(piv, obj_name) if obj_name is not None else None
+    cert_present = False
+    other_cert: str | None = None
+    other_cert_replaceable = False
+    if cert_der is not None:
+        cert_mech = _certificate_mechanism(cert_der)
+        if cert_mech == mech and key_object_present:
+            cert_present = True
+        else:
+            other_cert = "unrecognised"
+            if cert_mech is not None:
+                other_cert = _ALGORITHM_NAMES.get(cert_mech, other_cert)
+            if cert_mech == mech:  # its key is not on the card
+                other_cert_replaceable = True
+            elif cert_mech is not None and key_objects is not None:
+                cert_key = next(
+                    (k for k in key_objects if k.ref == ref and k.mechanism == cert_mech), None
+                )
+                other_cert_replaceable = cert_key is None or not preperso_mod.key_signs(
+                    cert_key.role, cert_key.mechanism
+                )
     objs = st.piv_objects or {}
     facts = CardFacts(
         pin_configured=pin_configured,
@@ -2991,6 +3374,12 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
         cert_present=cert_present,
         chuid_present=bool(objs.get("chuid")),
         ccc_present=bool(objs.get("ccc")),
+        key_object_can_sign=key_object_can_sign,
+        signing_siblings=signing_siblings,
+        applet_secured=bool(st.piv_secured),
+        other_cert=other_cert,
+        other_cert_replaceable=other_cert_replaceable,
+        listing_withheld=key_objects is None,
     )
     return facts, st.piv.label
 
@@ -3110,15 +3499,6 @@ def quickstart(
         )
 
     alg = algorithm.upper()
-    if alg.startswith("RSA") and not windows_rsa_shape:
-        raise click.BadParameter(
-            "on-card RSA needs a slot that has an RSA key object, and among the built-in "
-            "profiles only ms-logon's 9A has one - so this combination would fail on the "
-            "card. Use `--profile ms-logon --slot 9A`, or generate directly with `piv perso "
-            "generate-key` if this card is known to have the object, or import an off-card "
-            "key with `piv perso import-key`.",
-            param_hint="--algorithm",
-        )
 
     mech = perso_mod.ALGORITHMS.get(alg)
     if mech is None or mech not in pivc.SUPPORTED_ALGORITHMS:
@@ -3144,13 +3524,63 @@ def quickstart(
 
     with app.open_session() as session:
         facts, state_before = _collect_quickstart_facts(session, ref, mech)
+        if alg.startswith("RSA") and not windows_rsa_shape and not facts.key_object_present:
+            missing = f"this card has no {alg} key object on slot {ref:02X}"
+            if facts.applet_secured:
+                advice = (
+                    ", and the applet is finalized (SECURED), so none can be added. Choose an "
+                    "algorithm the slot already has a key for."
+                )
+            elif not facts.structure_present:
+                advice = (
+                    " and no PIV structure yet. Use `--profile ms-logon --slot 9A "
+                    "--include-preperso`, whose profile creates an RSA2048 object on 9A, or lay "
+                    "down a structure first with `factory piv preperso load-config`."
+                )
+            else:
+                advice = (
+                    ", and among the built-in profiles only ms-logon's 9A creates one. Use "
+                    f"`--profile ms-logon --slot 9A`, add the object with `{CLI_NAME} piv perso "
+                    "create-key-object`, or import an off-card key with `piv perso import-key`."
+                )
+            raise click.BadParameter(missing + advice, param_hint="--algorithm")
         provided = any(k.ref == ref and k.mechanism == mech for k in profile.keys)
+        _, _, new_role, new_attrs = _key_template(ref, mech, profile)
+        new_object_can_sign = preperso_mod.key_signs(new_role, mech)
         steps = _plan_quickstart(
             facts,
             QuickstartOptions(
-                ref, mech, cert_mode, include_preperso, profile_provides_key_object=provided
+                ref,
+                mech,
+                cert_mode,
+                include_preperso,
+                profile_provides_key_object=provided,
+                new_object_can_sign=new_object_can_sign,
+                new_object_roles=prof_mod.role_name(new_role),
+                profile_name=profile.name,
             ),
         )
+        if steps[0].run:
+            piv_auth_warning = profile.piv_auth_warning()
+            if piv_auth_warning:
+                app.out.warn(piv_auth_warning)
+        by_step = {s.step: s for s in steps}
+        if by_step["certificate"].run and facts.other_cert:
+            app.out.warn(
+                f"the certificate step replaces the {facts.other_cert} certificate now in "
+                f"slot {ref:02X}."
+            )
+        if by_step["certificate"].run and facts.listing_withheld:
+            app.out.warn(
+                "this card withholds its key listing, so quickstart cannot check before "
+                f"writing that the key in slot {ref:02X} can sign."
+            )
+        if steps[1].run and not new_object_can_sign:
+            app.out.warn(
+                f"the key object quickstart adds to slot {ref:02X} gets the role "
+                f"{prof_mod.role_name(new_role)} from profile '{profile.name}' and cannot sign; "
+                "it is permanent."
+            )
 
         if dry_run or app.dry_run:
             planned = [
@@ -3270,7 +3700,17 @@ def quickstart(
                         raise StatusWordError(resp.sw1, resp.sw2, context="SET PUK")
                     record(planned_step.step, "ok", sw=resp.sw_hex())
                 elif planned_step.step == "create-key-object":
-                    _create_key_object(app, adm, keys, ref, mech, False, slot)
+                    _create_key_object(
+                        app,
+                        adm,
+                        keys,
+                        ref,
+                        mech,
+                        bool(new_attrs & preperso_mod.ATTR_RSA_CRT),
+                        slot,
+                        profile=profile,
+                        confirmed=True,
+                    )
                     record(planned_step.step, "ok", detail={"slot": slot, "algorithm": alg})
                 elif planned_step.step == "generate-key":
                     generated = _generate_key_on_card(

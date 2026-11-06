@@ -102,6 +102,23 @@ class PivProfile:
     containers: list[ContainerDef] = field(default_factory=list)
     keys: list[KeyDef] = field(default_factory=list)
 
+    def can_sign(self, ref: int) -> bool:
+        """Whether any key object this profile creates on ``ref`` can sign."""
+        return any(k.ref == ref and pp.key_signs(k.role, k.mechanism) for k in self.keys)
+
+    def piv_auth_warning(self) -> str | None:
+        """The warning for a profile whose 9A key cannot sign, else ``None``."""
+        if not any(k.ref == c.KEYREF_PIV_AUTH for k in self.keys):
+            return None
+        if self.can_sign(c.KEYREF_PIV_AUTH):
+            return None
+        return (
+            f"profile '{self.name}' gives slot 9A a key that can authenticate but not sign. "
+            "macOS login, SSH, TLS client authentication and Windows logon sign with 9A; "
+            "for those, use the ssh or ms-logon profile. A key's role cannot be changed "
+            "once written."
+        )
+
     # -- compile ------------------------------------------------------------ #
     def build_ops(self) -> list[tuple[str, bytes]]:
         """Ordered (label, op-bytes): containers, PIN, PUK, then keys."""
@@ -235,7 +252,7 @@ class PivProfile:
                     "ref": f"{k.ref:02X}",
                     "name": k.name,
                     "mechanism": _REV_MECH.get(k.mechanism, hex(k.mechanism)),
-                    "role": _role_name(k.role),
+                    "role": role_name(k.role),
                     "contact": mode_name(k.contact),
                     "contactless": mode_name(k.contactless),
                     "attributes": [n for n, x in ATTRS.items() if k.attributes & x],
@@ -248,7 +265,7 @@ class PivProfile:
         return yaml.safe_dump(self.to_dict(), sort_keys=False)
 
 
-def _mode(v: Any) -> int:
+def parse_mode(v: Any) -> int:
     if isinstance(v, int):
         return v
     key = str(v).upper()
@@ -257,7 +274,7 @@ def _mode(v: Any) -> int:
     return MODES[key]
 
 
-def _role(v: Any) -> int:
+def parse_role(v: Any) -> int:
     """Parse a key role: one name, a '+'-combined string ('SIGN+AUTHENTICATE'),
     a list of names, or a raw int. The applet tests roles as a bitmask."""
     if isinstance(v, int):
@@ -272,7 +289,7 @@ def _role(v: Any) -> int:
     return out
 
 
-def _role_name(v: int) -> str:
+def role_name(v: int) -> str:
     exact = next((n for n, x in ROLES.items() if x == v), None)
     if exact:
         return exact
@@ -317,8 +334,8 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
                 ContainerDef(
                     bytes.fromhex(str(ct["oid"])),
                     str(ct.get("name", "")),
-                    _mode(ct["contact"]),
-                    _mode(ct["contactless"]),
+                    parse_mode(ct["contact"]),
+                    parse_mode(ct["contactless"]),
                 )
                 for ct in d.get("containers", [])
             ],
@@ -327,9 +344,9 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
                     int(str(k["ref"]), 16),
                     str(k.get("name", "")),
                     MECHANISMS[str(k["mechanism"]).upper()],
-                    _role(k["role"]),
-                    _mode(k["contact"]),
-                    _mode(k["contactless"]),
+                    parse_role(k["role"]),
+                    parse_mode(k["contact"]),
+                    parse_mode(k["contactless"]),
                     _attrs(k.get("attributes")),
                     admin_key=int(str(k["admin_key"]), 16) if k.get("admin_key") else None,
                 )

@@ -40,6 +40,7 @@ PLANS_OWN = frozenset(
         "piv admin delete-factory-keyset",
         "piv admin keys",
         "piv admin rotate-keys",
+        "piv perso create-key-object",
         "piv perso import-key",
         "piv perso import-p12",
         "piv quickstart",

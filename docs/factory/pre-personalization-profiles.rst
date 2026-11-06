@@ -15,6 +15,10 @@ Built-in profiles
    Byte-exact to the applet's own reference profile: an AES-256 admin key,
    ten containers (CHUID/CCC/certs/security-object/fingerprints/facial/printed),
    and five ECC-P256 key slots (9A/9C/9D/9E, plus the AES-only admin key 9B).
+   Its 9A key can authenticate but not sign, and macOS login, SSH, TLS client
+   authentication and Windows logon all sign with 9A. ``load-config`` and
+   ``piv quickstart --include-preperso`` warn about this for any profile whose
+   9A cannot sign; for those uses pick ``ssh`` or ``ms-logon``.
 
 ``developer`` / ``npivp-lab``
    The same structure as ``cryptnox-default`` — only the ``mode`` label

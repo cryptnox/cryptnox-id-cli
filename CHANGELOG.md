@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   completed authentication, with a count per security domain, also after a
   failed operation. The JSON `relay` object lists them as
   `open_initialize_updates`.
+- `piv perso create-key-object`: add a key object for one slot and algorithm
+  with the role and access modes given, for example a signing 9A on a card
+  whose 9A key cannot sign. Asks for confirmation; `--dry-run` sends nothing.
+  Refuses a finalized applet, and SIGN together with KEY_ESTABLISH, which the
+  applet refuses.
 
 ### Changed
 
@@ -32,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now `pin_limits`.
 - `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
 - `remote --default-keys` help and warnings updated for the current service.
+- A `6985` to `generate-csr`, `self-sign-cert` or `smoke-test` names the key's
+  role and points at a key on the slot that can sign, or at how to add one,
+  instead of suggesting a wrong lifecycle state.
+- `generate-key`, `import-key` and `import-p12 --create-key-object` name the
+  role they copy, and ask first when it gives 9A or 9C a key that cannot sign.
+- `load-config` and `quickstart --include-preperso` warn when the profile's 9A
+  key cannot sign.
+- `quickstart` refuses, before writing anything, a certificate step that would
+  fail because the key cannot sign (on cards that list their key objects);
+  creates a missing key object with the profile's role; accepts
+  `--algorithm RSA*` where the card already has that key object; and counts a
+  slot's certificate only for the key it was issued to, refusing to overwrite
+  one it cannot account for.
 
 ### Removed
 
@@ -39,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `piv perso generate-key` warns that it destroys the slot's key only when the
+  slot's certificate is for a key of the same algorithm.
+- A signature refused because the key object holds no key yet (`6983`) says
+  so, instead of suggesting a blocked PIN.
+- Creating a key object on a finalized applet (`--create-key-object`,
+  `create-key-object`) says the applet is finalized; the applet answers `6986`
+  there, which was reported as a bare status word.
 - On a contactless reader, `piv status`, `piv pin status`, `piv validate`
   and the commands that present the PIN say the PIN is not usable over this
   interface (the card answers 6982) instead of "not set" or the generic
