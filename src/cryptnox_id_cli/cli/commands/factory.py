@@ -268,9 +268,9 @@ def load_config(
     profile = _load_profile(file_, profile_name)
     ops = profile.build_ops()
     payload_bytes = profile.build_payload()
-    piv_auth_warning = profile.piv_auth_warning()
-    if piv_auth_warning:
-        app.out.warn(piv_auth_warning)
+    for warning in (profile.vci_warning(), profile.piv_auth_warning()):
+        if warning:
+            app.out.warn(warning)
 
     if dry_run or app.dry_run:
         result = {

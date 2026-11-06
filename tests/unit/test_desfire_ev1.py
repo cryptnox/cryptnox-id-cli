@@ -65,8 +65,10 @@ def test_session_key_for_des_and_2k3des():
 class Card:
     """The card's side of AuthenticateISO, FormatPICC and ChangeKey (EV1 scheme)."""
 
-    def __init__(self, key: bytes) -> None:
+    def __init__(self, key: bytes, *, rule: str = "spec", mac_settings: bool = True) -> None:
         self.key = key
+        self.rule = rule
+        self.mac_settings = mac_settings
         self.rnd_b = os.urandom(8)
         self.session: bytes | None = None
         self.iv = bytes(8)
@@ -83,9 +85,20 @@ class Card:
             rnd_a, rnd_b_rot = plain[:8], plain[8:]
             if rnd_b_rot != _rol(self.rnd_b):
                 return 0xAE, b""
-            self.session = ev1.session_key(self.key, rnd_a, self.rnd_b)
+            if self.rule == "3des":
+                self.session = rnd_a[:4] + self.rnd_b[:4] + rnd_a[4:8] + self.rnd_b[4:8]
+            else:
+                self.session = ev1.session_key(self.key, rnd_a, self.rnd_b)
             self.iv = bytes(8)
             return df.STATUS_OK, _cbc(self.key, data[-8:], _rol(rnd_a), True)
+        if cmd == df.CMD_GET_KEY_SETTINGS:
+            self.iv = ev1.cmac(self.session, self.iv, bytes([cmd]))
+            data = b"\x0f\x01"
+            if not self.mac_settings:
+                return df.STATUS_OK, data
+            mac = ev1.cmac(self.session, self.iv, data + bytes([df.STATUS_OK]))
+            self.iv = mac
+            return df.STATUS_OK, data + mac
         if cmd == df.CMD_FORMAT_PICC:
             assert self.session is not None
             self.iv = ev1.cmac(self.session, self.iv, bytes([cmd]))
@@ -113,6 +126,37 @@ def test_authenticate_and_format(key):
     assert card.formatted
 
 
+def test_the_card_s_session_key_form_wins_over_the_host_s_guess():
+    """Identical halves on the host, but the card derives the 2K3DES form."""
+    card = Card(bytes(16), rule="3des")
+    session = ev1.authenticate_iso(card, 0, bytes(16))
+    assert session.key == card.session
+    ev1.format_picc_iso(card, session)
+    assert card.formatted
+
+
+def test_no_session_key_form_matches_and_nothing_is_changed():
+    card = Card(bytes(16))
+    original = card.raw_command
+
+    def corrupt(cmd, data=b"", *, context=None):
+        status, out = original(cmd, data, context=context)
+        if cmd == df.CMD_GET_KEY_SETTINGS:
+            out = out[:-1] + bytes([out[-1] ^ 1])
+        return status, out
+
+    card.raw_command = corrupt
+    with pytest.raises(CryptnoxError, match="nothing was changed"):
+        ev1.authenticate_iso(card, 0, bytes(16))
+    assert not card.formatted
+
+
+def test_a_card_without_a_settings_mac_keeps_the_host_s_form():
+    card = Card(bytes(16), mac_settings=False)
+    session = ev1.authenticate_iso(card, 0, bytes(16))
+    assert session.key == card.session
+
+
 def test_a_wrong_key_is_refused_by_the_card():
     card = Card(bytes(16))
     with pytest.raises(df.DesfireError):
@@ -137,6 +181,8 @@ def test_change_picc_key_to_aes():
 def test_change_key_crc_covers_the_header():
     card = Card(bytes(16))
     session = ev1.authenticate_iso(card, 0, bytes(16))
+    session.iv = bytes(8)
+    card.iv = bytes(8)
     header = bytes([df.CMD_CHANGE_KEY, 0x80])
     body = bytes(16) + b"\x00"
     plain = body + desfire_crc32(header + body) + bytes(3)
@@ -160,7 +206,14 @@ class _Session:
 
 class _Dtx:
     key_type = 0x00
+    hw_major = 0x42
+    sw_major = 0x02
     card: Card | None = None
+
+    def get_version(self):
+        hw = bytes([0x04, 0x01, 0x01, self.hw_major, 0x00, 0x18, 0x05])
+        sw = bytes([0x04, 0x01, 0x01, self.sw_major, 0x00, 0x18, 0x05])
+        return df.parse_version(hw + sw + bytes(14))
 
     def __init__(self, session) -> None:
         pass
@@ -251,3 +304,31 @@ def test_picc_to_aes_refuses_an_aes_picc_key(wired):
 def test_picc_to_aes_needs_one_new_key(extra):
     result = _run("mifare", "keys", "picc-to-aes", "--zero-key", *extra)
     assert result.exit_code == 2
+
+
+def test_picc_to_aes_refuses_ev1_before_asking(wired, monkeypatch):
+    card = Card(bytes(16))
+    wired(0x00, card)
+    monkeypatch.setattr(_Dtx, "hw_major", 0x01)
+    monkeypatch.setattr(_Dtx, "sw_major", 0x01)
+    result = _run("mifare", "keys", "picc-to-aes", "--zero-key", "--new-zero-key")
+    assert result.exit_code != 0 and "EV1" in result.output
+    assert card.new_key is None and "Replace the PICC master key?" not in result.output
+
+
+@pytest.mark.parametrize("version", ["256", "-1"])
+def test_picc_to_aes_key_version_is_one_byte(version):
+    result = _run(
+        "mifare", "keys", "picc-to-aes", "--zero-key", "--new-zero-key", "--key-version", version
+    )
+    assert result.exit_code == 2
+
+
+def test_the_iso_handshake_is_redacted_in_the_transcript():
+    from cryptnox_id_cli.secrets.redaction import Redactor
+
+    r = Redactor()
+    token = bytes(range(16))
+    assert token.hex().upper() not in r.redact_command(b"\x90\xaf\x00\x00\x10" + token + b"\x00")
+    enc_b = bytes(range(8))
+    assert enc_b.hex().upper() not in r.redact_response(enc_b, 0x91, 0xAF, ins=0x1A)

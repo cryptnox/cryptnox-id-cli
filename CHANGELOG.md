@@ -38,8 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
   `0x61`), and `SM_PIN` (`0x41`) is new. The built-in profiles write the same
-  bytes as before, now named `SM` and `SM_PIN`; a custom profile that used
-  `VCI` for `0x40` should say `SM`.
+  bytes as before, now named `SM` and `SM_PIN`. Files written by 1.1
+  (`init-config`, the docs example) use `VCI_PIN` for `0x41` and must say
+  `SM_PIN` instead; `load-config` warns when a file uses `VCI` or `VCI_PIN`.
 - `mifare sdm setup` and `sdm read` refuse a card whose DESFire is EV1 or EV2,
   and `mifare version` names the generation.
 - `mifare app delete` warns that the card does not return the deleted
@@ -50,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   card without it (production cards with FIDO2), pointing at FIDO2
   attestation; JSON gains `reason`. `info` and `doctor` say the same.
 - `piv pin unblock` help says it also works on a PIN that is not blocked.
+- The APDU transcript withholds the DESFire authentication tokens and the card's
+  AuthenticateISO challenge.
 - `factory piv preperso inspect-defaults` reports the profile retry cap (10)
   and the applet's retry limit (15) separately; the JSON key `pin_fips` is
   now `pin_limits`.

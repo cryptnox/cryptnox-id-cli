@@ -100,8 +100,10 @@ class DesfireFrameTooLargeError(CryptnoxError):
     exit_code = 2
 
 
-# NXP chips report EV1/EV2/EV3 as software major 0x01/0x12/0x33; the tri-card's EV2 reports 0x02.
-_GENERATIONS = {0x01: "EV1", 0x12: "EV2", 0x02: "EV2", 0x33: "EV3"}
+# Hardware major as NXP and Proxmark3 read it (the tri-card's EV2 is 0x42); the small software
+# major is the fallback.
+_GENERATIONS_HW = {0x01: "EV1", 0x12: "EV2", 0x22: "EV2", 0x42: "EV2", 0x33: "EV3"}
+_GENERATIONS_SW = {0x01: "EV1", 0x02: "EV2", 0x03: "EV3"}
 
 
 @dataclass
@@ -136,8 +138,8 @@ class DesfireVersion:
 
     @property
     def generation(self) -> str | None:
-        """EV1, EV2 or EV3 from the software version; ``None`` when not known."""
-        return _GENERATIONS.get(self.sw_major)
+        """EV1, EV2 or EV3 from the version numbers; ``None`` when not known."""
+        return _GENERATIONS_HW.get(self.hw_major) or _GENERATIONS_SW.get(self.sw_major)
 
     def to_dict(self) -> dict[str, object]:
         return {

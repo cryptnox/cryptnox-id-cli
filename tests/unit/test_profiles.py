@@ -115,3 +115,21 @@ def test_role_parsing_forms():
     assert profiles.parse_role(0x05) == 0x05
     with pytest.raises(profiles.ProfileError):
         profiles.parse_role("SIGN+NOPE")
+
+
+@pytest.mark.parametrize(
+    ("name", "byte"), [("SM", 0x40), ("SM_PIN", 0x41), ("VCI", 0x60), ("VCI_PIN", 0x61)]
+)
+def test_secure_messaging_mode_bytes(name, byte):
+    assert profiles.parse_mode(name) == byte
+
+
+def test_mode_names_are_one_to_one():
+    assert len(set(profiles.MODES.values())) == len(profiles.MODES)
+
+
+def test_a_profile_file_naming_vci_is_flagged():
+    text = profiles.builtin("cryptnox-default").to_yaml().replace("SM_PIN", "VCI_PIN")
+    flagged = profiles.from_yaml(text)
+    assert flagged.names_vci and "version 1.1" in flagged.vci_warning()
+    assert profiles.from_yaml(profiles.builtin("cryptnox-default").to_yaml()).vci_warning() is None

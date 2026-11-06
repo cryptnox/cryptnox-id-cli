@@ -102,6 +102,18 @@ class PivProfile:
     puk: PinPolicy
     containers: list[ContainerDef] = field(default_factory=list)
     keys: list[KeyDef] = field(default_factory=list)
+    #: the source file named a mode VCI or VCI_PIN, whose bytes changed after 1.1
+    names_vci: bool = False
+
+    def vci_warning(self) -> str | None:
+        """The warning for a profile file that uses the VCI mode names, else ``None``."""
+        if not self.names_vci:
+            return None
+        return (
+            f"profile '{self.name}' uses VCI or VCI_PIN, which mean the applet's VCI modes "
+            "(0x60, 0x61). Files written by version 1.1 used these names for 0x40 and 0x41, "
+            "now called SM and SM_PIN; change such a file before loading it."
+        )
 
     def can_sign(self, ref: int) -> bool:
         """Whether any key object this profile creates on ``ref`` can sign."""
@@ -356,6 +368,12 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
         )
     except (KeyError, ValueError) as exc:
         raise ProfileError(f"invalid profile: {exc}") from exc
+    modes = [
+        str(o.get(side, "")).upper()
+        for o in [*d.get("containers", []), *d.get("keys", [])]
+        for side in ("contact", "contactless")
+    ]
+    prof.names_vci = any(m in ("VCI", "VCI_PIN") for m in modes)
     return prof
 
 

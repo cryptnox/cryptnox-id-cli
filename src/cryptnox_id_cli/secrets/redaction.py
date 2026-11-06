@@ -20,6 +20,7 @@ SENSITIVE_INS: dict[int, str] = {
     0x24: "CHANGE REFERENCE DATA",
     0x2C: "RESET RETRY COUNTER",
     0x87: "GENERAL AUTHENTICATE",
+    0xAF: "DESFire additional frame (authentication token)",
     0xC4: "DESFire ChangeKey",
     0xD8: "PUT KEY",
     0xE2: "STORE DATA",
@@ -157,7 +158,8 @@ class Redactor:
     def redact_response_data(self, data: bytes | bytearray, *, ins: int) -> str:
         """Return a log-safe hex rendering of a response body alone (no SW appended)."""
         body = bytes(data)
-        if body and ins == 0x87:  # GENERAL AUTHENTICATE responses can carry key material
+        # Key material (GENERAL AUTHENTICATE), or E(RndB) that allows a DES key search (0x1A).
+        if body and ins in (0x87, 0x1A):
             return _MARK.format(n=len(body))
         return self.mask(body.hex().upper())
 

@@ -31,8 +31,8 @@ class _FakeSession:
         return False
 
 
-def _version(sw_major: int) -> df.DesfireVersion:
-    hw = bytes([0x04, 0x01, 0x01, 0x42, 0x00, 0x18, 0x05])
+def _version(sw_major: int, hw_major: int = 0x00) -> df.DesfireVersion:
+    hw = bytes([0x04, 0x01, 0x01, hw_major, 0x00, 0x18, 0x05])
     sw = bytes([0x04, 0x01, 0x01, sw_major, 0x00, 0x18, 0x05])
     return df.parse_version(hw + sw + bytes(7) + bytes(5) + b"\x01\x26")
 
@@ -253,7 +253,7 @@ def test_module_docstring_no_longer_claims_read_only():
     assert "read-only" not in (mifare_cmd.__doc__ or "")
 
 
-@pytest.mark.parametrize(("sw_major", "generation"), [(0x02, "EV2"), (0x12, "EV2"), (0x01, "EV1")])
+@pytest.mark.parametrize(("sw_major", "generation"), [(0x02, "EV2"), (0x01, "EV1")])
 @pytest.mark.parametrize("command", ["setup", "read"])
 def test_sdm_refuses_a_desfire_before_ev3(monkeypatch, sw_major, generation, command):
     _wire(monkeypatch)
@@ -269,7 +269,18 @@ def test_sdm_refuses_a_desfire_before_ev3(monkeypatch, sw_major, generation, com
     assert f"DESFire is {generation}" in result.output and "needs DESFire EV3" in result.output
 
 
-@pytest.mark.parametrize(("sw_major", "generation"), [(0x02, "EV2"), (0x33, "EV3"), (0x07, None)])
-def test_version_names_the_generation(sw_major, generation):
-    assert _version(sw_major).generation == generation
-    assert _version(sw_major).to_dict()["generation"] == generation
+@pytest.mark.parametrize(
+    ("hw_major", "sw_major", "generation"),
+    [
+        (0x42, 0x02, "EV2"),  # the tri-card
+        (0x12, 0x01, "EV2"),
+        (0x22, 0x02, "EV2"),
+        (0x33, 0x03, "EV3"),
+        (0x01, 0x01, "EV1"),
+        (0x00, 0x03, "EV3"),
+        (0x07, 0x07, None),
+    ],
+)
+def test_version_names_the_generation(hw_major, sw_major, generation):
+    assert _version(sw_major, hw_major).generation == generation
+    assert _version(sw_major, hw_major).to_dict()["generation"] == generation

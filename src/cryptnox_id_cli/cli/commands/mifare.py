@@ -630,7 +630,7 @@ def format_command(
     is_flag=True,
     help="Make the new AES key all-zero (publicly known; development cards only).",
 )
-@click.option("--key-version", default=0, show_default=True, type=int)
+@click.option("--key-version", default=0, show_default=True, type=click.IntRange(0, 255))
 @click.pass_obj
 def keys_picc_to_aes(
     app: AppContext,
@@ -653,6 +653,11 @@ def keys_picc_to_aes(
         app.out.warn("the new AES key is the publicly known all-zero key; anyone can use it.")
     with app.open_session() as session:
         dtx = DesfireTransport(session)
+        # The new key is confirmed with AuthenticateEV2First, which EV1 does not have.
+        if dtx.get_version().generation == "EV1":
+            raise CryptnoxError(
+                "this card's DESFire is EV1; picc-to-aes needs EV2 or later to use the new key."
+            )
         if _picc_key_type(dtx) != 0x00:
             raise CryptnoxError("the PICC master key is already AES.")
         app.out.warn(

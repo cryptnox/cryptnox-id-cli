@@ -18,6 +18,7 @@ from cryptnox_id_cli.applets.mifare.desfire import (
     CMD_ADDITIONAL_FRAME,
     CMD_CHANGE_KEY,
     CMD_FORMAT_PICC,
+    CMD_GET_KEY_SETTINGS,
     STATUS_ADDITIONAL_FRAME,
     STATUS_OK,
     DesfireError,
@@ -120,7 +121,37 @@ def authenticate_iso(
         raise CryptnoxError(
             "AuthenticateISO: the card's answer does not match; not the card's key."
         )
-    return Ev1Session(session_key(key, rnd_a, rnd_b))
+    return _confirmed_session(transport, key, rnd_a, rnd_b)
+
+
+def _confirmed_session(
+    transport: DesfireTransport, key: bytes, rnd_a: bytes, rnd_b: bytes
+) -> Ev1Session:
+    """The session key the card actually uses, settled by the MAC on GetKeySettings
+    before any command that changes the card."""
+    # Whether the card treats a key as single DES depends on bits the host may not see
+    # the same way (parity, key version), so both forms are tried against the card's MAC.
+    preferred = session_key(key, rnd_a, rnd_b)
+    other = rnd_a[:4] + rnd_b[:4] + rnd_a[4:8] + rnd_b[4:8]
+    if other == preferred:
+        half = rnd_a[:4] + rnd_b[:4]
+        other = half + half
+    command = bytes([CMD_GET_KEY_SETTINGS])
+    status, data = transport.raw_command(CMD_GET_KEY_SETTINGS, context="GetKeySettings")
+    if status != STATUS_OK:
+        raise DesfireError(status, "GetKeySettings")
+    if len(data) <= BLOCK:
+        return Ev1Session(preferred, cmac(preferred, bytes(BLOCK), command))
+    payload, mac = data[:-BLOCK], data[-BLOCK:]
+    for candidate in (preferred, other):
+        iv = cmac(candidate, bytes(BLOCK), command)
+        expected = cmac(candidate, iv, payload + bytes([status]))
+        if mac == expected:
+            return Ev1Session(candidate, expected)
+    raise CryptnoxError(
+        "AuthenticateISO: the card's MAC matches neither DES nor 2K3DES session key; "
+        "nothing was changed."
+    )
 
 
 def format_picc_iso(transport: DesfireTransport, session: Ev1Session) -> None:

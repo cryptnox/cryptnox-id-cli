@@ -72,3 +72,35 @@ def test_detector_points_a_fido2_card_at_fido2_attestation(mock_connection, fido
 
 def test_the_hint_names_fido2_attestation():
     assert "FIDO2 attestation" in genuine_cmd.FIDO2_ATTESTATION_HINT
+
+
+def test_a_contactless_reader_without_a_desfire_answer_is_still_contactless(mock_connection):
+    from cryptnox_id_cli.state.model import DesfireState
+
+    detector = StateDetector(CardSession(mock_connection("3B00", {}, [])))
+    st = CardState(fido=FidoState.PERSONALIZED, desfire=DesfireState.NO_ANSWER_CONTACTLESS)
+    detector._detect_genuineness(st)
+    assert st.genuine == GenuinenessState.NEEDS_CONTACT_READER
+    assert not any("FIDO2 attestation" in n for n in st.notes)
+
+
+def test_a_card_that_left_the_field_still_gets_an_answer(monkeypatch):
+    class _Gone:
+        reader_name = "ACS ACR39U ICC Reader 00 00"
+
+        @property
+        def atr(self):
+            raise RuntimeError("Failed to get status: The smart card has been removed")
+
+    @contextlib.contextmanager
+    def session(self):
+        yield _Gone()
+
+    def not_found(self):
+        raise AppletNotFoundError("not found")
+
+    monkeypatch.setattr(AppContext, "open_session", session)
+    monkeypatch.setattr(GenuinenessApplet, "select", not_found)
+    result = CliRunner().invoke(root, ["--json", "genuine", "info"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["reason"] == "not_on_card"

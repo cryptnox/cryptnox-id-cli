@@ -129,6 +129,9 @@ keys):
   condition (SP 800-73-4).
 - ``VCI_PIN``: ``VCI`` plus the PIN.
 
+Profile files written by version 1.1 use ``VCI`` and ``VCI_PIN`` for what is now
+``SM`` and ``SM_PIN``; ``load-config`` warns when a file uses either name.
+
 Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
 sessions, so anything marked ``SM``, ``SM_PIN``, ``VCI`` or ``VCI_PIN`` on an
 interface cannot be used there with them. In the built-in profiles that is the

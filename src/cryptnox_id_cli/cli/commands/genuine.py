@@ -74,7 +74,11 @@ FIDO2_ATTESTATION_HINT = (
 
 def _not_found(session) -> tuple[str, str]:  # noqa: ANN001
     """Why SELECT found no applet: the contactless interface, or a card without it."""
-    if is_contactless_interface(session.reader_name, session.atr):
+    try:
+        atr = session.atr
+    except Exception:  # noqa: BLE001 - a card that left the field still gets the answer
+        atr = None
+    if is_contactless_interface(session.reader_name, atr):
         return "contactless", "it is contact-only; use a contact reader"
     return "not_on_card", f"not on this card: {FIDO2_ATTESTATION_HINT}"
 

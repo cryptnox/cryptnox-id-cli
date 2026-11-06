@@ -848,3 +848,12 @@ def test_create_key_object_warns_about_a_9a_role_that_cannot_sign(monkeypatch, c
     )
     assert result.exit_code == 0, result.output
     assert "cannot sign" in result.output
+
+
+def test_load_config_warns_about_vci_names(tmp_path):
+    text = prof.builtin("cryptnox-default").to_yaml().replace("SM_PIN", "VCI_PIN")
+    path = tmp_path / "p.yaml"
+    path.write_text(text)
+    result = run(["factory", "piv", "preperso", "load-config", "--file", str(path), "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "version 1.1" in " ".join(result.output.split())
