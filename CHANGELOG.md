@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The package ships the text of the GNU GPL version 3, which the LGPL
+  incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
   `0x61`), and `SM_PIN` (`0x41`) is new. The built-in profiles write the same
   bytes as before, now named `SM` and `SM_PIN`; a custom profile that used
