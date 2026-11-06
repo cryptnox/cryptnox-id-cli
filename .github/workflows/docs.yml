@@ -1,6 +1,6 @@
 name: Build and deploy documentation
 permissions:
-  contents: write
+  contents: read
 
 on:
   push:
@@ -20,6 +20,8 @@ jobs:
   build-docs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      slug: ${{ steps.slug.outputs.slug }}
 
     steps:
       - name: Checkout code
@@ -71,9 +73,40 @@ jobs:
           sphinx-build -M latexpdf docs docs/_build
           cp docs/_build/latex/cryptnox-id-cli.pdf docs/_build/html/cryptnox-id-cli.pdf
 
+      - name: Read the version directory of this build
+        id: slug
+        run: echo "slug=$(python -c 'import runpy; print(runpy.run_path("docs/conf.py")["docs_version"])')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the site for the deploy job
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: site
+          path: docs/_build/html
+          include-hidden-files: true
+          retention-days: 1
+
+  # Only this job holds a write token; pull request runs never reach it.
+  deploy-docs:
+    needs: build-docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: Download the site
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: site
+          path: docs/_build/html
+
       # continue-on-error: the branch does not exist on the very first deploy
       - name: Fetch previously published versions
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         continue-on-error: true
         with:
@@ -84,9 +117,9 @@ jobs:
       # /vMAJ.MIN/ (docs_version in docs/conf.py), earlier /v*/ trees kept as published,
       # the site root redirecting to the version being built.
       - name: Assemble versioned site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          SLUG: ${{ needs.build-docs.outputs.slug }}
         run: |
-          SLUG=$(python -c 'import runpy; print(runpy.run_path("docs/conf.py")["docs_version"])')
           rm -rf docs/_site
           mkdir -p docs/_site
           for d in gh-pages-prev/v*/ ; do
@@ -97,7 +130,6 @@ jobs:
           printf '<meta http-equiv="refresh" content="0; url=./%s/">\n' "$SLUG" > docs/_site/index.html
 
       - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453  # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
