@@ -190,6 +190,8 @@ percentage that `coverage report` prints, which sits below line coverage alone.
 
 ## License
 
+Copyright (C) 2026 Cryptnox SA.
+
 `cryptnox-id-cli` is dual-licensed:
 
 - **LGPL-3.0** for open-source projects and proprietary projects that comply
