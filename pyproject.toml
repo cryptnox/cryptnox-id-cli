@@ -119,10 +119,13 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+# The `if __name__` guards cannot run under test, so counting their false arm as a
+# missed branch reports a gap no test can close.
+exclude_also = ["if __name__ == .__main__.:"]
 # NOTE: with branch = true, this gate compares the COMBINED statement-and-branch
 # percentage that `coverage report` prints - not line coverage alone. Today the
-# three numbers are 61.09% combined, 64.86% line and 44.91% branch, so reading
-# this as a line-coverage floor overstates the suite by nearly four points.
+# three numbers are 77.34% combined, 79.82% line and 67.74% branch, so reading
+# this as a line-coverage floor understates the branch gap by twelve points.
 # Raise it in the same commit as the tests that earn the increase, and never
 # lower it to make a change pass.
 fail_under = 61
