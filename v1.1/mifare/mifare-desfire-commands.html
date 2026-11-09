@@ -101,7 +101,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mifare-desfire-guide.html">Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Commands</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#inspection">Inspection</a></li>
@@ -152,8 +152,9 @@
   <section id="mifare-desfire-commands">
 <h1>MIFARE DESFire commands<a class="headerlink" href="#mifare-desfire-commands" title="Link to this heading"></a></h1>
 <p>Contactless MIFARE DESFire commands (DESFire-capable reader required). Keys
-are AES-128, supplied via <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (factory default of a new
-application) or <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> — never on the command line.</p>
+are AES-128, except a factory 2K3DES PICC master key for <code class="docutils literal notranslate"><span class="pre">format</span></code> and
+<code class="docutils literal notranslate"><span class="pre">keys</span> <span class="pre">picc-to-aes</span></code>, supplied via <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (factory default) or
+<code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code>, never on the command line.</p>
 <section id="inspection">
 <h2>Inspection<a class="headerlink" href="#inspection" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>mifare info           version + free memory + applications
@@ -211,10 +212,14 @@ mifare sdm read      read the file, decrypt the PICC mirror, verify the MAC
 </section>
 <section id="destructive">
 <h2>Destructive<a class="headerlink" href="#destructive" title="Link to this heading"></a></h2>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>mifare app delete    delete an application and every file in it — permanent
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>mifare app delete    delete an application and every file in it, permanently;
+                     the memory is freed only by mifare format
                      (confirmation required unless --yes)
-mifare format        FormatPICC: erase ALL applications (gated; AES PICC
-                     master key required)
+mifare format        FormatPICC: erase ALL applications (gated; the PICC
+                     master key, AES or 2K3DES)
+mifare keys picc-to-aes
+                     replace a 2K3DES PICC master key with an AES-128 key
+                     (confirmation required unless --yes; no way back)
 </pre></div>
 </div>
 </section>

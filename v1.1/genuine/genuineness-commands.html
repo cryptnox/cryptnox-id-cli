@@ -101,7 +101,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
 </ul>
@@ -148,8 +148,9 @@
 <h1>Genuineness commands<a class="headerlink" href="#genuineness-commands" title="Link to this heading"></a></h1>
 <p>All <code class="docutils literal notranslate"><span class="pre">genuine</span></code> commands are <strong>read-only</strong> and <strong>contact-only</strong> — the
 attestation applet does not answer over a contactless reader (SELECT returns
-6A82 there). What is checked, what deliberately is not, and how trust anchors
-work are covered in <a class="reference internal" href="genuineness-guide.html"><span class="doc">Genuineness guide</span></a>.</p>
+6A82 there). Production cards with FIDO2 do not carry the applet at all, and
+<code class="docutils literal notranslate"><span class="pre">genuine</span></code> says so on a contact reader. What is checked, what deliberately is
+not, and how trust anchors work are covered in <a class="reference internal" href="genuineness-guide.html"><span class="doc">Genuineness guide</span></a>.</p>
 <section id="inspection">
 <h2>Inspection<a class="headerlink" href="#inspection" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>genuine info      SELECT + GET INFO + GET CERT; reports present / personalized,

@@ -101,7 +101,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#inspect-read-only">Inspect (read-only)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#applications-and-files">Applications and files</a></li>
@@ -211,6 +211,10 @@ key; the CLI authenticates and sends a MAC-protected <code class="docutils liter
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>app<span class="w"> </span>delete<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--zero-key
 </pre></div>
 </div>
+<p>The card does not return the memory a deleted application used:
+<code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">free-memory</span></code> stays lower until the card is formatted with
+<code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">format</span></code> (see <a class="reference internal" href="#format-the-picc-destructive">Format the PICC (destructive)</a> below for the key it
+needs).</p>
 </section>
 <section id="value-files">
 <h2>Value files<a class="headerlink" href="#value-files" title="Link to this heading"></a></h2>
@@ -242,8 +246,9 @@ simply has no records yet.</p>
 <h2>Keys<a class="headerlink" href="#keys" title="Link to this heading"></a></h2>
 <p>DESFire AES keys come from <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> (the all-zero factory default of a
 new application) or <code class="docutils literal notranslate"><span class="pre">--key-env</span> <span class="pre">NAME</span></code> (hex in an environment variable) —
-never on the command line. Keys are AES-128; legacy DES/3DES is intentionally
-not supported.</p>
+never on the command line. Application keys are AES-128. The one 2K3DES key
+this tool uses is a factory PICC master key, for <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">format</span></code> and
+<code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">keys</span> <span class="pre">picc-to-aes</span></code>.</p>
 <p>Rotate a key (same-key change — authenticate with the key being changed):</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>change<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--key-no<span class="w"> </span><span class="m">0</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
 <span class="w">     </span>--new-key-env<span class="w"> </span>NEWKEY
@@ -266,7 +271,9 @@ master key.</p>
 <section id="secure-dynamic-messaging-sdm-sun">
 <h2>Secure Dynamic Messaging (SDM / SUN)<a class="headerlink" href="#secure-dynamic-messaging-sdm-sun" title="Link to this heading"></a></h2>
 <p>DESFire EV3 cards can mirror an encrypted UID + read counter and a MAC into a
-free-read file on every read — a self-authenticating NFC tag. The
+free-read file on every read: a self-authenticating NFC tag. DESFire EV2 does
+not support SDM, and <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">sdm</span></code> refuses a card whose <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">version</span></code>
+reports EV1 or EV2. The
 <a class="reference internal" href="quick-start-a-tamper-evident-nfc-tag-sdm-sun.html"><span class="doc">Quick start: a tamper-evident NFC tag (SDM/SUN)</span></a> walks through it end to end; the short form:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>sdm<span class="w"> </span>setup<span class="w"> </span>--aid<span class="w"> </span>CC0102<span class="w"> </span>--file-id<span class="w"> </span><span class="m">02</span><span class="w"> </span>--zero-key<span class="w"> </span><span class="se">\</span>
 <span class="w">     </span>--url<span class="w"> </span><span class="s2">"https://example.com/t"</span>
@@ -292,13 +299,18 @@ authenticates with the PICC master key:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>format<span class="w"> </span>--zero-key<span class="w"> </span>--i-understand-this-erases-all-applications
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
 <p><code class="docutils literal notranslate"><span class="pre">FormatPICC</span></code> authenticates with the <strong>PICC master key</strong>. On factory cards
-that key is 2K3DES, and this CLI is AES-only by design — <code class="docutils literal notranslate"><span class="pre">format</span></code> checks
-the key type first and refuses with a clear message until the PICC master
-key has been provisioned to AES.</p>
+that key is 2K3DES (all zero); <code class="docutils literal notranslate"><span class="pre">format</span></code> reads the key type and authenticates
+accordingly, so <code class="docutils literal notranslate"><span class="pre">--zero-key</span></code> works on a factory card and on one whose PICC
+master key is the all-zero AES key. A 3K3DES PICC master key is not supported.</p>
+<p>To move the PICC master key to AES-128, so the card’s other AES commands can
+use it:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>keys<span class="w"> </span>picc-to-aes<span class="w"> </span>--zero-key<span class="w"> </span>--new-key-env<span class="w"> </span>NEW_PICC_KEY
+</pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">--new-key-env</span></code> names an environment variable holding the new key in hex.
+The command authenticates with the new key afterwards to confirm it. This
+tool has no way back to 2K3DES.</p>
 </section>
 <section id="scope">
 <h2>Scope<a class="headerlink" href="#scope" title="Link to this heading"></a></h2>
@@ -306,8 +318,8 @@ key has been provisioned to AES.</p>
 fully encrypted transfer, chunked writes); value files; record files
 (linear/cyclic) — all with transaction commit; same-key and cross-key
 <code class="docutils literal notranslate"><span class="pre">ChangeKey</span></code>; SDM/SUN configuration and host-side verification; <code class="docutils literal notranslate"><span class="pre">FormatPICC</span></code>
-(AES PICC master key required). Legacy DES/3DES authentication is intentionally
-not supported.</p>
+with an AES or 2K3DES PICC master key, and moving a 2K3DES PICC master key to
+AES. Other DES/3DES keys are not supported.</p>
 </section>
 </section>
 

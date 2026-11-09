@@ -101,7 +101,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
 </ul>
@@ -157,6 +157,16 @@ Cryptnox hardware without any shared secret. For the condensed version, see
 <p>The applet is <strong>contact-only</strong> — it does not answer over a contactless reader
 (SELECT returns <code class="docutils literal notranslate"><span class="pre">6A82</span></code> there) — and all <code class="docutils literal notranslate"><span class="pre">genuine</span></code> commands are
 <strong>read-only</strong>: the applet is inspected, never provisioned, by this tool.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Production cards with FIDO2 do not carry the genuineness applet, and
+<code class="docutils literal notranslate"><span class="pre">genuine</span></code> reports it as not on the card. On those cards the FIDO2
+attestation shows that the card is genuine: the attestation certificate a
+relying party receives at registration chains to the root that the FIDO
+Alliance Metadata Service lists for the card’s AAGUID
+(<code class="docutils literal notranslate"><span class="pre">1d1b4e33-76a1-47fb-97a0-14b10d0933f1</span></code>). <code class="docutils literal notranslate"><span class="pre">fido</span> <span class="pre">info</span></code> shows whether the
+card reports a Cryptnox AAGUID; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> does not verify the attestation chain.</p>
+</div>
 <section id="what-is-checked-and-what-deliberately-is-not">
 <h2>What is checked — and what deliberately is not<a class="headerlink" href="#what-is-checked-and-what-deliberately-is-not" title="Link to this heading"></a></h2>
 <p>There is more than one way to test a Cryptnox card’s genuineness; the methods

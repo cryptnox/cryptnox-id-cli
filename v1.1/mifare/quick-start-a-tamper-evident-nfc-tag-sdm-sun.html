@@ -101,7 +101,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick start</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick start (EV3)</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#step-1-create-an-application">Step 1 — create an application</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#step-2-set-up-the-sdm-file">Step 2 — set up the SDM file</a></li>
@@ -156,14 +156,17 @@ tag: on <em>every</em> read, the card mirrors a freshly encrypted copy of its UI
 an incrementing read counter into the file content, plus a MAC over them. A
 backend that knows the key can prove each read came from the genuine card — and
 detect replayed or cloned URLs — without any session or pairing.</p>
-<p>This guide configures SDM on a Cryptnox card and verifies the whole loop with
-<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>. It follows the public NXP application note <a class="reference external" href="https://www.nxp.com/docs/en/application-note/AN12196.pdf">AN12196</a>.</p>
+<p>This guide configures SDM on a Cryptnox card whose DESFire function is EV3 and
+verifies the whole loop with <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>. Cards with DESFire EV2 do not support SDM:
+the card refuses SDM files, and <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">sdm</span></code> stops with a message naming the
+generation. It follows the public NXP application note <a class="reference external" href="https://www.nxp.com/docs/en/application-note/AN12196.pdf">AN12196</a>.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p>A <strong>DESFire-capable contactless reader</strong> (the ACS ACR1252 is verified; some
 contactless readers do not pass native DESFire commands through).</p></li>
-<li><p>A Cryptnox card with the DESFire EV3 function — check with:</p></li>
+<li><p>A Cryptnox card with the DESFire EV3 function. <code class="docutils literal notranslate"><span class="pre">mifare</span> <span class="pre">version</span></code> names the
+generation:</p></li>
 </ul>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>mifare<span class="w"> </span>version
 </pre></div>

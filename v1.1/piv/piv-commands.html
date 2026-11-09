@@ -111,7 +111,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
 </ul>
@@ -188,8 +188,9 @@ An applet whose <code class="docutils literal notranslate"><span class="pre">res
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv pin status      PIN/PUK configured? retries left? (non-decrementing)
 piv pin verify      verify the PIN (a wrong PIN consumes one retry)
 piv pin change      change the PIN (cardholder; needs the current PIN)
-piv pin unblock     unblock a blocked PIN via the PUK (RESET RETRY COUNTER;
-                    a wrong PUK consumes a PUK retry — see warning below)
+piv pin unblock     set a new PIN with the PUK (RESET RETRY COUNTER; works on
+                    a PIN that is not blocked too; a wrong PUK consumes a PUK
+                    retry, see warning below)
 </pre></div>
 </div>
 </section>
@@ -200,8 +201,10 @@ piv pin unblock     unblock a blocked PIN via the PUK (RESET RETRY COUNTER;
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">change</span></code> and <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">puk</span> <span class="pre">change</span></code> are cardholder operations — they prove
 knowledge of the current value in-band (no SCP03 admin channel), unlike the
-<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">set-pin</span></code> / <code class="docutils literal notranslate"><span class="pre">set-puk</span></code> issuance commands. <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">unblock</span></code> resets a
-blocked PIN’s retry counter using the PUK. Current/new values come from masked
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">set-pin</span></code> / <code class="docutils literal notranslate"><span class="pre">set-puk</span></code> issuance commands. <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">pin</span> <span class="pre">unblock</span></code> sets a
+new PIN and resets its retry counter using the PUK. It works on a PIN that is not
+blocked as well, which makes it a test that the PUK is right, and a correct PUK
+also resets the PUK’s own retry counter. Current/new values come from masked
 prompts or the <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_PUK</span></code>
 / <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code> environment variables — never the command line.</p>
 <div class="admonition warning">
