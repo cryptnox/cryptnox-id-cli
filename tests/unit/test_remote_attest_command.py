@@ -218,10 +218,66 @@ def test_attest_sends_slot_and_algorithm_and_omits_ca_obj_by_default(wired, pki)
     }
 
 
-def test_ca_obj_is_sent_only_when_given(wired, pki):
+def test_ca_obj_is_no_longer_sent_and_says_so(wired, pki):
+    # The signing key is the service's own setting. Naming one is refused there
+    # and still costs the card an operation, so the option is ignored out loud.
     channel = wired["arm"]([ok_result(pki)])
-    run(["--json", "remote", "attest", "--ca-obj", "0301"])
-    assert channel.sent[0]["params"]["ca_obj"] == "0301"
+    result = run(["--json", "remote", "attest", "--ca-obj", "0301"])
+    assert result.exit_code == 0, result.output
+    assert channel.sent[0]["params"] == {"slot": "9C", "algorithm": "ECCP256"}
+    assert "--ca-obj is ignored" in result.stderr
+    assert "--ca-obj" not in run(["remote", "attest", "--help"]).output
+
+
+# --------------------------------------------------------------------------- #
+# What the service says it signed, against the certificate it returned        #
+# --------------------------------------------------------------------------- #
+def _identifiers(pki):
+    import hashlib
+
+    leaf = x509.load_der_x509_certificate(pki["leaf_der"])
+    spki = leaf.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return {
+        "cert_serial": f"{leaf.serial_number:x}",
+        "cert_sha256": hashlib.sha256(pki["leaf_der"]).hexdigest(),
+        "pub_sha256": hashlib.sha256(spki).hexdigest(),
+    }
+
+
+def test_reported_identifiers_are_recomputed_from_the_certificate(wired, pki):
+    wired["arm"]([ok_result(pki, **_identifiers(pki))])
+    result = run(["--json", "remote", "attest"])
+    assert result.exit_code == 0, result.output
+    checks = json.loads(result.stdout)["verified_locally"]
+    assert checks["certificate_serial_matches"] is True
+    assert checks["certificate_sha256_matches"] is True
+    assert checks["public_key_sha256_matches"] is True
+    assert "do not match" not in result.stderr
+
+
+def test_an_identifier_that_does_not_match_is_reported_and_warned_about(wired, pki):
+    ids = _identifiers(pki)
+    ids["cert_sha256"] = "00" * 32
+    ids["pub_sha256"] = ids["pub_sha256"].upper()  # case must not matter
+    wired["arm"]([ok_result(pki, **ids)])
+    result = run(["--json", "remote", "attest"])
+    assert result.exit_code == 0, result.output
+    checks = json.loads(result.stdout)["verified_locally"]
+    assert checks["certificate_sha256_matches"] is False
+    assert checks["certificate_serial_matches"] is True
+    assert checks["public_key_sha256_matches"] is True
+    assert "do not match the certificate it returned" in result.stderr
+
+
+def test_identifiers_the_service_does_not_report_are_left_unchecked(wired, pki):
+    wired["arm"]([ok_result(pki, cert_serial="not-hex")])
+    result = run(["--json", "remote", "attest"])
+    checks = json.loads(result.stdout)["verified_locally"]
+    assert checks["certificate_serial_matches"] is False
+    assert checks["certificate_sha256_matches"] is None
+    assert checks["public_key_sha256_matches"] is None
 
 
 def test_slot_is_validated():

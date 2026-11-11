@@ -31,6 +31,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whose 9A key cannot sign. Asks for confirmation; `--dry-run` sends nothing.
   Refuses a finalized applet, and SIGN together with KEY_ESTABLISH, which the
   applet refuses.
+- `remote reset` and `remote dev-reset` take `--piv-variant fips|fipsoff`, and
+  `--fips-off` for short: the service reinstalls the PIV applet as the FIPS-mode
+  build (default) or as the same applet with FIPS mode off, which accepts
+  pre-personalization profiles the FIPS-mode build refuses (a PIN shorter than
+  6 digits, more than 15 retries, a PIN usable over the contactless interface
+  without secure messaging). The build is sent explicitly either way. For
+  `fipsoff` the service is asked first whether it offers the build, and the
+  command stops before opening the reader when it does not. Afterwards the
+  applet is asked which build it is: `piv_build` in the before and after
+  inventories, `piv_build_matches` under `verified_locally`.
+- `remote inspect` reads the PIV applet's build locally, shows it, and compares
+  it with what the service read (`piv_build`, `piv_build_matches`).
+- `remote ping`: the service's build, the operations it serves, the PIV applet
+  builds it can install and its secure-channel policy. No card is needed and
+  the call does not count toward a card's operation limit.
+- A refused or failed remote operation says what happened and what to do next
+  for the answers the service is known to give: the per-card operation limit
+  and when it lifts, a busy service, a timeout, an internal error with the
+  reference to quote to support, a secure channel that cannot authenticate the
+  card's answers, a card on the contactless interface, a build the service does
+  not offer, an operation reserved to Cryptnox, a card that did not prove it is
+  genuine. The JSON error object gains `reason`, and `retry_in_seconds` or
+  `ref` when the service gave them; the exit code stays 16.
+- `remote attest` recomputes the identifiers the service reports for the
+  certificate it signed (serial number, SHA-256, SHA-256 of the public key)
+  from the returned certificate: `certificate_serial_matches`,
+  `certificate_sha256_matches`, `public_key_sha256_matches`.
 
 ### Changed
 
@@ -58,6 +85,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now `pin_limits`.
 - `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
 - `remote --default-keys` help and warnings updated for the current service.
+- `remote attest --ca-obj` is ignored with a warning and hidden from the help:
+  the service signs key attestations with one fixed CA key and refuses any
+  other, at the cost of one of the card's operations. The option will be
+  removed.
 - A `6985` to `generate-csr`, `self-sign-cert` or `smoke-test` names the key's
   role and points at a key on the slot that can sign, or at how to add one,
   instead of suggesting a wrong lifecycle state.

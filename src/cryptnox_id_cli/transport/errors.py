@@ -109,17 +109,44 @@ class RemotePolicyError(RemoteError):
 
 
 class RemoteOperationError(RemoteError):
-    """The service completed the exchange but reported the operation as failed."""
+    """The service completed the exchange but reported the operation as failed.
+
+    ``reason`` is a stable token for the kind of failure (``refused`` when the
+    service's answer is not one this client recognises). ``retry_in_seconds``
+    and ``ref`` are set when the service gave a waiting time or a support
+    reference.
+    """
 
     code = "remote_failed"
     exit_code = 16
 
-    def __init__(self, message: str, *, result: dict[str, object] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        result: dict[str, object] | None = None,
+        reason: str = "refused",
+        retry_in_seconds: int | None = None,
+        ref: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.result = result
+        self.reason = reason
+        self.retry_in_seconds = retry_in_seconds
+        self.ref = ref
 
     def to_dict(self) -> dict[str, object]:
-        return {"error": self.code, "message": str(self), "result": self.result}
+        out: dict[str, object] = {
+            "error": self.code,
+            "message": str(self),
+            "reason": self.reason,
+            "result": self.result,
+        }
+        if self.retry_in_seconds is not None:
+            out["retry_in_seconds"] = self.retry_in_seconds
+        if self.ref is not None:
+            out["ref"] = self.ref
+        return out
 
 
 @dataclass(frozen=True)

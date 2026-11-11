@@ -42,6 +42,11 @@ it; it cannot see what an encrypted command carries.
 Operations
 ----------
 
+``ping``
+   Asks the service about itself: its build, the operations it serves, the PIV
+   applet builds it can install and its secure-channel policy. No card is
+   involved; the service answers before any proof-of-work or card exchange.
+
 ``authenticate``
    Reads the ATR and CPLC serial. Key-free. Allows only card-manager reads.
 
@@ -131,12 +136,55 @@ version 2 of its PIV security domain. A card that can prove neither is refused
 untouched; Cryptnox support re-provisions it. The service's refusal may suggest
 ``reset --default-keys``, which it refuses without a factory token.
 
+The PIV applet build
+--------------------
+
+``reset`` and ``dev-reset`` reinstall the PIV applet, and the service holds two
+builds of it, made from the same source with one switch apart:
+
+* the **FIPS-mode build**, the default and the build cards ship with;
+* the **build with FIPS mode off**, asked for with ``--fips-off`` or
+  ``--piv-variant fipsoff``.
+
+With FIPS mode off the applet lifts three limits it enforces when a
+pre-personalization profile is loaded: the PIN may be as short as 4 digits
+instead of 6, the retry counter may exceed 15, and the PIN may be made usable
+over the contactless interface without secure messaging. It also skips the
+FIPS power-up self-tests and does not zeroise an object before discarding it.
+Slots, algorithms, key generation, key import, certificates and the admin
+channel behave the same in both builds; a card personalized with the built-in
+profiles behaves the same whichever build it carries.
+
+The two builds share the applet and package identifiers, so nothing outside
+the applet tells them apart. The applet reports its build in its status, read
+without authentication: ``piv inventory`` shows it as "FIPS-mode build", and
+``remote inspect``, ``remote reset`` and ``remote dev-reset`` read it and
+report it. After a reset the build read from the card is compared with the
+one asked for, so a service that installed something else is noticed.
+
+A ``reset`` without the option installs the FIPS-mode build again. Whether the
+service offers the build with FIPS mode off is its own setting; ``remote ping``
+lists the builds it offers, and |cli| asks before a reset that needs it.
+
+The limit of operations per card
+--------------------------------
+
+The service accepts a fixed number of operations per card in a period, five an
+hour at the time of writing, and every operation that reaches a card counts,
+``inspect`` and ``authenticate`` included. ``ping`` does not: it involves no
+card. When the limit is reached the service refuses before anything is sent to
+the card and says when it accepts the next operation; |cli| reports that
+waiting time, and ``retry_in_seconds`` with ``--json``. The counter is kept by
+the service, per card, and survives a restart of the service.
+
 What is sent to the service
 ---------------------------
 
 The card's ATR and CPLC serial identify the card to the service. They are the
 same values any reader can obtain from the card without a key. Nothing else
-about the card holder is sent.
+about the card holder is sent. An operation sends its own parameters with
+them: the slot and algorithm for ``attest``, the applet build and the key tier
+for ``reset`` and ``dev-reset``. ``ping`` sends nothing about a card.
 
 Transcripts
 -----------

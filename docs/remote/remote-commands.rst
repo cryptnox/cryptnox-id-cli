@@ -8,10 +8,11 @@ and what |cli| verified locally are shown apart. The service, the relay policy
 and what each operation does to the card are described in
 :doc:`/remote/remote-guide`.
 
-Every command opens the local reader first, then connects to the service over
-TLS and answers a small proof-of-work before any command is relayed. Only the
-PIV function and its security domains are reachable through the relay; the
-other card functions are refused by the relay policy.
+Every command except ``remote ping`` opens the local reader first, then
+connects to the service over TLS and answers a small proof-of-work before any
+command is relayed. Only the PIV function and its security domains are
+reachable through the relay; the other card functions are refused by the relay
+policy.
 
 Group options
 -------------
@@ -24,6 +25,20 @@ Group options
      --full-transcript   write relayed commands to --apdu-log and --verbose
                          without the extra masking the relay applies by
                          default; the standard secret masking still applies
+
+The service itself
+------------------
+
+.. code-block:: text
+
+   remote ping           ask the service what it runs and what it offers: its
+                         build, the operations it serves, the PIV applet builds
+                         it can install, its secure-channel policy. No card is
+                         needed, the reader is not opened, and the call does
+                         not count toward a card's operation limit.
+
+Operations the service offers and |cli| does not run are listed apart; they
+are reserved to Cryptnox's own tooling.
 
 Identification and inspection
 -----------------------------
@@ -44,12 +59,17 @@ Both commands report the card as read locally (reader, ATR, CPLC UID), the
 service's result as the service asserted it, and a cross-check of the fields
 the two have in common.
 
+``remote inspect`` also reads the PIV applet's build from the applet itself and
+shows it: the FIPS-mode build, or the build with FIPS mode off. The service
+reads the same flag through the relay; ``piv_build_matches`` under "Verified
+locally" says whether the two agree.
+
 Key attestation
 ---------------
 
 .. code-block:: text
 
-   remote attest [--slot 9C] [--algorithm ECCP256] [--ca-obj HEX] [--out FILE]
+   remote attest [--slot 9C] [--algorithm ECCP256] [--out FILE]
 
                          generate a key in the slot through the service and
                          receive its key-attestation certificate; the service
@@ -61,8 +81,6 @@ Key attestation
    Options:
      --slot HEX          9A, 9C, 9D, 9E or a retired slot 82 to 95 (default 9C)
      --algorithm NAME    ECCP256 (default), ECCP384, RSA2048, RSA3072, RSA4096
-     --ca-obj HEX        signing sub-CA in the service; omit for the
-                         key-attestation CA
      --out FILE          write the returned certificate (PEM)
 
 The returned certificate is verified locally before success is reported: the
@@ -73,12 +91,22 @@ public key must equal the certificate read back from the card's attestation
 container. That the key was generated on the card is the service's claim; the
 tool cannot witness it and says so.
 
+The service also names what it signed: the certificate's serial number and
+SHA-256, and the SHA-256 of the certified public key. |cli| recomputes the
+three from the returned certificate and reports them as
+``certificate_serial_matches``, ``certificate_sha256_matches`` and
+``public_key_sha256_matches``.
+
+The service signs key attestations with one fixed CA key. ``--ca-obj`` is
+accepted for compatibility, ignored with a warning, and will be removed.
+
 Reset
 -----
 
 .. code-block:: text
 
-   remote reset [--default-keys] [--i-understand-this-is-irreversible]
+   remote reset [--default-keys] [--piv-variant fips|fipsoff] [--fips-off]
+                [--i-understand-this-is-irreversible]
 
                          IRREVERSIBLY wipe and reinstall the PIV function: the
                          service deletes the PIV applet, its package and its
@@ -88,7 +116,8 @@ Reset
                          phrase RESET-PIV must be typed; non-interactively the
                          flag is required. --yes is not accepted.
 
-   remote dev-reset [--default-keys] [--i-understand-this-is-irreversible]
+   remote dev-reset [--default-keys] [--piv-variant fips|fipsoff] [--fips-off]
+                    [--i-understand-this-is-irreversible]
 
                          Development cards only. As reset, but the card manager
                          and the PIV security domain are left on the public
@@ -109,6 +138,23 @@ Reset
                          On dev-reset: the card proves it is genuine with key
                          version 2 of its PIV security domain instead of its
                          card-manager key.
+     --piv-variant NAME  the PIV applet build the service installs: fips, the
+                         FIPS-mode build (default), or fipsoff, the same applet
+                         with FIPS mode off
+     --fips-off          short for --piv-variant fipsoff
+
+Both builds come from the same applet source and carry the same identifiers;
+the applet reports which one it is. With FIPS mode off the applet accepts
+pre-personalization profiles the FIPS-mode build refuses (a PIN shorter than 6
+digits, more than 15 retries, a PIN usable over the contactless interface
+without secure messaging) and skips the FIPS power-up self-tests. Keys,
+algorithms and commands are the same. After the operation |cli| asks the
+applet which build it is and reports ``piv_build_matches``; a ``reset`` without
+the option installs the FIPS-mode build again.
+
+When the build with FIPS mode off is asked for, |cli| first asks the service
+whether it offers that build (``remote ping``) and stops before opening the
+reader when it does not.
 
 Before asking for consent, both commands read and show what the card holds:
 the PIV personalization state and data objects, the PIV security domain and
@@ -116,10 +162,61 @@ its key versions, and the state of the FIDO2 and genuineness functions, which
 stay outside the operation. The same inventory is read again afterwards and
 shown next to the service's result.
 
+When the service refuses
+------------------------
+
+A refused or failed operation exits with code 16. The message says what
+happened and what to do next; with ``--json`` the error object carries a
+``reason`` a script can branch on, the service's own answer under ``result``,
+and ``retry_in_seconds`` or ``ref`` when the service gave them.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - ``reason``
+     - Meaning
+   * - ``rate_limited_card``
+     - The service's limit of operations for this card is reached.
+       ``retry_in_seconds`` says when the next one is accepted. Every operation
+       on a card counts, ``inspect`` and ``authenticate`` included; ``ping``
+       does not.
+   * - ``rate_limited_source``
+     - Too many connections from this network address.
+   * - ``busy``
+     - The service is running as many operations as it accepts at once.
+   * - ``timeout``
+     - The service stopped waiting for the card or the connection. The
+       operation may be half done: inspect, then repeat.
+   * - ``internal_error``
+     - A fault on the service's side. ``ref`` is the reference to quote to
+       Cryptnox support.
+   * - ``legacy_channel``
+     - The card's PIV security domain speaks a secure channel that cannot
+       authenticate the card's answers. Key attestation is not issued on it,
+       and other operations are reserved to Cryptnox.
+   * - ``contactless``
+     - The card answered over the contactless interface; the service
+       administers the PIV function over the contact interface only.
+   * - ``piv_build_unavailable``
+     - The service does not offer the requested PIV applet build.
+   * - ``factory_token_required``
+     - This form of the operation is reserved to Cryptnox.
+   * - ``card_not_genuine``
+     - The card did not prove it is genuine with its own keys.
+   * - ``unsupported_operation`` / ``unsupported_request``
+     - The service does not offer the operation, or does not accept the slot
+       or algorithm asked for.
+   * - ``proof_of_work``
+     - The service rejected the proof-of-work answer.
+   * - ``refused``
+     - Anything else; the message carries the service's own sentence.
+
 Endpoint
 --------
 
 The service endpoint is fixed to ``wss://piv.cryptnox.com``. For development
-against a local stand-in, ``CRYPTNOX_REMOTE_URL`` redirects the identification
-and inspection commands only; it must be a ``wss://`` URL, or ``ws://`` to
-loopback. ``reset`` and ``dev-reset`` refuse to run while it is set.
+against a local stand-in, ``CRYPTNOX_REMOTE_URL`` redirects ``ping`` and the
+identification and inspection commands only; it must be a ``wss://`` URL, or
+``ws://`` to loopback. ``reset`` and ``dev-reset`` refuse to run while it is
+set.

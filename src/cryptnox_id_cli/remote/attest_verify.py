@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from cryptography import x509
@@ -122,6 +123,51 @@ def _spki(der: bytes) -> bytes:
         .public_key()
         .public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     )
+
+
+def check_reported_identifiers(
+    result: Mapping[str, object], leaf_der: bytes
+) -> dict[str, bool | None]:
+    """Compare the identifiers the service reports with the certificate it returned.
+
+    The service names what it signed: the certificate's serial number
+    (``cert_serial``, hex), its SHA-256 (``cert_sha256``) and the SHA-256 of the
+    certified public key as a DER SubjectPublicKeyInfo (``pub_sha256``). The same
+    three values go into the service's own record of the signature, so a
+    mismatch means the record and the certificate describe different things.
+    Each is recomputed here from the returned certificate; ``None`` stands for
+    an identifier the service did not report.
+    """
+
+    def reported(key: str) -> str | None:
+        value = result.get(key)
+        return value.strip().lower() if isinstance(value, str) and value.strip() else None
+
+    checks: dict[str, bool | None] = {
+        "certificate_sha256_matches": None,
+        "certificate_serial_matches": None,
+        "public_key_sha256_matches": None,
+    }
+    digest = reported("cert_sha256")
+    if digest is not None:
+        checks["certificate_sha256_matches"] = digest == hashlib.sha256(leaf_der).hexdigest()
+    serial = reported("cert_serial")
+    if serial is not None:
+        try:
+            checks["certificate_serial_matches"] = (
+                int(serial, 16) == x509.load_der_x509_certificate(leaf_der).serial_number
+            )
+        except ValueError:
+            checks["certificate_serial_matches"] = False
+    key_digest = reported("pub_sha256")
+    if key_digest is not None:
+        try:
+            checks["public_key_sha256_matches"] = (
+                key_digest == hashlib.sha256(_spki(leaf_der)).hexdigest()
+            )
+        except ValueError:
+            checks["public_key_sha256_matches"] = False
+    return checks
 
 
 def verify_returned_attestation(

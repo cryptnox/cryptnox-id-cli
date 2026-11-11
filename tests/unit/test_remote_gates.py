@@ -163,8 +163,14 @@ def test_reset_payload_carries_before_after_and_params(wired):
     result = run(["--json", "remote", "reset", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
-    # The derived key is the default; only --default-keys turns it off.
-    assert channel.sent[0] == {"type": "hello", "op": "reset", "params": {"fused": True}}
+    # The derived key and the FIPS-mode build are the defaults, and both are sent
+    # explicitly so the outcome never depends on the service's own defaults.
+    assert channel.sent[0] == {
+        "type": "hello",
+        "op": "reset",
+        "params": {"fused": True, "piv_variant": "fips"},
+    }
+    assert payload["piv_variant"] == "fips"
     assert payload["before"]["piv_ssd_key_versions"] == [1]
     assert payload["before"]["piv_state"] == "PivNotPresent"
     assert payload["after"]["piv_ssd_key_versions"] == [1]
@@ -177,7 +183,7 @@ def test_reset_default_keys_warns_that_the_service_refuses_it(wired):
     channel = wired["arm"]([OK_RESULT])
     result = run(["remote", "reset", "--default-keys", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": False}
+    assert channel.sent[0]["params"] == {"fused": False, "piv_variant": "fips"}
     assert "factory token" in result.output
 
 
@@ -185,7 +191,7 @@ def test_dev_reset_default_keys_selects_the_ssd_proof(wired):
     channel = wired["arm"]([OK_RESULT])
     result = run(["remote", "dev-reset", "--default-keys", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": False}
+    assert channel.sent[0]["params"] == {"fused": False, "piv_variant": "fips"}
     assert "factory token" not in result.output
 
 
@@ -208,7 +214,7 @@ def test_dev_reset_needs_no_token_and_sends_none(wired, monkeypatch):
     channel = wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", "dev-reset", "--i-understand-this-is-irreversible"])
     assert result.exit_code == 0, result.output
-    assert channel.sent[0]["params"] == {"fused": True}
+    assert channel.sent[0]["params"] == {"fused": True, "piv_variant": "fips"}
 
 
 def test_dev_reset_help_mentions_no_token():

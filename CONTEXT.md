@@ -67,6 +67,16 @@ _Avoid_: dump, snapshot (export-config is a different, observed-state file)
 A named pre-personalization configuration, such as `cryptnox-default` or `ms-logon`.
 _Avoid_: template, preset
 
+**FIPS-mode build**:
+The PIV applet as cards ship with it, built with the applet's FIPS mode on. That
+mode bounds what a profile may ask for: a PIN of at least 6 digits, at most 15
+retries, no PIN over the contactless interface without secure messaging. Its
+counterpart, the *build with FIPS mode off*, is the same applet without those
+bounds; the remote service installs either on request. The applet reports which
+one it is in its status, read without authentication.
+_Avoid_: FIPS card, FIPS-certified (a build is not a certification claim), variant
+(the service's protocol word, kept for the option `--piv-variant` only)
+
 **Slot**:
 A PIV key reference (9A authentication, 9C signature, 9D key management, 9E card
 authentication) holding at most one private key.
