@@ -113,6 +113,25 @@ Profile YAML
        contactless: NEVER
        attributes: [IMPORTABLE]
 
+**Applet build** (optional top-level key): ``fips_mode: false`` says the profile
+is written for the PIV applet build with FIPS mode off, which the remote
+service installs on request (:doc:`/remote/remote-guide`). It widens the PIN
+and PUK bounds listed below. ``load-config`` then asks the card which build it
+carries and refuses the FIPS-mode build before anything is written, because
+that build would refuse the PIN verifier after the containers were created,
+and what was created cannot be removed. Leave the key out for the FIPS-mode
+build, the build cards ship with; the built-in profiles do.
+
+.. code-block:: yaml
+
+   name: short-pin
+   mode: production
+   fips_mode: false
+   pin:
+     min: 4
+     max: 8
+     retries: 6
+
 **Mechanisms**: ``AES128``, ``AES192``, ``AES256``, ``RSA2048``, ``RSA3072``,
 ``RSA4096``, ``ECCP256``, ``ECCP384``, ``CS2``, ``CS7``.
 
@@ -137,7 +156,9 @@ sessions, so anything marked ``SM``, ``SM_PIN``, ``VCI`` or ``VCI_PIN`` on an
 interface cannot be used there with them. In the built-in profiles that is the
 contactless side of most containers. The PIN and PUK are created for contact
 use only: the applet's FIPS-mode build accepts a PIN over contactless only
-inside secure messaging.
+inside secure messaging. The build with FIPS mode off would accept one without
+it, but a profile cannot ask for that: ``fips_mode: false`` widens the length
+and retry bounds only.
 
 **Key roles** (a bitmask — combine with ``+``, e.g. ``AUTHENTICATE+SIGN``, or
 give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.
@@ -171,8 +192,10 @@ whole profile before anything is sent to a card:
 
 - the admin key mechanism must be AES-128/192/256 (this applet's 9B is
   AES-only);
-- PIN and PUK ``min`` must be at least 6 and ``max`` must be at least ``min``;
-- PIN and PUK ``retries`` must be 0–10;
+- PIN and PUK ``min`` must be at least 6 (at least 4 with ``fips_mode: false``),
+  and ``max`` must be at least ``min`` and at most 16;
+- PIN and PUK ``retries`` must be 0–10 (0–127 with ``fips_mode: false``);
+- ``fips_mode``, when present, must be ``true`` or ``false``;
 - every key's mechanism must be one this applet actually supports (see
   ``inspect-defaults``);
 - the profile must define at least one container or key.

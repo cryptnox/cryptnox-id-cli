@@ -17,6 +17,16 @@ from cryptnox_id_cli.applets.piv import constants as c
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.transport.errors import CryptnoxError
 
+# PIN and PUK bounds a profile may ask for. The FIPS-mode build refuses a minimum
+# length under 6 and more than 15 retries; this tool caps a profile for it at 10.
+# With FIPS mode off the applet accepts a minimum length of 4 and up to 127 retries.
+# The longest PIN the applet stores is 16 in both builds.
+PIN_MIN_LENGTH_FIPS = 6
+PIN_RETRY_CAP_FIPS = 10
+PIN_MIN_LENGTH = 4
+PIN_RETRY_CAP = 127
+PIN_MAX_LENGTH = 16
+
 # Name <-> byte maps (user-friendly YAML).
 MECHANISMS = {
     "AES128": 0x08,
@@ -104,6 +114,25 @@ class PivProfile:
     keys: list[KeyDef] = field(default_factory=list)
     #: the source file named a mode VCI or VCI_PIN, whose bytes changed after 1.1
     names_vci: bool = False
+    #: False for a profile written for the applet build with FIPS mode off: the PIN
+    #: and PUK bounds are then that build's, and the FIPS-mode build refuses it.
+    fips_mode: bool = True
+
+    def pin_bounds(self) -> tuple[int, int]:
+        """(minimum length, most retries) a PIN or PUK policy of this profile may ask for."""
+        if self.fips_mode:
+            return PIN_MIN_LENGTH_FIPS, PIN_RETRY_CAP_FIPS
+        return PIN_MIN_LENGTH, PIN_RETRY_CAP
+
+    def fips_mode_note(self) -> str | None:
+        """What a profile for the build with FIPS mode off asks of the card, else ``None``."""
+        if self.fips_mode:
+            return None
+        return (
+            f"profile '{self.name}' is written for the PIV applet build with FIPS mode off "
+            "(fips_mode: false). The FIPS-mode build refuses what goes beyond its bounds: a "
+            "PIN or PUK shorter than 6, more than 15 retries."
+        )
 
     def vci_warning(self) -> str | None:
         """The warning for a profile file that uses the VCI mode names, else ``None``."""
@@ -201,13 +230,29 @@ class PivProfile:
             errors.append(
                 "admin key mechanism must be AES-128/192/256 (this applet: 9B is AES-only)"
             )
-        for label, pol, floor in (("PIN", self.pin, 6), ("PUK", self.puk, 6)):
+        floor, cap = self.pin_bounds()
+        # What the build with FIPS mode off would accept, said once where it helps.
+        hint = (
+            " (the PIV applet build with FIPS mode off accepts it: set fips_mode: false in "
+            "the profile and install that build)"
+        )
+        for label, pol in (("PIN", self.pin), ("PUK", self.puk)):
             if pol.min_length < floor:
-                errors.append(f"{label} min_length {pol.min_length} < minimum {floor}")
+                wider = self.fips_mode and pol.min_length >= PIN_MIN_LENGTH
+                errors.append(
+                    f"{label} min_length {pol.min_length} < minimum {floor}"
+                    + (hint if wider else "")
+                )
             if pol.max_length < pol.min_length:
                 errors.append(f"{label} max_length < min_length")
-            if not (0 <= pol.retries <= 10):
-                errors.append(f"{label} retries {pol.retries} out of range (max 10)")
+            if pol.max_length > PIN_MAX_LENGTH:
+                errors.append(f"{label} max_length {pol.max_length} > maximum {PIN_MAX_LENGTH}")
+            if not (0 <= pol.retries <= cap):
+                wider = self.fips_mode and 0 <= pol.retries <= PIN_RETRY_CAP
+                errors.append(
+                    f"{label} retries {pol.retries} out of range (max {cap})"
+                    + (hint if wider else "")
+                )
         for k in self.keys:
             if k.ref == c.KEYREF_ADMIN:
                 continue  # admin key checked above
@@ -231,6 +276,9 @@ class PivProfile:
         return {
             "name": self.name,
             "mode": self.mode,
+            # Written only when it departs from the default, so files for the
+            # FIPS-mode build read as they always did.
+            **({} if self.fips_mode else {"fips_mode": False}),
             "admin": {
                 "key_ref": f"{self.admin_key_ref:02X}",
                 "mechanism": _REV_MECH.get(self.admin_mechanism, hex(self.admin_mechanism)),
@@ -323,6 +371,9 @@ def _attrs(values: Any) -> int:
 
 
 def from_dict(d: dict[str, Any]) -> PivProfile:
+    fips_mode = d.get("fips_mode", True)
+    if not isinstance(fips_mode, bool):
+        raise ProfileError("invalid profile: fips_mode must be true or false")
     try:
         admin = d["admin"]
         pin, puk = d["pin"], d["puk"]
@@ -374,6 +425,7 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
         for side in ("contact", "contactless")
     ]
     prof.names_vci = any(m in ("VCI", "VCI_PIN") for m in modes)
+    prof.fips_mode = fips_mode
     return prof
 
 

@@ -18,10 +18,12 @@ from rich.console import Console
 
 from cryptnox_id_cli.applets import cardmanager as cm
 from cryptnox_id_cli.applets.piv import constants as c
+from cryptnox_id_cli.applets.piv import inventory as inventory_mod
 from cryptnox_id_cli.applets.piv import mgmt_auth
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
 from cryptnox_id_cli.applets.piv.admin import PivAdmin, scp_label
+from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
 from cryptnox_id_cli.applets.piv.ssd import (
     ISD_AID,
@@ -44,6 +46,7 @@ from cryptnox_id_cli.secrets.resolver import (
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.state.model import PivState
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError
+from cryptnox_id_cli.transport.pcsc import CardSession
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 
 
@@ -187,7 +190,16 @@ def inspect_defaults(app: AppContext) -> None:
     payload = {
         "supported_algorithms": supported,
         "slots": [s.ref_hex for s in PIV_SLOTS],
-        "pin_limits": {"min_length": 6, "profile_retry_cap": 10, "applet_retry_limit": 15},
+        "pin_limits": {
+            "min_length": prof_mod.PIN_MIN_LENGTH_FIPS,
+            "profile_retry_cap": prof_mod.PIN_RETRY_CAP_FIPS,
+            "applet_retry_limit": 15,
+            # a profile that says fips_mode: false, for the build with FIPS mode off
+            "fips_mode_off": {
+                "min_length": prof_mod.PIN_MIN_LENGTH,
+                "profile_retry_cap": prof_mod.PIN_RETRY_CAP,
+            },
+        },
         "builtin_profiles": prof_mod.builtin_names(),
     }
 
@@ -197,6 +209,10 @@ def inspect_defaults(app: AppContext) -> None:
         con.print(f"  Key slots: {', '.join(s.ref_hex for s in PIV_SLOTS)}")
         con.print(
             "  PIN/PUK limits: min length 6; retries up to 10 in a profile (the applet allows 15)"
+        )
+        con.print(
+            "    with FIPS mode off (profile key fips_mode: false): min length "
+            f"{prof_mod.PIN_MIN_LENGTH}; retries up to {prof_mod.PIN_RETRY_CAP}"
         )
         con.print(f"  Built-in profiles: {', '.join(prof_mod.builtin_names())}")
 
@@ -250,6 +266,29 @@ def _load_profile(file_: str | None, profile_name: str | None) -> prof_mod.PivPr
     return profile
 
 
+def _refuse_on_fips_mode_build(session: CardSession, profile: prof_mod.PivProfile) -> None:
+    """Stop a profile for the build with FIPS mode off before it reaches the other build.
+
+    The FIPS-mode build would refuse the PIN verifier part-way through, after the
+    containers were created, and what was created cannot be removed. The applet
+    reports its build without authentication, so the question is asked first. A
+    card that does not answer is left to the applet's own judgement.
+    """
+    piv = PivApplet(session)
+    try:
+        piv.select()
+        status = inventory_mod.read_status(piv)
+    except CryptnoxError:
+        return
+    if status is not None and status.fips_mode:
+        raise prof_mod.ProfileError(
+            f"profile '{profile.name}' is written for the PIV applet build with FIPS mode off "
+            "(fips_mode: false), and this card carries the FIPS-mode build, which refuses "
+            "it. `remote reset --fips-off` installs the other build; it wipes the PIV "
+            "function. Nothing was written."
+        )
+
+
 @preperso.command("load-config")
 @click.option("--file", "file_", type=click.Path(exists=True, dir_okay=False))
 @click.option("--profile", "profile_name", help="A built-in profile name instead of --file.")
@@ -271,11 +310,15 @@ def load_config(
     for warning in (profile.vci_warning(), profile.piv_auth_warning()):
         if warning:
             app.out.warn(warning)
+    note = profile.fips_mode_note()
+    if note:
+        app.out.note(note)
 
     if dry_run or app.dry_run:
         result = {
             "dry_run": True,
             "profile": profile.name,
+            "fips_mode": profile.fips_mode,
             "operations": [label for label, _ in ops],
             "bulk_bytes": len(payload_bytes),
             "bulk_hex": payload_bytes.hex().upper(),
@@ -306,6 +349,8 @@ def load_config(
     sent: list[dict[str, object]] = []
     failed: tuple[str, str] | None = None
     with app.open_session() as session:
+        if not profile.fips_mode:
+            _refuse_on_fips_mode_build(session, profile)
         adm = PivAdmin(session)
         for label, op in ops:
             # JCOP 4.5 allows only ONE application APDU per applet-directed SCP03

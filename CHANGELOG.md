@@ -58,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   certificate it signed (serial number, SHA-256, SHA-256 of the public key)
   from the returned certificate: `certificate_serial_matches`,
   `certificate_sha256_matches`, `public_key_sha256_matches`.
+- Profile YAML: `fips_mode: false` marks a profile written for the PIV applet
+  build with FIPS mode off. Its PIN and PUK may then be as short as 4 and have
+  up to 127 retries; without the key the bounds stay 6 and 10. `load-config`
+  asks the card which build it carries and refuses the FIPS-mode build before
+  anything is written. `inspect-defaults` lists both sets of bounds. A PIN or
+  PUK `max` above 16, which the applet refuses, is now a profile error.
 
 ### Changed
 
