@@ -391,3 +391,145 @@ def test_occupied_container_asks_interactively(occupied, pki, monkeypatch):
     occupied["arm"]([ok_result(pki)])
     result = run(["remote", "attest"], input="y\n")
     assert result.exit_code == 0, result.output
+
+
+# --------------------------------------------------------------------------- #
+# A finalized applet: the key in the slot is overwritten                      #
+# --------------------------------------------------------------------------- #
+GET_STATUS = "00CB3F00055C032F475300"
+STATUS_SECURED = "531880010F8101008201008301008401008501008601008701FF"
+STATUS_OPEN = "53188001078101008201008301008401008501008601008701FF"
+# What the service answers on a finalized applet: when the confirmation is missing, when
+# the slot has no key object, and what a build from before 2026-11 answered.
+NEEDS_CONFIRMATION = {
+    "type": "result",
+    "ok": False,
+    "op": "attest",
+    "applet_finalized": True,
+    "confirmation_required": "replace_key",
+    "error": "attest refused: the PIV applet is finalized. Attesting generates a new key in "
+    "slot 9C and the key now in that slot is overwritten. The request did not confirm that "
+    "(params.replace_key), so nothing was changed. A client that cannot confirm it needs an "
+    "update",
+}
+NO_KEY_OBJECT = {
+    "type": "result",
+    "ok": False,
+    "op": "attest",
+    "applet_finalized": True,
+    "error": "attest refused: the finalized PIV applet has no ECCP256 key object in slot 9C "
+    "(GENERATE SW=6A80), and nothing can be added to a finalized applet. Nothing was changed",
+}
+OLDER_SERVICE = {"type": "result", "ok": False, "error": "create 9B mgmt key failed SW=6986"}
+
+
+@pytest.fixture
+def finalized(wired):
+    """The applet reports itself finalized (SECURED): nothing can be added to it."""
+    wired["conn"]._exchanges[GET_STATUS] = f"{STATUS_SECURED}|9000"
+    return wired
+
+
+def test_finalized_applet_warns_that_the_key_is_overwritten_and_stops_without_yes(finalized, pki):
+    finalized["arm"]([ok_result(pki)])
+    result = run(["--json", "remote", "attest"])
+    assert result.exit_code == 1
+    assert "overwrites the key in slot 9C" in json.loads(result.stdout)["message"]
+    assert "THE KEY NOW IN SLOT 9C IS OVERWRITTEN" in result.stderr
+    assert finalized["opened"] == 0  # nothing was sent, no operation spent
+
+
+def test_finalized_applet_sends_the_confirmation_only_after_yes(finalized, pki):
+    channel = finalized["arm"]([ok_result(pki, applet_finalized=True, key_replaced=True)])
+    result = run(["--yes", "--json", "remote", "attest"])
+    assert result.exit_code == 0, result.output
+    assert channel.sent[0]["params"] == {
+        "slot": "9C",
+        "algorithm": "ECCP256",
+        "replace_key": True,
+    }
+    assert "THE KEY NOW IN SLOT 9C IS OVERWRITTEN" in result.stderr  # said even with --yes
+
+
+def test_finalized_applet_asks_about_the_key_interactively(finalized, pki, monkeypatch):
+    monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
+    finalized["arm"]([ok_result(pki)])
+    result = run(["remote", "attest"], input="n\n")
+    assert result.exit_code != 0
+    assert "Overwrite the key in slot 9C?" in result.output
+    assert finalized["opened"] == 0
+    channel = finalized["arm"]([ok_result(pki)])
+    result = run(["remote", "attest"], input="y\n")
+    assert result.exit_code == 0, result.output
+    assert channel.sent[0]["params"]["replace_key"] is True
+
+
+def test_an_applet_that_is_not_finalized_gets_no_warning_and_sends_no_confirmation(wired, pki):
+    wired["conn"]._exchanges[GET_STATUS] = f"{STATUS_OPEN}|9000"
+    channel = wired["arm"]([ok_result(pki)])
+    result = run(["--json", "remote", "attest"])
+    assert result.exit_code == 0, result.output
+    assert "finalized" not in result.stderr
+    assert "replace_key" not in channel.sent[0]["params"]
+
+
+def _not_stored(pki):
+    return ok_result(
+        pki,
+        applet_finalized=True,
+        key_replaced=True,
+        attestation_stored=False,
+        written_to_card=False,
+        readback_matches=False,
+    )
+
+
+def test_a_certificate_the_card_could_not_store_is_printed(finalized, pki):
+    # A finalized applet without an attestation container: the certificate comes back in
+    # the service's answer only.
+    finalized["after"].update(_piv_exchanges(None))
+    finalized["arm"]([_not_stored(pki)])
+    result = run(["--yes", "remote", "attest"])
+    assert result.exit_code == 0, result.output
+    assert "not stored on the card" in result.output
+    assert "It is printed below; keep it." in result.output
+    assert "-----BEGIN CERTIFICATE-----" in result.output
+
+
+def test_a_certificate_the_card_could_not_store_goes_to_the_out_file(finalized, pki, tmp_path):
+    finalized["after"].update(_piv_exchanges(None))
+    finalized["arm"]([_not_stored(pki)])
+    out = tmp_path / "attestation.pem"
+    result = run(["--yes", "--json", "remote", "attest", "--out", str(out)])
+    assert result.exit_code == 0, result.output
+    assert out.read_text() == pki["leaf_pem"]
+    assert f"It was written to {out}." in result.stderr.replace("\n", "")
+    payload = json.loads(result.stdout)
+    assert payload["result"]["attestation_stored"] is False
+    assert payload["verified_locally"]["attestation_container_written"] is False
+    # Chain, card serial, slot and trust model hold. The fourth binding compares the
+    # certified key with the certificate stored on the card, and there is none: unchecked,
+    # so the overall verdict stays false, as `AttestVerification.verified` defines it.
+    verification = payload["verification"]
+    assert verification["chain_verified"] is True
+    assert verification["serial_number_matches_card"] is True
+    assert verification["public_key_matches_card"] is None
+    assert verification["verified"] is False
+
+
+@pytest.mark.parametrize(
+    ("answer", "says"),
+    [
+        (NEEDS_CONFIRMATION, "overwrites the key now in the slot"),
+        (NO_KEY_OBJECT, "no key object for this algorithm"),
+        (OLDER_SERVICE, "this build of the service cannot attest a key on a finalized applet"),
+    ],
+)
+def test_a_refusal_on_a_finalized_applet_is_explained(finalized, answer, says):
+    finalized["arm"]([answer])
+    result = run(["--yes", "--json", "remote", "attest"])
+    assert result.exit_code == 16, result.output
+    error = json.loads(result.stdout)
+    assert error["reason"] == "applet_finalized"
+    assert says in error["message"]
+    assert error["result"]["error"] == answer["error"]

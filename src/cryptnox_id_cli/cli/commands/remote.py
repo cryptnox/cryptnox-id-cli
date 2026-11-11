@@ -867,6 +867,21 @@ def _read_certificates(card: _Card, slot: int) -> tuple[bytes | None, bytes | No
     return slot_cert, attestation
 
 
+def _piv_finalized(card: _Card) -> bool:
+    """Whether the PIV applet reports itself finalized, read key-free.
+
+    Leaves the card manager selected afterwards.
+    """
+    piv = PivApplet(card.session)
+    try:
+        piv.select()
+        status = inventory_mod.read_status(piv)
+    except CryptnoxError:
+        status = None
+    _read_cplc(card.session)
+    return bool(status is not None and status.secured)
+
+
 @command.command("attest")
 @click.option("--slot", default="9C", show_default=True, help="Slot to generate the key in.")
 @click.option(
@@ -920,18 +935,40 @@ def attest(
             occupied.append(f"slot {slot_hex} holds a certificate")
         if container_before is not None:
             occupied.append("the attestation container holds a certificate")
+        finalized = _piv_finalized(card)
+        if finalized:
+            # A finalized card is one in use: say what is lost before anything is sent.
+            app.out.warn(
+                f"the PIV applet on this card is finalized. remote attest generates a new key "
+                f"in slot {slot_hex}: THE KEY NOW IN SLOT {slot_hex} IS OVERWRITTEN and cannot "
+                "be recovered; a certificate issued for it stops matching the slot. Nothing "
+                "can be added to a finalized applet, so the slot must already have a key "
+                "object for the algorithm, and the key attestation is stored on the card only "
+                "if the applet has an attestation container; otherwise it is returned (keep "
+                "it with --out)."
+            )
         if occupied:
             app.out.warn(
                 "remote attest replaces the key in the slot and the certificate in the "
                 "attestation container: " + "; ".join(occupied) + "."
             )
-            if not app.yes:
-                if app.json or not sys.stdin.isatty():
-                    raise CryptnoxError(
-                        "remote attest would overwrite existing material; pass --yes to confirm."
-                    )
-                if not click.confirm("Continue and overwrite?", default=False):
-                    raise click.Abort()
+        if (occupied or finalized) and not app.yes:
+            if app.json or not sys.stdin.isatty():
+                raise CryptnoxError(
+                    f"remote attest on a finalized applet overwrites the key in slot {slot_hex}; "
+                    "pass --yes to confirm."
+                    if finalized
+                    else "remote attest would overwrite existing material; pass --yes to confirm."
+                )
+            question = (
+                f"Overwrite the key in slot {slot_hex}?" if finalized else "Continue and overwrite?"
+            )
+            if not click.confirm(question, default=False):
+                raise click.Abort()
+        if finalized:
+            # The service overwrites a key on a finalized applet only for a client that says
+            # the card holder agreed. Sent after the warning above, never before.
+            params["replace_key"] = True
 
         app.out.note(f"remote {op} via {url}")
         report = _relay(app, ctx, card, op, params, url)
@@ -953,6 +990,16 @@ def attest(
         identifiers = av.check_reported_identifiers(report.result, leaf_der)
         if out_:
             Path(out_).write_bytes(pem.encode("utf-8"))
+    # A finalized applet without an attestation container: the certificate exists only in
+    # the service's answer, so it must not scroll away.
+    not_stored = report.result.get("attestation_stored") is False and bool(pem)
+    if not_stored:
+        app.out.warn(
+            "the applet has no attestation container and none can be added to a finalized "
+            "applet: the key attestation is not stored on the card, so the certified key "
+            "cannot be compared with a certificate on the card (reported as unchecked). "
+            + (f"It was written to {out_}." if out_ else "It is printed below; keep it.")
+        )
 
     card_info = card.to_dict()
     checks = _cross_check(card_info, report.result)
@@ -1013,5 +1060,8 @@ def attest(
             "  [dim]On-card generation is the service's claim; the relay cannot witness it.[/dim]"
         )
         _print_checks(c, checks)
+        if not_stored and not out_ and isinstance(pem, str):
+            c.print("\n[bold]Key attestation certificate[/bold] (not stored on the card)")
+            c.print(escape(pem.strip()))
 
     app.out.result(payload, human)

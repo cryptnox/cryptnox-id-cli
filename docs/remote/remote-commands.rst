@@ -100,6 +100,17 @@ three from the returned certificate and reports them as
 The service signs key attestations with one fixed CA key. ``--ca-obj`` is
 accepted for compatibility, ignored with a warning, and will be removed.
 
+**On a finalized applet** nothing can be added, so the service generates the
+new key in the slot's existing key object: the key now in the slot is
+overwritten and cannot be recovered, and a certificate issued for it stops
+matching the slot. The command reads the applet's state first, says so, and
+asks before anything is sent (``--yes`` answers for a script); only then does
+it send the confirmation the service requires. The slot must already have a
+key object for the algorithm. The key attestation is stored on the card only
+if the applet has an attestation container, which the built-in profiles do
+not create; otherwise it is returned and not stored: the command says so and
+prints the certificate unless ``--out`` was given.
+
 Reset
 -----
 
@@ -204,6 +215,11 @@ and ``retry_in_seconds`` or ``ref`` when the service gave them.
      - This form of the operation is reserved to Cryptnox.
    * - ``card_not_genuine``
      - The card did not prove it is genuine with its own keys.
+   * - ``applet_finalized``
+     - The PIV applet is finalized and the operation could not go on: the
+       slot has no key object for the algorithm (nothing can be added to a
+       finalized applet), or the overwriting of the key in the slot was not
+       confirmed. Nothing was changed.
    * - ``unsupported_operation`` / ``unsupported_request``
      - The service does not offer the operation, or does not accept the slot
        or algorithm asked for.

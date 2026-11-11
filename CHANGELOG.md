@@ -58,6 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   certificate it signed (serial number, SHA-256, SHA-256 of the public key)
   from the returned certificate: `certificate_serial_matches`,
   `certificate_sha256_matches`, `public_key_sha256_matches`.
+- `remote attest` on a finalized PIV applet: the service generates the new key
+  in the slot's existing key object, which overwrites the key now in the slot.
+  The command says so before anything is sent, asks (or needs `--yes`), and
+  only then sends the confirmation the service requires (`replace_key`).
+  When the applet has no attestation container the certificate is returned
+  and not stored on the card; the command says so and prints it unless
+  `--out` was given. A refusal on a finalized applet has the reason
+  `applet_finalized`.
 - Profile YAML: `fips_mode: false` marks a profile written for the PIV applet
   build with FIPS mode off. Its PIN and PUK may then be as short as 4 and have
   up to 127 retries; without the key the bounds stay 6 and 10. `load-config`

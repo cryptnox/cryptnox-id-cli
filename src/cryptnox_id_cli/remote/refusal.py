@@ -30,6 +30,7 @@ REASONS: tuple[str, ...] = (
     "piv_build_unavailable",
     "factory_token_required",
     "card_not_genuine",
+    "applet_finalized",
     "unsupported_operation",
     "unsupported_request",
     "proof_of_work",
@@ -187,6 +188,34 @@ def classify(op: str, payload: Mapping[str, object]) -> Refusal:
             "the card did not prove it is genuine with its own keys: it is not a genuine "
             "Cryptnox card, its Cryptnox keyset was deleted, or it is already on the default "
             "keys. Nothing was changed; contact Cryptnox support.",
+        )
+
+    if payload.get("applet_finalized") is True:
+        if payload.get("confirmation_required") == "replace_key":
+            return refusal(
+                "applet_finalized",
+                f"the PIV applet on this card is finalized, and {op} overwrites the key now "
+                "in the slot. The service does that only when the client confirms it, and "
+                "this run did not: the applet's state could not be read here to ask first. "
+                "Nothing was changed.",
+            )
+        return refusal(
+            "applet_finalized",
+            "the PIV applet on this card is finalized and the slot has no key object for "
+            "this algorithm; nothing can be added to a finalized applet. Nothing was "
+            "changed. `piv inventory` lists the key objects the slot has; `remote reset` "
+            "gives an empty applet and erases the PIV keys and certificates.",
+        )
+
+    if "failed sw=6986" in low:
+        # A service build from before finalized applets were handled: it creates the
+        # management key, the slot's key object and the attestation container before it
+        # generates the key, and a finalized applet answers 6986 to the first.
+        return refusal(
+            "applet_finalized",
+            f"the PIV applet refused a change to its structure during {op} (status 6986), "
+            "which is what a finalized applet answers, and this build of the service cannot "
+            "attest a key on a finalized applet. Nothing was certified.",
         )
 
     if low.startswith("unknown op"):

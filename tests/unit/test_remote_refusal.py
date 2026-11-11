@@ -89,6 +89,28 @@ CASES = [
         {"error": "refused: the card did not authenticate with its derived KVN2 (not a genuine"},
         "card_not_genuine",
     ),
+    # a finalized applet: the service's flag, and what a build from before it answered
+    (
+        "attest",
+        {
+            "error": "attest refused: the PIV applet is finalized. Attesting generates a new "
+            "key in slot 9C and the key now in that slot is overwritten.",
+            "applet_finalized": True,
+            "confirmation_required": "replace_key",
+        },
+        "applet_finalized",
+    ),
+    (
+        "attest",
+        {
+            "error": "attest refused: the finalized PIV applet has no ECCP256 key object in "
+            "slot 9C (GENERATE SW=6A80)",
+            "applet_finalized": True,
+        },
+        "applet_finalized",
+    ),
+    ("attest", {"error": "create 9B mgmt key failed SW=6986"}, "applet_finalized"),
+    ("attest", {"error": "create slot 9C (adminKey=9B) failed SW=6986"}, "applet_finalized"),
     ("dev-reset", {"error": "unknown op 'dev-reset'"}, "unsupported_operation"),
     (
         "attest",
