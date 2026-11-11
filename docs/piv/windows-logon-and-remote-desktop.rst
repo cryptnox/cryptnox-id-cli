@@ -72,6 +72,17 @@ The second form does everything in one shot — PIN, PUK, an on-card **RSA-2048*
 key in 9A (the private key never leaves the card), a CSR for your CA, and the
 CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.
 
+On a card that returns at most 256 bytes of a public key over the admin
+channel, the RSA generation finishes behind the PIV management key (``9B``),
+and a card fresh from pre-personalization holds no value for it
+(:doc:`/piv/piv-personalization`). ``quickstart`` then stops at
+``generate-key`` and names the command that loads one. Run it, then repeat the
+same ``quickstart`` command; it skips the steps already done:
+
+.. code-block:: console
+
+   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+
 Step 1 — get the certificate issued
 -----------------------------------
 
