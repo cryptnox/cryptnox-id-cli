@@ -36,6 +36,9 @@ machine token (see :doc:`/json-output`).
    * - 6
      - ``status_word``
      - The card rejected a command (the message carries the ISO status word).
+       A refused PIN, PUK, certificate import or object write also ends with
+       this code, after printing its result object in place of an error
+       object (see :doc:`/json-output`).
    * - 7
      - ``scp03_error`` / ``mgmt_key``
      - SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch), or

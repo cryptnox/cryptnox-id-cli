@@ -754,6 +754,18 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
             c.print(f"[red]PIN not verified:[/red] {message} (SW={info.sw_hex()})")
 
     app.out.result(payload, human)
+    _exit_if_refused(resp.ok)
+
+
+def _exit_if_refused(ok: bool) -> None:
+    """End with the status-word exit code when the card refused the command.
+
+    Called after the result is printed: that payload carries the status word and,
+    for a PIN or PUK, the retries left, which the error object would not. A script
+    that only looks at the exit code must not take a refused PIN for a verified one.
+    """
+    if not ok:
+        sys.exit(6)
 
 
 def _change_secret_result(
@@ -778,6 +790,7 @@ def _change_secret_result(
                 c.print(f"  [red]{blocked_hint}[/red]")
 
     app.out.result(payload, human)
+    _exit_if_refused(resp.ok)
 
 
 @pin.command("change")
@@ -2550,6 +2563,7 @@ def _set_verifier_value(
             else f"[red]{label} not set:[/red] {info.message} (SW={info.sw_hex()})"
         ),
     )
+    _exit_if_refused(resp.ok)
 
 
 @perso.command("set-pin")
@@ -2882,6 +2896,7 @@ def perso_import_cert(
     app.out.result(
         {"slot": slot, "imported": resp.ok, "sw": info.sw_hex(), "checked": checked}, human
     )
+    _exit_if_refused(resp.ok)
 
 
 def _emit_object(app: AppContext, name: str, data: bytes, out_: str | None) -> None:
@@ -2958,6 +2973,7 @@ def perso_write_object(app: AppContext, object_name: str, file_: str, default_ke
             else f"[red]Write failed:[/red] {info.message} (SW={info.sw_hex()})"
         ),
     )
+    _exit_if_refused(resp.ok)
 
 
 @perso.command("write-standard-objects")
@@ -2983,6 +2999,7 @@ def perso_write_standard_objects(app: AppContext, default_keys: bool) -> None:
             c.print(f"  {mark}  {r['object']}")
 
     app.out.result({"objects": results}, human)
+    _exit_if_refused(all(r["ok"] for r in results))
 
 
 @perso.command("smoke-test")

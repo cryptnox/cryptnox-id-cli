@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `piv pin verify`, `piv pin change`, `piv pin unblock`, `piv puk change`,
+  `piv perso set-pin`, `piv perso set-puk`, `piv perso import-cert`,
+  `piv perso write-object` and `piv perso write-standard-objects` exit with
+  code 6 when the card refuses, instead of 0. They print the same result
+  object as before (`verified`, `changed`, `set`, `imported` or `written` set
+  to `false`, with the status word and, for a PIN or PUK, the retries left).
+  A script that tested only the exit code took a refused PIN for a verified
+  one.
 - The package ships the text of the GNU GPL version 3, which the LGPL
   incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,

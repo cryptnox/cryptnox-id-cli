@@ -64,6 +64,30 @@ add three fields:
      "context": "SELECT PIV"
    }
 
+A refused PIN, PUK or write
+---------------------------
+
+Nine commands answer a question the card may answer with "no": ``piv pin
+verify``, ``piv pin change``, ``piv pin unblock``, ``piv puk change``, ``piv
+perso set-pin``, ``piv perso set-puk``, ``piv perso import-cert``, ``piv perso
+write-object`` and ``piv perso write-standard-objects``. When the card refuses,
+they print their **result object**, not an error object, and exit with code 6:
+
+.. code-block:: json
+
+   {
+     "verified": false,
+     "sw": "63C5",
+     "message": "Verification failed; 5 attempt(s) remaining.",
+     "retries_remaining": 5
+   }
+
+The object is the one the command prints on success, with its outcome field
+(``verified``, ``changed``, ``set``, ``imported``, ``written``, or ``ok`` per
+object) set to ``false`` and the card's status word in ``sw``. A script can
+test the exit code alone; one that reads the object gets the retries left
+without a second command.
+
 Snapshot reports
 ------------------
 
