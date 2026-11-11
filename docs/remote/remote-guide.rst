@@ -152,8 +152,13 @@ instead of 6, the retry counter may exceed 15, and the PIN may be made usable
 over the contactless interface without secure messaging. It also skips the
 FIPS power-up self-tests and does not zeroise an object before discarding it.
 Slots, algorithms, key generation, key import, certificates and the admin
-channel behave the same in both builds; a card personalized with the built-in
-profiles behaves the same whichever build it carries.
+channel behave the same in both builds; a card personalized with a profile
+that asks for none of the three behaves the same whichever build it carries.
+
+A profile asks for them with ``fips_mode: false``
+(:doc:`/factory/pre-personalization-profiles`). The built-in ``ms-logon-nfc``
+profile, for Windows logon with the card on an NFC reader, is the one that
+does (:doc:`/piv/windows-logon-and-remote-desktop`).
 
 The two builds share the applet and package identifiers, so nothing outside
 the applet tells them apart. The applet reports its build in its status, read

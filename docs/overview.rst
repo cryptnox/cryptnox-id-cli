@@ -33,7 +33,10 @@ Reachability at a glance
        Windows logon needs a contact reader; administration works over both
        interfaces. Over contactless the built-in profiles expose the CHUID,
        the card-authentication certificate and the card-authentication key
-       (9E), which needs no PIN: the data physical access control uses.
+       (9E), which needs no PIN: the data physical access control uses. The
+       exception is a card set up for Windows logon over NFC: the
+       ``ms-logon-nfc`` profile on the applet build with FIPS mode off, where
+       the PIN and the 9A key also work over contactless.
    * - FIDO2
      - contactless (NFC)
      - Windows: requires an Administrator terminal.

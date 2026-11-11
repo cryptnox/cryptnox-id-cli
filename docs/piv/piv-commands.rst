@@ -3,7 +3,9 @@ PIV commands
 
 Operator and personalization commands for the PIV function (SP 800-73).
 Administration runs over an SCP03 secure channel and works over both
-interfaces (the PIN, the PUK and the PIN-protected keys are **contact-only**);
+interfaces (the PIN, the PUK and the PIN-protected keys are **contact-only**,
+except the PIN and the 9A keys of a card set up with the ``ms-logon-nfc``
+profile);
 admin keys come from ``--default-keys`` (the test keys every card ships with)
 or, once replaced (:ref:`piv-admin-key-rotation`), the ``PIV_SCP03_ENC`` /
 ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment variables. PIN values come

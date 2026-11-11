@@ -61,6 +61,27 @@ Built-in profiles
    available; that attribute permits import, it does not prevent on-card
    generation.
 
+``ms-logon-nfc``
+   Windows smart-card logon with the card on an NFC reader. It is ``ms-logon``
+   with what the logon needs opened to the contactless interface:
+
+   * the PIN is accepted over contactless **in clear**, with 3 of its 6 tries;
+   * the 9A keys can be used over contactless after the PIN;
+   * the 9A certificate and the CCC can be read over contactless (the CHUID
+     already can).
+
+   The PUK, the other keys and the other certificates stay as in ``ms-logon``.
+
+   This profile is for the **PIV applet build with FIPS mode off** only
+   (``fips_mode: false``, see below). The FIPS-mode build, which cards ship
+   with, accepts a PIN over contactless only inside secure messaging, and the
+   driver Windows ships has none; it refuses this profile's PIN verifier.
+   Install the other build first with ``remote reset --fips-off``
+   (:doc:`/remote/remote-guide`), then load the profile over a **contact**
+   reader. A card set up this way is not a FIPS-validated configuration, and
+   its PIN crosses the radio link unprotected: see
+   :doc:`/piv/windows-logon-and-remote-desktop`.
+
 Inspecting profiles
 ----------------------
 
@@ -116,7 +137,8 @@ Profile YAML
 **Applet build** (optional top-level key): ``fips_mode: false`` says the profile
 is written for the PIV applet build with FIPS mode off, which the remote
 service installs on request (:doc:`/remote/remote-guide`). It widens the PIN
-and PUK bounds listed below. ``load-config`` then asks the card which build it
+and PUK bounds listed below and allows a PIN or PUK over the contactless
+interface. ``load-config`` then asks the card which build it
 carries and refuses the FIPS-mode build before anything is written, because
 that build would refuse the PIN verifier after the containers were created,
 and what was created cannot be removed. Leave the key out for the FIPS-mode
@@ -154,11 +176,37 @@ Profile files written by version 1.1 use ``VCI`` and ``VCI_PIN`` for what is now
 Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
 sessions, so anything marked ``SM``, ``SM_PIN``, ``VCI`` or ``VCI_PIN`` on an
 interface cannot be used there with them. In the built-in profiles that is the
-contactless side of most containers. The PIN and PUK are created for contact
-use only: the applet's FIPS-mode build accepts a PIN over contactless only
-inside secure messaging. The build with FIPS mode off would accept one without
-it, but a profile cannot ask for that: ``fips_mode: false`` widens the length
-and retry bounds only.
+contactless side of most containers.
+
+**PIN and PUK over the contactless interface** (optional keys of ``pin`` and
+``puk``): by default both are created for contact use only, because the
+applet's FIPS-mode build accepts a PIN over contactless only inside secure
+messaging. The build with FIPS mode off accepts one without it:
+
+.. code-block:: yaml
+
+   fips_mode: false
+   pin:
+     min: 6
+     max: 8
+     retries: 6
+     contactless: ALWAYS
+     contactless_retries: 3
+
+- ``contactless``: ``NEVER`` (the default) or ``ALWAYS``. ``ALWAYS`` means the
+  value is accepted over contactless **in clear**; anyone who can listen to
+  the exchange between the card and the reader learns it.
+- ``contactless_retries``: how many of ``retries`` the contactless interface
+  may use, from 1 to ``retries``. After that many wrong values over
+  contactless the applet answers ``6983`` there and keeps the remaining tries
+  for the contact interface, so the PIN cannot be blocked over the air. A
+  correct value on the contact interface restores the full count.
+
+Both keys are written to a file only when the value is usable over
+contactless. ``load-config`` and ``piv quickstart --include-preperso`` warn
+before they write such a profile, and ``piv inventory`` reads the setting back
+(``mode_contactless``, ``retries_contactless`` of each verifier). The built-in
+``ms-logon-nfc`` profile sets them for the PIN only.
 
 **Key roles** (a bitmask — combine with ``+``, e.g. ``AUTHENTICATE+SIGN``, or
 give a YAML list): ``AUTHENTICATE``, ``KEY_ESTABLISH``, ``SIGN``.
@@ -195,6 +243,8 @@ whole profile before anything is sent to a card:
 - PIN and PUK ``min`` must be at least 6 (at least 4 with ``fips_mode: false``),
   and ``max`` must be at least ``min`` and at most 16;
 - PIN and PUK ``retries`` must be 0–10 (0–127 with ``fips_mode: false``);
+- PIN and PUK ``contactless`` must be ``NEVER`` or ``ALWAYS``; ``ALWAYS`` needs
+  ``fips_mode: false`` and ``contactless_retries`` from 1 to ``retries``;
 - ``fips_mode``, when present, must be ``true`` or ``false``;
 - every key's mechanism must be one this applet actually supports (see
   ``inspect-defaults``);

@@ -15,7 +15,8 @@ Quick hits:
 * **FIDO commands fail on Windows** — run from an Administrator terminal.
 * **DESFire not answering** — use a DESFire-capable *contactless* reader.
 * **A PIN step fails over NFC** — the PIN, the PUK and the PIN-protected keys are
-  contact-only; administration works over both interfaces.
+  contact-only (the ``ms-logon-nfc`` profile opens the PIN and the 9A keys to
+  NFC); administration works over both interfaces.
 * **yubico-piv-tool sees nothing** — pass your reader: ``-r <substring>``.
 * **Two readers hold a card** — the CLI refuses to guess; pass ``--reader``.
 
@@ -77,7 +78,8 @@ not hit this in normal use — only when scripting raw ``apdu`` calls.
 PIN, and ``piv status`` / ``piv pin status`` say the PIN is not usable over this
 interface, right after ``set-pin`` succeeded.**
 You are on a contactless (NFC/PICC) reader. The PIN and PUK verifiers are
-**contact-only** on every built-in profile, and so are the 9A/9C/9D keys;
+**contact-only** on every built-in profile but ``ms-logon-nfc``, and so are
+the 9A/9C/9D keys;
 only the admin channel (``load-config``, ``set-pin``, ``set-puk``,
 ``generate-key``, ``import-cert``, ``write-standard-objects``) works over
 both interfaces, which is why pre-personalization and personalization got

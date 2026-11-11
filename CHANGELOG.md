@@ -64,6 +64,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   asks the card which build it carries and refuses the FIPS-mode build before
   anything is written. `inspect-defaults` lists both sets of bounds. A PIN or
   PUK `max` above 16, which the applet refuses, is now a profile error.
+- Profile YAML: `contactless: ALWAYS` with `contactless_retries` under `pin`
+  or `puk` makes the value usable over the contactless interface, in clear,
+  with that many of its tries. Only a profile with `fips_mode: false` may ask
+  for it. `load-config` and `quickstart --include-preperso` warn before they
+  write such a profile.
+- Built-in profile `ms-logon-nfc`: Windows logon with the card on an NFC
+  reader, for the applet build with FIPS mode off. It is `ms-logon` with the
+  PIN accepted over contactless (3 of its 6 tries), the 9A keys usable there
+  after the PIN, and the 9A certificate and the CCC readable there.
+  `piv quickstart --profile ms-logon-nfc --slot 9A` defaults to RSA-2048 as
+  `ms-logon` does, and refuses a card that carries the FIPS-mode build before
+  it plans anything. Over a contactless reader such a card shows the PIN
+  usable and the PUK refused; `piv pin status`, `info` and `quickstart` word
+  their note for the PUK alone.
 
 ### Changed
 

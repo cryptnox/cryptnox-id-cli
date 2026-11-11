@@ -51,8 +51,12 @@ def write(tmp_path, data: dict) -> str:
 # --------------------------------------------------------------------------- #
 # The model                                                                   #
 # --------------------------------------------------------------------------- #
+#: the one built-in profile written for the build with FIPS mode off
+OFF_BUILTINS = {"ms-logon-nfc"}
+
+
 def test_built_in_profiles_are_for_the_fips_mode_build_and_read_as_before():
-    for name in profiles.builtin_names():
+    for name in sorted(set(profiles.builtin_names()) - OFF_BUILTINS):
         prof = profiles.builtin(name)
         assert prof.fips_mode is True
         assert "fips_mode" not in prof.to_dict()

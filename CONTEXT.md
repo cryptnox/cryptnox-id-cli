@@ -17,7 +17,8 @@ _Avoid_: applet (DESFire is not a JavaCard applet), app, mode
 **Contact interface**:
 The wired ISO 7816 interface; the only interface where the PIN, the PUK, the
 PIN-protected keys and the management key (9B) work. The admin channel works over
-both interfaces.
+both interfaces. One profile departs from this: `ms-logon-nfc`, for the build with
+FIPS mode off, opens the PIN and the 9A keys to the contactless interface.
 _Avoid_: chip mode
 
 **Contactless interface**:

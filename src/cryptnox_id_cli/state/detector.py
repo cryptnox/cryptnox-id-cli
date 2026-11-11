@@ -9,7 +9,7 @@ from cryptnox_id_cli.applets.genuine.genuine import GenuinenessApplet
 from cryptnox_id_cli.applets.piv import inventory
 from cryptnox_id_cli.applets.piv import objects as piv_obj
 from cryptnox_id_cli.applets.piv.constants import REF_PIV_PIN, REF_PUK
-from cryptnox_id_cli.applets.piv.piv import PIN_INTERFACE_REFUSED_HINT, PivApplet
+from cryptnox_id_cli.applets.piv.piv import PivApplet, interface_refused_hint
 from cryptnox_id_cli.state.model import (
     CardPresence,
     CardState,
@@ -108,11 +108,13 @@ class StateDetector:
         with contextlib.suppress(CryptnoxError):
             st.piv_pin = piv.pin_status(REF_PIV_PIN)
             st.piv_puk = piv.pin_status(REF_PUK)
-        verifier_refused = bool(
-            (st.piv_pin and st.piv_pin.refused) or (st.piv_puk and st.piv_puk.refused)
-        )
-        if verifier_refused:
-            st.notes.append("PIN/PUK state not readable: " + PIN_INTERFACE_REFUSED_HINT)
+        pin_refused = bool(st.piv_pin and st.piv_pin.refused)
+        puk_refused = bool(st.piv_puk and st.piv_puk.refused)
+        verifier_refused = pin_refused or puk_refused
+        hint = interface_refused_hint(pin_refused, puk_refused)
+        if hint:
+            what = "PIN/PUK state" if pin_refused else "PUK state"
+            st.notes.append(f"{what} not readable: {hint}")
 
         present: dict[str, bool] = {}
         for name in _PROBE_OBJECTS:

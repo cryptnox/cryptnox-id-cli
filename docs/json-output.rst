@@ -134,11 +134,14 @@ just theirs. The section shapes:
 
 ``apt`` / ``pin`` / ``puk`` are ``null`` when not available.
 ``refused_on_interface`` is ``true`` when the card answered the PIN or PUK probe
-with 6982, which a contactless reader gets because the built-in profiles make
-both contact-only; ``configured`` and ``retries_remaining`` are then unknown,
+with 6982, which a contactless reader gets because every built-in profile but
+``ms-logon-nfc`` makes both contact-only; ``configured`` and
+``retries_remaining`` are then unknown,
 not false. The same ``pin`` / ``puk`` objects appear in ``info --json`` and
 ``piv status --json``; ``piv pin status --json`` adds a top-level ``note``
-string when either is refused.
+string when either is refused. On a card set up with ``ms-logon-nfc`` a
+contactless reader shows the PIN usable (with the tries that interface may
+use) and the PUK refused, and the note is about the PUK alone.
 
 **mifare** — one of:
 
