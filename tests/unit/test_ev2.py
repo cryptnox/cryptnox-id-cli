@@ -657,3 +657,40 @@ def test_value_get_of_a_full_mode_value_file_fails(monkeypatch):
     result = run(VALUE_GET)
     assert result.exit_code == 1, result.output
     assert "GetValue: expected 4 bytes, got 16" in result.output
+
+
+ZERO_KEY_READ = ["mifare", "read", "--aid", "010203", "--file-id", "01", "--full", "--length", "20"]
+ZERO_KEY_READ += ["--zero-key"]
+
+
+@pytest.mark.xfail(strict=True, reason="the public zero key is registered as a secret")
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_full_read_with_the_zero_key_shows_zero_bytes_as_hex(monkeypatch, json_mode):
+    conn = _AnswersAfterAuth(lambda card: _full_answer(card, bytes(20)), bytes(16))
+    wire_session(monkeypatch, conn)
+    result = run(["--json", *ZERO_KEY_READ] if json_mode else ZERO_KEY_READ)
+    assert result.exit_code == 0, result.output
+    assert "00" * 20 in result.output
+    assert "REDACTED" not in result.output
+
+
+@pytest.mark.xfail(strict=True, reason="the public zero key is registered as a secret")
+def test_write_with_the_zero_key_keeps_zero_bytes_in_the_apdu_log(monkeypatch, tmp_path):
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, b""), bytes(16)))
+    log = tmp_path / "apdu.log"
+    args = [
+        "--yes",
+        "--apdu-log",
+        str(log),
+        "mifare",
+        "write",
+        "--aid",
+        "010203",
+        "--file-id",
+        "01",
+    ]
+    result = run([*args, "--data", "00" * 16, "--zero-key"])
+    assert result.exit_code == 0, result.output
+    write_line = next(line for line in log.read_text().splitlines() if line.startswith("> 903D"))
+    assert "00" * 16 in write_line
+    assert "REDACTED" not in write_line
