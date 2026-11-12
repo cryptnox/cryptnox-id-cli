@@ -10,6 +10,7 @@ apart in the output.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import time
@@ -40,7 +41,7 @@ from cryptnox_id_cli.transport.errors import (
     RemoteError,
     RemoteOperationError,
 )
-from cryptnox_id_cli.transport.pcsc import CardSession, RawConnection
+from cryptnox_id_cli.transport.pcsc import CardSession, RawConnection, is_contactless_interface
 from cryptnox_id_cli.util import tlv
 
 _FULL_TRANSCRIPT_KEY = "remote.full_transcript"
@@ -72,9 +73,9 @@ _BUILD_NAMES = {"fips": "FIPS-mode build", "fipsoff": "build with FIPS mode off"
 def command(ctx: click.Context, full_transcript: bool) -> None:
     """Run operations through the Cryptnox remote PIV service.
 
-    Every command opens the local reader, connects to the service over TLS,
-    answers a small proof-of-work, and relays the commands the service sends to
-    the card. Only the PIV function and its security domains are reachable; the
+    Every command but `ping` opens the local reader, connects to the service
+    over TLS, answers a small proof-of-work, and relays the commands the service
+    sends to the card. Only the PIV function and its security domains are reachable; the
     other card functions are fenced off by the relay policy.
     """
     ctx.meta[_FULL_TRANSCRIPT_KEY] = full_transcript
@@ -301,15 +302,114 @@ def _fmt(value: object) -> str:
     return str(value)
 
 
+def _text(value: object) -> str:
+    """A value the service supplied: formatted, control sequences stripped, markup escaped."""
+    return escape(rproto.sanitize_server_text(_fmt(value)))
+
+
+#: Result keys with a rendering of their own, left out of the generic dump.
+_RENDERED_KEYS = frozenset({"channel", "nfc_admin_lock"})
+
+
 def _print_result(c: Console, result: dict[str, object]) -> None:
     c.print("\n[bold]Service result[/bold] (asserted by the service)")
     for key, value in result.items():
+        if key in _RENDERED_KEYS:
+            continue
         if key == "steps" and isinstance(value, list):
             c.print("  steps:")
             for step in value:
-                c.print(f"    {escape(_fmt(step))}")
+                c.print(f"    {_text(step)}")
             continue
-        c.print(f"  {escape(str(key))}: {escape(_fmt(value))}")
+        c.print(f"  {_text(key)}: {_text(value)}")
+
+
+_CHANNEL_MODES = {
+    "hardened": "the card authenticates and encrypts its answers",
+    "legacy": "the card's answers are not authenticated",
+}
+
+
+def _channel(result: dict[str, object]) -> dict[str, object] | None:
+    chan = result.get("channel")
+    return chan if isinstance(chan, dict) else None
+
+
+def _print_channel(c: Console, result: dict[str, object], *, expected: bool = False) -> None:
+    """The admin channel as the service reports it; ``expected`` for operations that open one."""
+    chan = _channel(result)
+    if chan is None:
+        if expected:
+            c.print("  Admin channel: not reported by the service (treated as legacy)")
+        return
+    mode = chan.get("mode")
+    mode_text = _text(mode) if isinstance(mode, str) else "mode not reported"
+    line = f"{_text(chan.get('scp'))} level {_text(chan.get('level'))}, {mode_text}"
+    if isinstance(mode, str) and mode in _CHANNEL_MODES:
+        line += f" ({_CHANNEL_MODES[mode]})"
+    c.print(f"  Admin channel: {line}, as the service reports it")
+
+
+def _warn_channel(app: AppContext, result: dict[str, object]) -> None:
+    chan = _channel(result)
+    if chan is None:
+        return
+    scp = chan.get("scp")
+    if chan.get("mode") == "legacy" and isinstance(scp, str) and scp.upper() == "SCP03":
+        app.out.warn(
+            "the service drove this SCP03 card at the legacy channel level, so the card's "
+            "answers were not authenticated; the service's log says why."
+        )
+
+
+def _print_nfc_admin_lock(c: Console, result: dict[str, object]) -> None:
+    lock = result.get("nfc_admin_lock")
+    if not isinstance(lock, dict):
+        return
+    if lock.get("restrict_contactless_admin") is True:
+        c.print("  Contactless administration: refused by the applet from now on (lock set)")
+        return
+    detail = f" ({_text(lock['error'])})" if isinstance(lock.get("error"), str) else ""
+    c.print(f"  Contactless administration: lock [red]NOT set[/red]{detail}")
+
+
+def _warn_nfc_admin_lock(app: AppContext, result: dict[str, object]) -> None:
+    lock = result.get("nfc_admin_lock")
+    if isinstance(lock, dict) and lock.get("restrict_contactless_admin") is not True:
+        app.out.warn(
+            "the service could not set the applet's contactless-administration lock; the "
+            "applet still accepts its admin channel over the contactless interface."
+        )
+
+
+def _warn_contactless_reader(app: AppContext, card: _Card, *, refused: bool) -> None:
+    """Advice from the reader's name; the service's gate reads the card's own interface report."""
+    if is_contactless_interface(card.reader, bytes.fromhex(card.atr)):
+        gate = " and refuses this operation over contactless" if refused else ""
+        app.out.warn(
+            "this looks like a contactless reader; the service administers the PIV "
+            f"function over the contact interface only{gate}. Use a contact reader, or the "
+            "contact slot of a combination reader."
+        )
+
+
+_UNVERIFIED_EXIT = 17
+
+
+def _exit_if_unverified(app: AppContext, checks: dict[str, object]) -> None:
+    """End with code 17 when a local check failed.
+
+    Called after the result is printed: that payload carries every check, so no
+    error object follows it. A script that only looks at the exit code must not
+    take a result this tool itself rejected for a success.
+    """
+    failed = [name for name, value in checks.items() if value is False]
+    if failed:
+        app.out.error(
+            "local verification failed: " + ", ".join(failed) + ". The result above is the "
+            "service's account; the checks named are this tool's own and did not hold."
+        )
+        sys.exit(_UNVERIFIED_EXIT)
 
 
 def _print_checks(c: Console, checks: dict[str, object]) -> None:
@@ -320,7 +420,7 @@ def _print_checks(c: Console, checks: dict[str, object]) -> None:
         elif value is False:
             label = "[red]MISMATCH[/red]"
         else:
-            label = "[dim]not reported by the service[/dim]"
+            label = "[dim]unchecked[/dim]"
         c.print(f"  {key}: {label}")
 
 
@@ -417,6 +517,8 @@ def _print_ping(c: Console, url: str, payload: dict[str, object]) -> None:
         deployed = builds.get("deployed") if isinstance(builds.get("deployed"), dict) else {}
         names = []
         for name in builds["enabled"]:
+            if not isinstance(name, str):
+                continue
             marks = []
             if name == builds.get("default"):
                 marks.append("default")
@@ -473,7 +575,9 @@ def ping(ctx: click.Context) -> None:
     server_time = answer.get("server_time")
     skew = (
         round(time.time() - server_time)
-        if isinstance(server_time, int | float) and not isinstance(server_time, bool)
+        if isinstance(server_time, int | float)
+        and not isinstance(server_time, bool)
+        and math.isfinite(server_time)
         else None
     )
     payload: dict[str, object] = {
@@ -538,12 +642,14 @@ def _run_read_only(ctx: click.Context, op: str) -> None:
 
     def human(c: Console) -> None:
         _print_header(c, op, url, card_info, relay_info)
+        _print_channel(c, report.result)
         _print_result(c, report.result)
         if op == "inspect":
             c.print(f"\n[bold]PIV applet build[/bold] (read locally): {escape(_build_text(build))}")
         _print_checks(c, checks)
 
     app.out.result(payload, human)
+    _exit_if_unverified(app, checks)
 
 
 @command.command("authenticate")
@@ -591,7 +697,8 @@ _FIPS_OFF_MEANS = (
     "It accepts pre-personalization profiles the FIPS-mode build refuses (a PIN shorter "
     "than 6 digits, more than 15 retries, a PIN usable over the contactless interface "
     "without secure messaging) and skips the FIPS power-up self-tests. Keys, algorithms "
-    "and commands are the same."
+    "and commands are the same. The build with FIPS mode off holds no FIPS 140-3 "
+    "validation."
 )
 
 
@@ -696,6 +803,7 @@ def _run_destructive(
 
     card = _open_card(app)
     try:
+        _warn_contactless_reader(app, card, refused=False)
         before = _confirm_destructive(app, op, phrase, understood, card, default_keys, piv_build)
         app.out.note(f"remote {op} via {url}")
         report = _relay(app, ctx, card, op, params, url)
@@ -731,12 +839,22 @@ def _run_destructive(
 
     def human(c: Console) -> None:
         _print_header(c, op, url, card_info, relay_info)
+        _print_channel(c, report.result, expected=True)
         _print_result(c, report.result)
+        _print_nfc_admin_lock(c, report.result)
         c.print()
         _print_inventory(c, "After", after)
         _print_checks(c, checks)
 
     app.out.result(payload, human)
+    _warn_channel(app, report.result)
+    _warn_nfc_admin_lock(app, report.result)
+    if _build_matches("fipsoff", after.get("piv_build")):
+        app.out.warn(
+            "the card now carries the PIV applet build with FIPS mode off, which holds no "
+            "FIPS 140-3 validation."
+        )
+    _exit_if_unverified(app, checks)
 
 
 def _piv_build_options(fn):  # noqa: ANN001, ANN202 - a click decorator stack
@@ -867,6 +985,39 @@ def _read_certificates(card: _Card, slot: int) -> tuple[bytes | None, bytes | No
     return slot_cert, attestation
 
 
+def _check_out_path(path: str) -> None:
+    """Refuse a --out the run could not write before an operation is spent on the card."""
+    target = Path(path)
+    parent = target.parent if str(target.parent) else Path(".")
+    if not parent.is_dir() or not os.access(parent, os.W_OK):
+        raise CryptnoxError(f"--out {path}: the directory does not exist or is not writable")
+    if target.exists() and not os.access(target, os.W_OK):
+        raise CryptnoxError(f"--out {path} is not writable")
+
+
+def _verdict(verification: av.AttestVerification | None) -> bool | None:
+    """True when every binding holds, False when one fails, None when one could not be checked."""
+    if verification is None:
+        return False
+    if verification.verified:
+        return True
+    bindings = (
+        verification.chain_verified,
+        verification.serial_number_matches_card,
+        verification.slot_matches,
+        verification.trust_model_matches,
+        verification.public_key_matches_card,
+    )
+    return False if any(b is False for b in bindings) else None
+
+
+def _pem_lines(pem: str) -> str:
+    """A PEM from the service with each line stripped of control sequences, line breaks kept."""
+    return "\n".join(
+        rproto.sanitize_server_text(line, limit=128) for line in pem.strip().splitlines()
+    )
+
+
 def _piv_finalized(card: _Card) -> bool:
     """Whether the PIV applet reports itself finalized, read key-free.
 
@@ -891,17 +1042,9 @@ def _piv_finalized(card: _Card) -> bool:
     type=click.Choice(ATTEST_ALGORITHMS, case_sensitive=False),
     help="Key algorithm.",
 )
-@click.option(
-    "--ca-obj",
-    default=None,
-    hidden=True,
-    help="No longer used: the service signs key attestations with one fixed CA key.",
-)
 @click.option("--out", "out_", type=click.Path(dir_okay=False), help="Write the leaf PEM here.")
 @click.pass_context
-def attest(
-    ctx: click.Context, slot: str, algorithm: str, ca_obj: str | None, out_: str | None
-) -> None:
+def attest(ctx: click.Context, slot: str, algorithm: str, out_: str | None) -> None:
     """Generate a key on the card through the service and receive its attestation.
 
     The service generates the key in the slot, signs a key-attestation certificate
@@ -919,16 +1062,12 @@ def attest(
     slot_hex = f"{slot_ref:02X}"
     url, _production = _endpoint(op)
     params: dict[str, object] = {"slot": slot_hex, "algorithm": algorithm.upper()}
-    if ca_obj:
-        # The signing key is the service's own setting; naming another one is refused
-        # and still counts as an operation on the card, so the value is not sent.
-        app.out.warn(
-            "--ca-obj is ignored: the service signs key attestations with one fixed CA key. "
-            "The option will be removed."
-        )
+    if out_:
+        _check_out_path(out_)
 
     card = _open_card(app)
     try:
+        _warn_contactless_reader(app, card, refused=True)
         slot_cert, container_before = _read_certificates(card, slot_ref)
         occupied = []
         if slot_cert is not None:
@@ -979,6 +1118,7 @@ def attest(
     pem = report.result.get("attestation_cert_pem")
     verification: av.AttestVerification | None = None
     identifiers: dict[str, bool | None] = {}
+    written_to: str | None = None
     if isinstance(pem, str) and pem.strip():
         try:
             leaf_der = av.leaf_from_pem(pem)
@@ -989,7 +1129,14 @@ def attest(
         )
         identifiers = av.check_reported_identifiers(report.result, leaf_der)
         if out_:
-            Path(out_).write_bytes(pem.encode("utf-8"))
+            try:
+                Path(out_).write_bytes(pem.encode("utf-8"))
+                written_to = out_
+            except OSError as exc:
+                app.out.warn(
+                    f"the certificate could not be written to {out_} ({exc}); it is in the "
+                    "result below and, without --json, printed in full."
+                )
     # A finalized applet without an attestation container: the certificate exists only in
     # the service's answer, so it must not scroll away.
     not_stored = report.result.get("attestation_stored") is False and bool(pem)
@@ -998,14 +1145,23 @@ def attest(
             "the applet has no attestation container and none can be added to a finalized "
             "applet: the key attestation is not stored on the card, so the certified key "
             "cannot be compared with a certificate on the card (reported as unchecked). "
-            + (f"It was written to {out_}." if out_ else "It is printed below; keep it.")
+            + (
+                f"It was written to {written_to}."
+                if written_to
+                else "It is printed below; keep it."
+            )
         )
 
     card_info = card.to_dict()
     checks = _cross_check(card_info, report.result)
     checks["attestation_returned"] = verification is not None
-    checks["attestation_verified"] = verification.verified if verification else False
-    checks["attestation_container_written"] = container_after is not None
+    checks["attestation_verified"] = _verdict(verification)
+    # The service's own word that it stored nothing leaves nothing to compare with.
+    checks["attestation_container_written"] = (
+        None if report.result.get("attestation_stored") is False else container_after is not None
+    )
+    if out_:
+        checks["certificate_written_to_out"] = written_to is not None
     # What the service says it signed, against the certificate it returned.
     checks.update(identifiers)
     if any(value is False for value in identifiers.values()):
@@ -1013,6 +1169,7 @@ def attest(
             "the identifiers the service reports for the certificate do not match the "
             "certificate it returned; report this to Cryptnox support."
         )
+    key_authenticated = report.result.get("public_key_authenticated")
     relay_info = _relay_info(report)
     payload: dict[str, object] = {
         "op": op,
@@ -1023,20 +1180,24 @@ def attest(
         "result": report.result,
         "verification": verification.to_dict() if verification else None,
         "verified_locally": checks,
-        "out": out_,
+        "out": written_to,
         "relay": relay_info,
     }
 
     def human(c: Console) -> None:
         _print_header(c, op, url, card_info, relay_info)
+        _print_channel(c, report.result, expected=True)
         _print_result(c, {k: v for k, v in report.result.items() if k != "attestation_cert_pem"})
         c.print("\n[bold]Key attestation[/bold] (checked locally)")
         if verification is None:
             c.print("  [red]the service returned no certificate[/red]")
         else:
-            verdict = (
-                "[green]verified[/green]" if verification.verified else "[red]NOT verified[/red]"
-            )
+            if checks["attestation_verified"] is True:
+                verdict = "[green]verified[/green]"
+            elif checks["attestation_verified"] is False:
+                verdict = "[red]NOT verified[/red]"
+            else:
+                verdict = "[yellow]not fully checked[/yellow]"
             c.print(f"  {verdict}  {escape(verification.subject)}")
             c.print(f"  chain: {' -> '.join(escape(n) for n in verification.chain)}")
             for label, value in (
@@ -1054,14 +1215,36 @@ def attest(
                 c.print(f"  {label}: {mark}")
             for reason in verification.reasons:
                 c.print(f"  [yellow]-[/yellow] {escape(reason)}")
-            if out_:
-                c.print(f"  PEM written to {escape(out_)}")
+            if written_to:
+                c.print(f"  PEM written to {escape(written_to)}")
+        if key_authenticated is True:
+            mark = "[green]yes[/green]"
+        elif key_authenticated is False:
+            mark = "[red]NO[/red]"
+        else:
+            mark = "[dim]not reported[/dim]"
+        c.print(f"  public key authenticated by the card's channel (service's claim): {mark}")
         c.print(
             "  [dim]On-card generation is the service's claim; the relay cannot witness it.[/dim]"
         )
         _print_checks(c, checks)
-        if not_stored and not out_ and isinstance(pem, str):
+        if (not_stored or (out_ and written_to is None)) and isinstance(pem, str):
             c.print("\n[bold]Key attestation certificate[/bold] (not stored on the card)")
-            c.print(escape(pem.strip()))
+            c.print(escape(_pem_lines(pem)))
 
     app.out.result(payload, human)
+    _warn_channel(app, report.result)
+    if key_authenticated is False:
+        app.out.warn(
+            "the public key the service certified was received over a channel whose answers "
+            "the card does not authenticate; something between the service and the card "
+            "could have substituted it, so this attestation is weaker."
+        )
+    elif key_authenticated is not True:
+        app.out.warn(
+            "the service did not say whether the public key it certified reached it "
+            "authenticated by the card. A service without the hardened channel receives it "
+            "over a channel whose answers the card does not authenticate, so treat this "
+            "attestation as the weaker kind."
+        )
+    _exit_if_unverified(app, checks)

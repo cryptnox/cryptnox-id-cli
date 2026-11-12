@@ -144,7 +144,8 @@ def test_the_build_with_fips_mode_off_is_asked_of_the_service_first_then_request
     assert json.loads(result.stdout)["piv_variant"] == "fipsoff"
 
 
-def test_the_default_build_needs_no_question_to_the_service(wired):
+def test_the_default_build_needs_no_question_to_the_service(monkeypatch, mock_connection, wired):
+    wire_session(monkeypatch, card(mock_connection, VERSION_FIPS, STATUS_FIPS), reader_name="R")
     channel = wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", "reset", "--piv-variant", "fips", FLAG])
     assert result.exit_code == 0, result.output
@@ -232,10 +233,11 @@ def test_a_card_that_does_not_carry_the_requested_build_is_flagged(wired):
     # The service says the reset went well, yet the applet still reports FIPS mode off.
     wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", "reset", FLAG])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 17, result.output  # printed, then refused
     payload = json.loads(result.stdout)
     assert payload["piv_variant"] == "fips"
     assert payload["verified_locally"]["piv_build_matches"] is False
+    assert "local verification failed: piv_build_matches" in result.stderr
     assert "does not carry the requested PIV applet FIPS-mode build" in result.stderr
     assert "build with FIPS mode off (OpenFIPS201-P71D600 2.0.0)" in result.stderr
 
@@ -268,10 +270,13 @@ def test_without_an_applet_the_build_is_unknown_not_wrong(monkeypatch, mock_conn
     wire_session(monkeypatch, conn, reader_name="Fake Reader 00 00")
     wired["arm"]([OK_RESULT])
     result = run(["--json", "remote", "reset", FLAG])
-    assert result.exit_code == 0, result.output
+    # An applet that is absent after the reset fails the presence checks (exit 17);
+    # the build itself stays unknown rather than wrong.
+    assert result.exit_code == 17, result.output
     payload = json.loads(result.stdout)
     assert payload["after"]["piv_build"] is None
     assert payload["verified_locally"]["piv_build_matches"] is None
+    assert "piv_build_matches" not in result.stderr
 
 
 def test_human_output_names_the_build_and_warns_about_what_fips_off_means(wired):
@@ -283,6 +288,7 @@ def test_human_output_names_the_build_and_warns_about_what_fips_off_means(wired)
     assert "a PIN shorter than 6 digits" in text
     assert "PIV applet build: build with FIPS mode off (OpenFIPS201-P71D600 2.0.0)" in text
     assert "piv_build_matches: match" in text
+    assert "holds no FIPS 140-3 validation" in text
 
 
 def test_going_back_to_the_fips_mode_build_is_announced(wired):
@@ -315,7 +321,7 @@ def _inspect_result(fips_mode):
 def test_inspect_reads_the_build_itself_and_compares_it_with_the_service(wired, reported, expected):
     wired["arm"]([_inspect_result(reported)])
     result = run(["--json", "remote", "inspect"])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == (17 if expected is False else 0), result.output
     payload = json.loads(result.stdout)
     assert payload["piv_build"]["fips_mode"] is False
     assert payload["verified_locally"]["piv_build_matches"] is expected

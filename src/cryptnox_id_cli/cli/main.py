@@ -6,6 +6,7 @@ import json as _json
 import sys
 
 import click
+from rich.markup import escape
 
 from cryptnox_id_cli import CLI_NAME, __version__
 from cryptnox_id_cli.cli import dryrun
@@ -29,7 +30,7 @@ def _report(app: AppContext | None, exc: CryptnoxError) -> None:
     if app is not None and app.json:
         sys.stdout.write(_json.dumps(exc.to_dict(), indent=2) + "\n")
     elif app is not None:
-        app.out.error(str(exc))
+        app.out.error(escape(str(exc)))
     else:  # error before context creation
         click.echo(f"error: {exc}", err=True)
 

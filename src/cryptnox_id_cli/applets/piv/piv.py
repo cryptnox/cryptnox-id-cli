@@ -46,7 +46,8 @@ PIN_INTERFACE_REFUSED_HINT = (
 PUK_INTERFACE_REFUSED_HINT = (
     "the card refuses PUK commands over this interface (SW=6982) and accepts the PIN "
     "there: the PUK is contact-only on this card, which is how the ms-logon-nfc profile "
-    "sets it. Use a contact reader to unblock the PIN or to change the PUK."
+    "sets it. A PIN shown blocked here may only have used up its contactless tries: a "
+    "correct PIN on a contact reader restores them, and the PUK is the last resort."
 )
 
 

@@ -16,7 +16,9 @@ Quick hits:
 * **DESFire not answering** — use a DESFire-capable *contactless* reader.
 * **A PIN step fails over NFC** — the PIN, the PUK and the PIN-protected keys are
   contact-only (the ``ms-logon-nfc`` profile opens the PIN and the 9A keys to
-  NFC); administration works over both interfaces.
+  NFC); administration works over both interfaces unless the applet's
+  contactless-administration lock is set, as it is on a card the remote
+  service reinstalled.
 * **yubico-piv-tool sees nothing** — pass your reader: ``-r <substring>``.
 * **Two readers hold a card** — the CLI refuses to guess; pass ``--reader``.
 

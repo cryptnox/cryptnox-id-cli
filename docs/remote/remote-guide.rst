@@ -97,6 +97,54 @@ Operations
    reader can install or delete applets on the card, and only Cryptnox can make
    it genuine again.
 
+The admin channel the service opens
+-----------------------------------
+
+For ``attest``, ``reset`` and ``dev-reset`` the service opens the PIV
+applet's admin channel with the card's own key. On an SCP03 card it asks for
+security level ``0x33``: commands and answers are both authenticated and
+encrypted, so nothing between the service and the card, |cli| included, can
+alter what the card says. That is the hardened channel. SCP02 cards have no
+answer protection, so on them the service drives the card at the legacy level
+``0x03``, where only the commands are protected. Every result names the
+channel used (``channel``: protocol, level, ``hardened`` or ``legacy``) and
+|cli| shows it. A legacy channel on an SCP03 card is warned about, and the
+service's log says why. A result without the field comes from a service
+without the hardened channel; |cli| shows the channel as not reported and
+treats it as legacy. The relay policy stops at the first failed
+authentication, so an SCP03 security domain that refused the hardened level
+ends the operation rather than being driven at the legacy level.
+
+Three rules follow from the channel:
+
+* The relay stays a plain relay. On the hardened channel the card signs each
+  answer together with its status word, so a client that reassembled chained
+  answers or rewrote status words would break the channel. The service then
+  reports ``R-MAC mismatch``, and |cli| says to check the relay path rather
+  than retry.
+* Administration is contact-only. Through the channel the applet reports
+  which interface it is being driven over, and the service refuses ``attest``
+  over contactless. ``reset`` and ``dev-reset`` work through the card manager,
+  which the applet does not govern; there the card's own configuration keeps
+  administration on the contact interface. After a ``reset`` the service also
+  sets the applet's own lock, so the applet refuses its admin channel over
+  contactless by itself (``nfc_admin_lock`` in the result); ordinary PIV use
+  over contactless is unaffected. |cli| warns before connecting when the
+  selected reader looks contactless; the service's decision rests on the
+  card's report, not on the reader's name.
+* A card whose channel cannot authenticate its answers (SCP02, or an SCP03
+  card driven at the legacy level) gets no key attestation, and the other
+  operations only with a Cryptnox access token, which |cli| has no option
+  for. The service refuses with ``legacy_channel`` set and |cli| says so.
+  ``authenticate`` and ``inspect`` open no channel and need no token.
+
+For ``attest``, ``public_key_authenticated`` says whether the public key the
+service certified reached it through the hardened channel. When it did not,
+or the service does not say, |cli| warns that something between the service
+and the card could have substituted the key: the certificate is still bound
+to the card, the slot and the certificate stored on the card, but the key's
+origin rests on the service's claim alone.
+
 What a failed authentication costs
 ----------------------------------
 
@@ -148,7 +196,8 @@ builds of it, made from the same source with one switch apart:
 
 With FIPS mode off the applet lifts three limits it enforces when a
 pre-personalization profile is loaded: the PIN may be as short as 4 digits
-instead of 6, the retry counter may exceed 15, and the PIN may be made usable
+instead of 6, the retry counter may exceed 15 (|cli| still caps a profile at
+15, the most the card reports back), and the PIN may be made usable
 over the contactless interface without secure messaging. It also skips the
 FIPS power-up self-tests and does not zeroise an object before discarding it.
 Slots, algorithms, key generation, key import, certificates and the admin

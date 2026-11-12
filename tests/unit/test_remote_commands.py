@@ -123,8 +123,9 @@ def test_authenticate_json_payload(wired):
 def test_mismatch_between_service_and_card_is_reported_not_hidden(wired):
     wired["arm"]([{"type": "result", "ok": True, "cplc_uid": "0000000000000000"}])
     result = run(["--json", "remote", "authenticate"])
-    assert result.exit_code == 0
+    assert result.exit_code == 17  # printed, then refused: the tool's own check failed
     assert json.loads(result.stdout)["verified_locally"]["cplc_uid_matches"] is False
+    assert "local verification failed: cplc_uid_matches" in result.stderr
 
 
 def test_human_output_separates_asserted_from_verified(wired):
@@ -253,3 +254,74 @@ def test_app_context_apdu_trace_writes_and_traces(tmp_path):
     app.apdu_trace("> 00A4040000")
     app.close()
     assert "> 00A4040000" in (tmp_path / "t.log").read_text()
+
+
+# --------------------------------------------------------------------------- #
+# Text from the service reaches the terminal as text                          #
+# --------------------------------------------------------------------------- #
+def test_service_text_with_markup_reaches_the_terminal_as_written(wired):
+    wired["arm"]([{"type": "result", "ok": False, "error": "install [/opt/x.cap] failed"}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 16, result.output
+    assert "install [/opt/x.cap] failed" in result.stderr
+
+
+def test_generic_result_values_are_stripped_of_control_sequences(wired):
+    odd = {"type": "result", "ok": True, "note": "fine\x1b[31m [red]x", "n": {"a": "\x1b[0m"}}
+    wired["arm"]([odd])
+    result = run(["remote", "authenticate"])
+    assert result.exit_code == 0, result.output
+    assert "note: fine [red]x" in result.output
+    assert "\x1b" not in result.output
+
+
+# --------------------------------------------------------------------------- #
+# The channel the service reports, on the read-only operations                #
+# --------------------------------------------------------------------------- #
+def test_hardened_channel_is_shown_without_a_warning(wired):
+    chan = {"scp": "SCP03", "level": "0x33", "mode": "hardened", "responses_authenticated": True}
+    wired["arm"]([{"type": "result", "ok": True, "channel": chan}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 0, result.output
+    assert (
+        "Admin channel: SCP03 level 0x33, hardened (the card authenticates and encrypts "
+        "its answers)" in result.output
+    )
+    assert "warning" not in result.output
+
+
+def test_legacy_channel_on_an_scp02_card_is_shown_without_a_warning(wired):
+    chan = {"scp": "SCP02", "level": "0x03", "mode": "legacy", "responses_authenticated": False}
+    wired["arm"]([{"type": "result", "ok": True, "channel": chan}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 0, result.output
+    assert "SCP02 level 0x03, legacy (the card's answers are not authenticated)" in result.output
+    assert "warning" not in result.output
+
+
+def test_an_unknown_channel_mode_is_shown_as_the_service_wrote_it(wired):
+    chan = {"scp": "SCP03", "level": "0x13", "mode": "odd\x1b[31m"}
+    wired["arm"]([{"type": "result", "ok": True, "channel": chan}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 0, result.output
+    assert "Admin channel: SCP03 level 0x13, odd, as the service reports it" in result.output
+
+
+# --------------------------------------------------------------------------- #
+# A recognised refusal is reworded, and the service's own sentence stays       #
+# --------------------------------------------------------------------------- #
+def test_a_recognised_refusal_keeps_the_service_sentence_as_a_note(wired):
+    said = "rate limit for card 6183187507216221; retry in 6s"
+    wired["arm"]([{"type": "result", "ok": False, "error": said}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 16, result.output
+    assert f"the service said: {said}" in result.output
+    assert "accepts the next one in 6 seconds" in result.stderr
+
+
+def test_an_unrecognised_refusal_is_not_repeated_as_a_note(wired):
+    wired["arm"]([{"type": "result", "ok": False, "error": "rate limit"}])
+    result = run(["remote", "inspect"])
+    assert result.exit_code == 16, result.output
+    assert "the service said" not in result.output
+    assert "reported inspect as failed: rate limit" in result.stderr

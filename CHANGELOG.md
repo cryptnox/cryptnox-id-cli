@@ -66,11 +66,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and not stored on the card; the command says so and prints it unless
   `--out` was given. A refusal on a finalized applet has the reason
   `applet_finalized`.
+- Remote operations show the admin channel the service used, hardened or
+  legacy, and warn when an SCP03 card's answers were not authenticated, when
+  a key attestation's public key was not or the service did not say, and when
+  a contactless reader is selected for an administrative operation.
+  `remote reset` reports whether the applet's contactless-administration lock
+  was set.
 - Profile YAML: `fips_mode: false` marks a profile written for the PIV applet
   build with FIPS mode off. Its PIN and PUK may then be as short as 4 and have
-  up to 127 retries; without the key the bounds stay 6 and 10. `load-config`
+  up to 15 retries; without the key the bounds stay 6 and 10. `load-config`
   asks the card which build it carries and refuses the FIPS-mode build before
-  anything is written. `inspect-defaults` lists both sets of bounds. A PIN or
+  anything is written, in a dry run too when a card is in the reader. `inspect-defaults` lists both sets of bounds. A PIN or
   PUK `max` above 16, which the applet refuses, is now a profile error.
 - Profile YAML: `contactless: ALWAYS` with `contactless_retries` under `pin`
   or `puk` makes the value usable over the contactless interface, in clear,
@@ -97,6 +103,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `false`, with the status word and, for a PIN or PUK, the retries left).
   A script that tested only the exit code took a refused PIN for a verified
   one.
+- `remote` commands exit with code 17 when a check they make on their own
+  does not hold (a `false` under `verified_locally`): the returned key
+  attestation did not verify, the card does not carry the applet build asked
+  for, the card is not the one the service reports. The result object is
+  printed as before. A script that tested only the exit code took such a run
+  for a success. A check with nothing to compare against is `null` and not a
+  failure: a key attestation the card could not store is reported as
+  unchecked, and `--out` is checked for a writable directory before anything
+  is sent.
 - The package ships the text of the GNU GPL version 3, which the LGPL
   incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
@@ -121,10 +136,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now `pin_limits`.
 - `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
 - `remote --default-keys` help and warnings updated for the current service.
-- `remote attest --ca-obj` is ignored with a warning and hidden from the help:
-  the service signs key attestations with one fixed CA key and refuses any
-  other, at the cost of one of the card's operations. The option will be
-  removed.
 - A `6985` to `generate-csr`, `self-sign-cert` or `smoke-test` names the key's
   role and points at a key on the slot that can sign, or at how to add one,
   instead of suggesting a wrong lifecycle state.
@@ -142,9 +153,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - `remote dev-reset` no longer asks for a development token.
+- `remote attest --ca-obj`: the service signs key attestations with one fixed
+  CA key and refuses any other.
 
 ### Fixed
 
+- Text the service supplies is stripped of control sequences and markup
+  before display, in results and in the error line; a bracketed path in a
+  service message no longer breaks the error line.
 - `piv perso generate-key` warns that it destroys the slot's key only when the
   slot's certificate is for a key of the same algorithm.
 - A signature refused because the key object holds no key yet (`6983`) says

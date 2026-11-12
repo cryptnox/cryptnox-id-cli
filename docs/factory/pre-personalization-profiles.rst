@@ -139,9 +139,10 @@ is written for the PIV applet build with FIPS mode off, which the remote
 service installs on request (:doc:`/remote/remote-guide`). It widens the PIN
 and PUK bounds listed below and allows a PIN or PUK over the contactless
 interface. ``load-config`` then asks the card which build it
-carries and refuses the FIPS-mode build before anything is written, because
-that build would refuse the PIN verifier after the containers were created,
-and what was created cannot be removed. Leave the key out for the FIPS-mode
+carries and refuses the FIPS-mode build before anything is written, in a dry
+run too when a card is in the reader, because that build would refuse the PIN
+verifier after the containers were created, and what was created cannot be
+removed. Leave the key out for the FIPS-mode
 build, the build cards ship with; the built-in profiles do.
 
 .. code-block:: yaml
@@ -242,7 +243,8 @@ whole profile before anything is sent to a card:
   AES-only);
 - PIN and PUK ``min`` must be at least 6 (at least 4 with ``fips_mode: false``),
   and ``max`` must be at least ``min`` and at most 16;
-- PIN and PUK ``retries`` must be 0–10 (0–127 with ``fips_mode: false``);
+- PIN and PUK ``retries`` must be 0–10 (0–15 with ``fips_mode: false``: the
+  applet takes up to 127 there, but it reports at most 15 back);
 - PIN and PUK ``contactless`` must be ``NEVER`` or ``ALWAYS``; ``ALWAYS`` needs
   ``fips_mode: false`` and ``contactless_retries`` from 1 to ``retries``;
 - ``fips_mode``, when present, must be ``true`` or ``false``;

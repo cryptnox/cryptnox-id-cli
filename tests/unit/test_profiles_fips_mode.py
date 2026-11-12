@@ -79,10 +79,10 @@ def test_the_fips_mode_bounds_stand_and_point_at_the_other_build():
 
 
 def test_a_profile_for_the_build_with_fips_mode_off_may_use_its_bounds():
-    prof = profiles.from_dict(off_profile(min=4, retries=127))
+    prof = profiles.from_dict(off_profile(min=4, retries=15))
     assert prof.fips_mode is False
     assert prof.validate() == []
-    assert prof.pin_bounds() == (4, 127)
+    assert prof.pin_bounds() == (4, 15)
     assert "FIPS mode off" in (prof.fips_mode_note() or "")
 
 
@@ -90,7 +90,7 @@ def test_a_profile_for_the_build_with_fips_mode_off_may_use_its_bounds():
     ("pin", "fragment"),
     [
         ({"min": 3}, "PIN min_length 3 < minimum 4"),
-        ({"retries": 128}, "PIN retries 128 out of range (max 127)"),
+        ({"retries": 16}, "PIN retries 16 out of range (max 15)"),
         ({"max": 17}, "PIN max_length 17 > maximum 16"),
         ({"min": 9, "max": 8}, "PIN max_length < min_length"),
     ],
@@ -180,7 +180,8 @@ def card(monkeypatch, mock_connection):
     return wire
 
 
-def test_dry_run_says_which_build_the_profile_is_for(tmp_path):
+def test_dry_run_says_which_build_the_profile_is_for(tmp_path, card):
+    card(None)  # a card that does not report its build: the preview stands on its own
     path = write(tmp_path, off_profile())
     result = run(["--json", *LOAD, "--file", path, "--dry-run"])
     assert result.exit_code == 0, result.output
@@ -202,6 +203,24 @@ def test_a_fips_mode_card_is_refused_before_anything_is_written(tmp_path, card):
     assert "this card carries the FIPS-mode build" in error["message"]
     assert "remote reset --fips-off" in error["message"]
     assert _FakeAdmin.opened == 0 and _FakeAdmin.sent == []
+
+
+def test_a_dry_run_on_a_fips_mode_card_refuses_like_the_real_run(tmp_path, card):
+    card(STATUS_FIPS)
+    path = write(tmp_path, off_profile())
+    result = run(["--json", *LOAD, "--file", path, "--dry-run"])
+    assert result.exit_code == 8
+    assert "this card carries the FIPS-mode build" in json.loads(result.stdout)["message"]
+    assert _FakeAdmin.opened == 0
+
+
+def test_a_dry_run_on_a_card_with_fips_mode_off_previews(tmp_path, card):
+    card(STATUS_FIPS_OFF)
+    path = write(tmp_path, off_profile())
+    result = run(["--json", *LOAD, "--file", path, "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["dry_run"] is True
+    assert _FakeAdmin.opened == 0
 
 
 def test_a_card_with_fips_mode_off_takes_the_profile(tmp_path, card):
@@ -243,6 +262,6 @@ def test_inspect_defaults_lists_both_sets_of_bounds():
     result = run(["--json", "factory", "piv", "preperso", "inspect-defaults"])
     limits = json.loads(result.stdout)["pin_limits"]
     assert limits["min_length"] == 6 and limits["profile_retry_cap"] == 10
-    assert limits["fips_mode_off"] == {"min_length": 4, "profile_retry_cap": 127}
+    assert limits["fips_mode_off"] == {"min_length": 4, "profile_retry_cap": 15}
     text = " ".join(run(["factory", "piv", "preperso", "inspect-defaults"]).output.split())
     assert "with FIPS mode off (profile key fips_mode: false): min length 4" in text

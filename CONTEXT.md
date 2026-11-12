@@ -17,7 +17,8 @@ _Avoid_: applet (DESFire is not a JavaCard applet), app, mode
 **Contact interface**:
 The wired ISO 7816 interface; the only interface where the PIN, the PUK, the
 PIN-protected keys and the management key (9B) work. The admin channel works over
-both interfaces. One profile departs from this: `ms-logon-nfc`, for the build with
+both interfaces unless the applet's contactless-administration lock is set, which the
+remote service does when it reinstalls the applet. One profile departs from this: `ms-logon-nfc`, for the build with
 FIPS mode off, opens the PIN and the 9A keys to the contactless interface.
 _Avoid_: chip mode
 
@@ -110,6 +111,13 @@ one exception is reading back a large generated public key, which some cards del
 only after management-key authentication.
 _Avoid_: management key (a different key with a different authentication - see
 Management key)
+
+**Hardened channel**:
+The admin channel at SCP03 security level 0x33, where the card authenticates and
+encrypts its answers as well as the commands, so nothing between the service and the
+card can alter what the card says. The legacy level (0x03, and every SCP02 channel)
+protects the commands only; the remote service issues no key attestation over it.
+_Avoid_: encrypted channel, full channel
 
 **Management key (9B)**:
 The PIV applet's own AES administration key at key reference 9B. It authenticates over

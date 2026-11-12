@@ -31,6 +31,7 @@ REASONS: tuple[str, ...] = (
     "factory_token_required",
     "card_not_genuine",
     "applet_finalized",
+    "answer_altered",
     "unsupported_operation",
     "unsupported_request",
     "proof_of_work",
@@ -127,7 +128,7 @@ def classify(op: str, payload: Mapping[str, object]) -> Refusal:
         return refusal(
             "busy",
             "the service is running as many operations as it accepts at once. Nothing was "
-            "sent to the card; retry in a moment.",
+            "changed on the card; retry in a moment.",
         )
 
     if low in ("idle/op timeout", "operation deadline exceeded"):
@@ -172,13 +173,6 @@ def classify(op: str, payload: Mapping[str, object]) -> Refusal:
             "on the card; `remote ping` lists the builds it offers.",
         )
 
-    if "factory token" in low:
-        return refusal(
-            "factory_token_required",
-            f"the service reserves this form of {op} to Cryptnox (it needs a factory token). "
-            "Nothing was changed on the card; contact Cryptnox support.",
-        )
-
     if (
         "derived keys no longer authenticate" in low
         or "did not authenticate with its derived" in low
@@ -188,6 +182,13 @@ def classify(op: str, payload: Mapping[str, object]) -> Refusal:
             "the card did not prove it is genuine with its own keys: it is not a genuine "
             "Cryptnox card, its Cryptnox keyset was deleted, or it is already on the default "
             "keys. Nothing was changed; contact Cryptnox support.",
+        )
+
+    if "factory token" in low:
+        return refusal(
+            "factory_token_required",
+            f"the service reserves this form of {op} to Cryptnox (it needs a factory token). "
+            "Nothing was changed on the card; contact Cryptnox support.",
         )
 
     if payload.get("applet_finalized") is True:
@@ -208,14 +209,19 @@ def classify(op: str, payload: Mapping[str, object]) -> Refusal:
         )
 
     if "failed sw=6986" in low:
-        # A service build from before finalized applets were handled: it creates the
-        # management key, the slot's key object and the attestation container before it
-        # generates the key, and a finalized applet answers 6986 to the first.
+        # Older service builds stop at the first creation a finalized applet refuses.
         return refusal(
             "applet_finalized",
             f"the PIV applet refused a change to its structure during {op} (status 6986), "
             "which is what a finalized applet answers, and this build of the service cannot "
             "attest a key on a finalized applet. Nothing was certified.",
+        )
+
+    if "r-mac mismatch" in low:
+        return refusal(
+            "answer_altered",
+            "an answer from the card was altered between the service and the card. Check "
+            "the relay path and report it; do not retry in a loop.",
         )
 
     if low.startswith("unknown op"):

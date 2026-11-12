@@ -210,3 +210,21 @@ operation left without a completed authentication). ``reset`` and
 ``verification`` with every binding checked on the returned certificate.
 Fields under ``result`` are the service's assertions; only ``verified_locally``,
 ``before``, ``after`` and ``verification`` are the tool's own findings.
+``reset`` and ``dev-reset`` add ``piv_variant``, and their inventories
+``piv_build``; ``verified_locally`` carries ``piv_build_matches`` for
+``reset``, ``dev-reset`` and ``inspect``, and for ``attest``
+``attestation_returned``, ``attestation_verified``,
+``attestation_container_written``, ``certificate_serial_matches``,
+``certificate_sha256_matches``, ``public_key_sha256_matches`` and, with
+``--out``, ``certificate_written_to_out``; ``out`` is the file written, or
+``null``. A failed operation's error object gains ``reason`` and, when the
+service gave them, ``retry_in_seconds`` or ``ref``. ``remote ping`` is the one
+command without a card: it returns ``op``, ``endpoint``, ``client``,
+``service`` (the service's answer, sanitised), ``operations_available``,
+``operations_not_in_this_client`` and ``clock_skew_seconds``.
+A ``false`` under ``verified_locally`` ends the command with exit code 17
+after the object is printed; no error object follows it. ``null`` is not a
+failure. ``channel`` and ``nfc_admin_lock`` under ``result`` are the
+service's account of the admin channel it used and of the applet's
+contactless-administration lock; ``public_key_authenticated`` is its claim
+that the certified key reached it authenticated by the card.

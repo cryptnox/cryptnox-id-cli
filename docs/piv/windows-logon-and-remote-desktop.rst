@@ -248,12 +248,11 @@ on-card RSA generation of the last command needs
 (:doc:`/piv/piv-personalization`). Steps 1 to 3 are then the same, with the
 card on the NFC reader for the logon.
 
-What has been verified with a card set up by these commands, on a contactless
-reader: Windows identifies it as a PIV card, its inbox minidriver builds the
-key container for the 9A certificate, and the Smart Card Key Storage Provider
-signs with the 9A key after the PIN, all over NFC. With |cli| over the same
-reader the PIN is accepted, 9A signs and 9C is refused. A complete logon
-against a domain controller over NFC has not been run.
+With a card set up by these commands on a contactless reader, Windows
+identifies it as a PIV card, its inbox minidriver builds the key container
+for the 9A certificate, and the Smart Card Key Storage Provider signs with the
+9A key after the PIN, all over NFC. With |cli| over the same reader the PIN is
+accepted, 9A signs and 9C is refused.
 
 What this costs:
 

@@ -86,8 +86,18 @@ CASES = [
     ),
     (
         "dev-reset",
-        {"error": "refused: the card did not authenticate with its derived KVN2 (not a genuine"},
+        {
+            "error": "refused: the card did not authenticate with its derived KVN2 (not a "
+            "genuine Cryptnox PIV card, consumer-locked, or already on default keys without "
+            "KVN2 - re-provisioning a default-keyed card needs a Cryptnox factory token: "
+            "contact Cryptnox support)"
+        },
         "card_not_genuine",
+    ),
+    (
+        "attest",
+        {"error": "R-MAC mismatch: the response was altered in transit (slot 9C)"},
+        "answer_altered",
     ),
     # a finalized applet: the service's flag, and what a build from before it answered
     (

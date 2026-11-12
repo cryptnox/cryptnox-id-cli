@@ -219,7 +219,8 @@ def card(monkeypatch, mock_connection):
     return wire
 
 
-def test_dry_run_warns_that_the_pin_crosses_the_radio_link():
+def test_dry_run_warns_that_the_pin_crosses_the_radio_link(card):
+    card(STATUS_FIPS_OFF)  # the build the profile is for; the FIPS-mode build is refused
     result = run(["--json", *LOAD, "--profile", "ms-logon-nfc", "--dry-run"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)

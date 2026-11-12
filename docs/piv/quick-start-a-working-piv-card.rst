@@ -10,7 +10,8 @@ Prerequisites
 
 * A **contact** smart-card reader. The PIN, the PUK and the PIN-protected
   keys work over the contact interface only, and this guide presents the PIN
-  partway through. Administration works over both interfaces; apart from it,
+  partway through. Administration works over both interfaces unless the
+  applet's contactless-administration lock is set; apart from it,
   a contactless reader gets just the data that needs no PIN, such as the
   CHUID.
 * |cli| installed, and ``yubico-piv-tool`` if you want to run the verification

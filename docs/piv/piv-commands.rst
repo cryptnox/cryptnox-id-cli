@@ -225,9 +225,9 @@ Notes
   one generated over the plain path, whose public half is the one reported; RSA
   generation therefore runs twice on such a card.
 * ``piv quickstart`` defaults to ECC P-256, except with ``--profile ms-logon``
-  on slot 9A, the one built-in shape with an RSA key object and the Windows
-  one, where it defaults to RSA-2048 because Windows does not enumerate EC
-  keys. Elsewhere ``--algorithm RSA*`` is accepted only when the card already
+  or ``ms-logon-nfc`` on slot 9A, the built-in shapes with an RSA key object
+  and the Windows ones, where it defaults to RSA-2048 because Windows does not
+  enumerate EC keys. Elsewhere ``--algorithm RSA*`` is accepted only when the card already
   has that RSA key object for the slot.
 * ``piv quickstart`` reads the applet's key-object listing before planning. A
   card with no structure at all needs ``--include-preperso`` (or a

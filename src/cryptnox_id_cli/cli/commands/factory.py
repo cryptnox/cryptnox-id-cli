@@ -297,6 +297,14 @@ def load_config(
         app.out.note(note)
 
     if dry_run or app.dry_run:
+        if not profile.fips_mode:
+            try:
+                with app.open_session() as session:
+                    _refuse_on_fips_mode_build(session, profile)
+            except prof_mod.ProfileError:
+                raise
+            except CryptnoxError:
+                pass  # no reader or card: the preview stands on its own
         result = {
             "dry_run": True,
             "profile": profile.name,
