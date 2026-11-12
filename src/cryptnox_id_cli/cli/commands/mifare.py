@@ -27,6 +27,7 @@ from cryptnox_id_cli.applets.mifare.ev1 import (
     format_picc_iso,
 )
 from cryptnox_id_cli.applets.mifare.ev2 import (
+    Ev2Error,
     authenticate_ev2_first,
     change_file_settings,
     change_key_cross,
@@ -389,6 +390,14 @@ def keys_change(
         else:
             ev2 = authenticate_ev2_first(dtx, key_no, current)
             change_key_same(dtx, ev2, key_no, new_key, key_version=key_version)
+            # The card's OK to this ChangeKey carries no MAC, so only the new key proves it.
+            try:
+                authenticate_ev2_first(dtx, key_no, new_key)
+            except (df.DesfireError, Ev2Error) as exc:
+                raise Ev2Error(
+                    "ChangeKey: the card answered OK, but the new key does not authenticate; "
+                    f"key {key_no} may still hold its old value."
+                ) from exc
     app.out.result(
         {
             "aid": aid.upper(),
@@ -399,8 +408,12 @@ def keys_change(
         },
         lambda c: c.print(
             f"[green]Changed key {key_no}[/green] of {aid.upper()} "
-            + (f"(cross-key; authenticated with key {auth_key_no})." if cross else "(same-key).")
-            + " Re-authenticate with the new key now."
+            + (
+                f"(cross-key; authenticated with key {auth_key_no}). "
+                "Re-authenticate with the new key now."
+                if cross
+                else "(same-key); the new key authenticates."
+            )
         ),
     )
 

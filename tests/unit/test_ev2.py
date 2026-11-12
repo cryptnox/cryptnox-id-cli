@@ -528,9 +528,10 @@ def test_keys_change_of_the_authenticated_key_succeeds_on_a_bare_ok(monkeypatch,
     result = run([*(["--json"] if json_mode else []), *SAME_KEY_CHANGE])
     assert result.exit_code == 0, result.output
     assert card.key == NEW_KEY
+    assert card.rnda is not None  # authenticated with the new key after the change
+    assert json_mode or "the new key authenticates" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="a relayed bare OK is reported as a changed key")
 @pytest.mark.parametrize("json_mode", [True, False])
 @pytest.mark.parametrize("relay", ["change", "change+auth"])
 def test_keys_change_of_the_authenticated_key_fails_when_the_card_kept_the_old_key(
