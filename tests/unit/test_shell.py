@@ -3,6 +3,8 @@
 
 """Interactive shell: loop survives bad input, exits cleanly, inherits globals."""
 
+import click
+import pytest
 from click.testing import CliRunner
 
 from cryptnox_id_cli.cli.commands.shell import _global_args
@@ -77,3 +79,27 @@ def test_global_args_reconstructs_launch_options():
 
 def test_global_args_empty_for_defaults():
     assert _global_args(AppContext()) == []
+
+
+@pytest.mark.xfail(strict=True, reason="click.Abort escapes the shell loop")
+def test_shell_survives_a_declined_confirmation():
+    r = _run("mifare app delete --aid 010203\nn\nboguscmd\nexit\n")
+    assert r.exit_code == 0, r.output
+    assert "Aborted!" in r.output
+    assert "No such command" in r.output
+
+
+@pytest.mark.xfail(strict=True, reason="click.Abort escapes the shell loop")
+@pytest.mark.parametrize("raised", [KeyboardInterrupt, EOFError], ids=["ctrl-c", "eof"])
+def test_shell_survives_an_interrupted_command(raised):
+    @click.command("interruptprobe", hidden=True)
+    def probe() -> None:
+        raise raised
+
+    main.add_command(probe)
+    try:
+        r = _run("interruptprobe\nboguscmd\nexit\n")
+    finally:
+        main.commands.pop("interruptprobe", None)
+    assert r.exit_code == 0, r.output
+    assert "No such command" in r.output
