@@ -262,13 +262,17 @@ def command_full(
     plaintext: bytes = b"",
     response_len: int = 0,
     context: str | None = None,
+    terminates_session: bool = False,
     max_frame: int = MAX_COMMAND_FRAME,
 ) -> bytes:
     """Send a command in EV2 CommMode.FULL: the command header stays in the clear, the
     ``plaintext`` data is AES-CBC encrypted (IV = E(Kenc, A55A||TI||CmdCtr||0)), the
     whole ``header||ciphertext`` is MACed and chain-sent, and the response data is
     MAC-verified then decrypted (IV uses 5AA5||TI||CmdCtr after the counter advances).
-    Returns the decrypted response truncated to ``response_len`` (0 = all)."""
+    Returns the decrypted response truncated to ``response_len`` (0 = all).
+
+    Every answer must carry a response MAC, except the OK of a command that ends the
+    session (ChangeKey of the authenticated key); pass ``terminates_session=True`` for it."""
     ctx = context or f"DESFire {cmd:02X} (FULL)"
     enc = (
         _aes_cbc_iv(
@@ -295,7 +299,7 @@ def command_full(
     session.cmd_ctr += 1
     if status != STATUS_OK:
         raise DesfireError(status, ctx)
-    if len(acc) == 0:
+    if terminates_session and len(acc) == 0:
         return b""
     if len(acc) < 8:
         raise Ev2Error(f"{ctx}: response MAC missing.")
@@ -333,6 +337,7 @@ def change_key_same(
         header=bytes([key_no]),
         plaintext=bytes(new_key) + bytes([key_version & 0xFF]),
         context=context or "ChangeKey",
+        terminates_session=True,
     )
 
 

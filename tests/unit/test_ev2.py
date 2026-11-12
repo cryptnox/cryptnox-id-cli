@@ -405,7 +405,6 @@ MACED_IN_FULL_MODE = [
 ]
 
 
-@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
 @pytest.mark.parametrize("send", MACED_IN_FULL_MODE)
 def test_full_mode_refuses_an_ok_that_carries_no_response_mac(send):
     # Of the FULL commands the CLI sends, only ChangeKey of the authenticated key ends the session.
@@ -441,7 +440,6 @@ class _OkWithoutMacAfterAuth(FakeEv2Card):
         return [], 0x91, 0x00
 
 
-@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
 @pytest.mark.parametrize("json_mode", [True, False])
 def test_full_read_without_a_response_mac_fails_and_writes_nothing(
     monkeypatch, tmp_path, json_mode
@@ -472,7 +470,6 @@ FULL_MODE_COMMANDS = [
 ]
 
 
-@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
 @pytest.mark.parametrize("json_mode", [True, False])
 @pytest.mark.parametrize(("args", "context"), FULL_MODE_COMMANDS)
 def test_full_mode_commands_fail_on_an_ok_without_a_response_mac(

@@ -78,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `mifare read --full`, `mifare write --full`, `mifare sdm setup` and
+  `mifare keys change` with `--auth-key-no` fail with `ev2_error` (exit 11)
+  when the card answers OK without a response MAC, instead of reporting
+  success with nothing verified.
 - `piv perso generate-key` warns that it destroys the slot's key only when the
   slot's certificate is for a key of the same algorithm.
 - A signature refused because the key object holds no key yet (`6983`) says
