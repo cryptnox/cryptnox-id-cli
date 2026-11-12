@@ -81,7 +81,6 @@ def test_global_args_empty_for_defaults():
     assert _global_args(AppContext()) == []
 
 
-@pytest.mark.xfail(strict=True, reason="click.Abort escapes the shell loop")
 def test_shell_survives_a_declined_confirmation():
     r = _run("mifare app delete --aid 010203\nn\nboguscmd\nexit\n")
     assert r.exit_code == 0, r.output
@@ -89,7 +88,6 @@ def test_shell_survives_a_declined_confirmation():
     assert "No such command" in r.output
 
 
-@pytest.mark.xfail(strict=True, reason="click.Abort escapes the shell loop")
 @pytest.mark.parametrize("raised", [KeyboardInterrupt, EOFError], ids=["ctrl-c", "eof"])
 def test_shell_survives_an_interrupted_command(raised):
     @click.command("interruptprobe", hidden=True)

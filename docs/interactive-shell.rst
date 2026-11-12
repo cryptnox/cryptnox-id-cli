@@ -44,7 +44,7 @@ Built-ins and keys
    * - ``exit`` / ``quit``
      - Leave the shell.
    * - :kbd:`Ctrl-C`
-     - Cancel the current line; the shell stays open.
+     - Cancel the current line or the running command; the shell stays open.
    * - :kbd:`Ctrl-D` (end of input)
      - Leave the shell.
 

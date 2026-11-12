@@ -108,17 +108,9 @@ def command(ctx: click.Context) -> None:
             click.echo(f"error: {exc}", err=True)
             continue
 
-        # Re-enter the root group for this one line. standalone_mode=False keeps Click
-        # from calling sys.exit on our behalf; a fresh AppContext per command preserves
-        # the per-command SCP03 session semantics the applets require. Errors are already
-        # routed through the group's funnel; catch the SystemExit it raises so the loop
-        # survives, and catch Click's own usage errors here.
-        #
-        # sys.argv must mirror the line being run: the Windows FIDO elevation offer
-        # rebuilds its UAC relaunch from sys.argv (transport/elevation.relaunch_command),
-        # and the shell's own argv says "shell" - relaunching THAT would open a hidden
-        # elevated shell waiting on input, hanging both processes. Swap it in, restore
-        # after.
+        # A fresh root invocation per line gives each command its own AppContext and SCP03 session.
+        # Workaround: the Windows FIDO elevation relaunch rebuilds its command from sys.argv, and
+        # relaunching "shell" elevated hangs both processes, so swap in the typed line.
         saved_argv = sys.argv
         try:
             sys.argv = [saved_argv[0], *argv]
@@ -127,7 +119,8 @@ def command(ctx: click.Context) -> None:
             pass  # error already reported via the group's funnel; keep the shell alive
         except click.ClickException as exc:
             exc.show()
-        except (KeyboardInterrupt, EOFError):
-            click.echo()
+        except click.exceptions.Abort:
+            # Click turns Ctrl-C and end of input into Abort, the same as a declined prompt.
+            click.echo("Aborted!", err=True)
         finally:
             sys.argv = saved_argv
