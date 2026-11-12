@@ -82,7 +82,6 @@ def test_human_shows_the_readable_certificate_and_the_empty_slots(card):
         assert [cell.strip() for cell in rows[slot].split("│")[3:6]] == ["no", "-", "-"]
 
 
-@pytest.mark.xfail(strict=True, reason="human mode hides the parse error")
 def test_human_flags_the_unreadable_certificate_and_prints_why(card):
     _, human = run_both_modes(["piv", "certs", "list"])
     assert human.exit_code == 0, human.output
