@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Offline verification of a PIV key-attestation chain.
 
 The pinned ``cryptography`` exposes no high-level path validator, so we walk the chain

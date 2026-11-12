@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV2 authentication (AuthenticateEV2First) and secure messaging.
 
 Session keys are derived per NXP AN12343 with an AES-CMAC KDF:

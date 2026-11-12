@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Local verification of a key-attestation certificate returned by the service.
 
 The service says it generated a key on the card and returns a certificate for

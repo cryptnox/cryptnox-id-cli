@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Exception hierarchy and friendly ISO 7816 status-word decoding.
 
 Every status word is mapped to a plain-language message plus the raw code, so the

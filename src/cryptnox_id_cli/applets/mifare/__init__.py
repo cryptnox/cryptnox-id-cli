@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """MIFARE DESFire EV2 support (contactless).
 
 The DESFire function is the card's default (MIFARE) applet, reached over a

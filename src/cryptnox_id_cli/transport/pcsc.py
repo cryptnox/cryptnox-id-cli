@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """pyscard wrapper: passive reader status, Cryptnox/ACS-first selection, and a CardSession
 that handles 6Cxx/61xx chaining and writes a redacted APDU transcript."""
 

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Interactive shell: loop survives bad input, exits cleanly, inherits globals."""
 
 from click.testing import CliRunner

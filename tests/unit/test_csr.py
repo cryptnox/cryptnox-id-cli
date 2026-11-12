@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """CSR / self-signed cert assembly around an external signer (verified with cryptography)."""
 
 import pytest

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Generators for basic PIV data objects (CHUID, CCC, Discovery).
 
 These produce minimal, well-formed objects suitable for a dev/test card so the

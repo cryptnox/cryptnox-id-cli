@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """FIDO PIN/UV auth protocol tests: crypto roundtrips + an end-to-end card loopback."""
 
 import hashlib

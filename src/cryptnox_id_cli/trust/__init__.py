@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Pinned trust anchors for offline attestation-chain verification.
 
 PEM certificates dropped into ``trust/genuine/`` are bundled into the package (and the

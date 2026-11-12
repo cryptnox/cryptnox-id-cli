@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The licence is stated as `LGPL-3.0-only OR LicenseRef-Commercial` in the
+  package metadata and in an SPDX header at the top of every source file.
 - The package ships the text of the GNU GPL version 3, which the LGPL
   incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,

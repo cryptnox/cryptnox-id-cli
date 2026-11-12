@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The ``shell`` command — a captive interactive prompt.
 
 Launched from a Start-menu shortcut or by hand, it reads a line, runs it as a

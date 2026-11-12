@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The single redaction chokepoint for APDU logs and any secret-bearing output.
 
 Two layers of defence:

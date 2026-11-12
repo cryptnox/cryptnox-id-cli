@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """SCP02 secure channel (GlobalPlatform Card Spec 2.x), used for PIV admin commands.
 
 Some Cryptnox cards present an SCP02 admin channel rather than SCP03 -- notably the

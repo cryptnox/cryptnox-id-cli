@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Windows elevation detection and the FIDO/SCARD_E_NO_ACCESS message.
 
 On Windows, selecting the FIDO CTAP AID from a non-elevated process is refused by

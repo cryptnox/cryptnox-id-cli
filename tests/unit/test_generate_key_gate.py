@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`piv perso generate-key` must not silently destroy a certified key.
 
 Safety review 2026-08-21, finding 2 (high): the bare command regenerated the slot key

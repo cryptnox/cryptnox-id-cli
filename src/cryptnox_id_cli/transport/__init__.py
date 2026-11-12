@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PC/SC transport: APDU framing, reader selection, status-word decoding."""
 
 from cryptnox_id_cli.transport.apdu import APDU, Response

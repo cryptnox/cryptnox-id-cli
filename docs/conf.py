@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This documentation set is the future public repo for the product docs,

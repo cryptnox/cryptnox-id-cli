@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`_check_pin_verify` must not claim a blocked PIN unless the card actually said so.
 
 Only 63C0 (retry counter exhausted) proves it. 6983 is also returned when the PIN

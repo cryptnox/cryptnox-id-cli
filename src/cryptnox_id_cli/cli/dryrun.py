@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Fail-closed enforcement of the global ``--dry-run`` promise.
 
 ``--dry-run`` is documented as "write nothing to the card". Only a few commands can

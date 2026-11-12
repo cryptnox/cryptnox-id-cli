@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The ``piv`` command — PIV management and personalization.
 
 Read-only inspection (info/status/slots/certs/objects), PIN operations, the SCP03

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Wire grammar and crypto for PIV management key (9B) authentication.
 
 Every byte of the 9B exchange is fixed by the applet's case dispatch: it selects

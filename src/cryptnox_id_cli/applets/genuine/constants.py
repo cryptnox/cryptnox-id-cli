@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Constants for the Cryptnox Genuineness / attestation applet.
 
 Values mirror the factory tool (``genuineness_tools/factory_perso.py``): Cryptnox

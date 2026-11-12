@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`factory card status` and `factory card fuse`: the card-manager commands, against a
 stateful card-manager double. No real card is fused by these tests."""
 

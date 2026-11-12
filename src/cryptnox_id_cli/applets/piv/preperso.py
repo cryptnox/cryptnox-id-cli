@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """OpenFIPS201 PUT DATA ADMIN grammar (pre-personalization / factory).
 
 Mirrors the applet's own perso toolkit (``tools/perso/piv_admin.py``) byte-for-byte.

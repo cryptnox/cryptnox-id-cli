@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV data-object registry plus GET DATA construction / unwrapping."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The operation loop: announce the operation, answer the proof-of-work, relay
 commands under the policy, return the result.
 

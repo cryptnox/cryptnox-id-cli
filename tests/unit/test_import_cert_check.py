@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`piv perso import-cert` checks: `--csr` compares public keys before any card
 contact, `--verify-pin` has the slot sign a challenge and verifies it with the
 certificate's key. Neither flag leaves the old behaviour (write whatever is given)."""

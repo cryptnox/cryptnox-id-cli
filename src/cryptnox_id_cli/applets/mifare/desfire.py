@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """MIFARE DESFire EV2 native command transport + read-only parsers.
 
 Native commands are sent ISO-7816-wrapped: ``90 <cmd> 00 00 [Lc <data>] 00``.

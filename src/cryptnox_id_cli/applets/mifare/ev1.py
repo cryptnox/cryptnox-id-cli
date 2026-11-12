@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV1 secure messaging for a DES / 2K3DES key: AuthenticateISO (0x1A), the
 3DES CMAC chain, FormatPICC and moving the PICC master key to AES.
 

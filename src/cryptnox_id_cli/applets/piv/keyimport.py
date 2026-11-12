@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV asymmetric private-key injection (CHANGE REFERENCE DATA ADMIN over SCP03).
 
 OpenFIPS201 accepts externally generated key material with ``00 24 <P1=mechanism>

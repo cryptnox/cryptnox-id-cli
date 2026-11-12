@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``mifare`` — MIFARE DESFire EV2 (contactless; reads AND writes).
 
 DESFire is the card's default applet; these commands need a DESFire-capable

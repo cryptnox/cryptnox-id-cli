@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Golden-vector tests for the pre-perso grammar (vs the applet's own toolkit)."""
 
 from cryptnox_id_cli.applets.piv import preperso as p
