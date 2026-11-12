@@ -23,7 +23,6 @@ CHILD_ERROR = {"error": "applet_not_found", "message": "FIDO2 applet not found o
 CHILD_RESULT = {"selected": True, "version": "FIDO_2_1"}
 
 
-@pytest.mark.xfail(strict=True, reason="the child writes only a result, not its error")
 def test_the_child_writes_its_error_to_the_result_file(tmp_path, monkeypatch):
     wire_session(monkeypatch, QueueConn([(b"", 0x6A, 0x82)]))  # SELECT: no FIDO applet
     out = tmp_path / "result.json"
@@ -68,7 +67,6 @@ def test_the_parent_shows_the_child_error_in_json(monkeypatch):
     assert not os.path.exists(calls[0][2])
 
 
-@pytest.mark.xfail(strict=True, reason="the parent renders an error as a result")
 def test_the_parent_shows_the_child_error_as_an_error(monkeypatch):
     _windows(monkeypatch, code=1, write=json.dumps(CHILD_ERROR))
     result = run(["--yes", "fido", "ping"])
@@ -86,7 +84,6 @@ def test_the_parent_still_shows_a_child_result(monkeypatch):
     assert "FIDO_2_1" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="the parent reports only the exit code")
 @pytest.mark.parametrize("write", [None, "  \n"], ids=["no-file", "blank-file"])
 def test_a_child_that_left_no_result_says_where_its_output_went(monkeypatch, write):
     _windows(monkeypatch, code=3, write=write)

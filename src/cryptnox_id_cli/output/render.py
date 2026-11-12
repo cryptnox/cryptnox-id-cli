@@ -26,18 +26,21 @@ class Output:
     ) -> None:
         self.json = json
         self.verbose = verbose
-        # When set (elevated child), the result payload is also written here as JSON so
-        # the non-elevated parent can surface it in the original console.
+        # Elevated child: results and errors are also written here for the parent's console.
         self.result_path = result_path
         # In JSON mode we keep stdout pure (no rich), so diagnostics go to stderr.
         self.console = Console(no_color=no_color, highlight=False, soft_wrap=True)
         self.err = Console(stderr=True, no_color=no_color, highlight=False, soft_wrap=True)
 
     # -- results ------------------------------------------------------------ #
-    def result(self, payload: dict, render_human: Callable[[Console], None]) -> None:
+    def capture(self, payload: dict) -> None:
+        """Hand ``payload`` to the non-elevated parent, when this is the elevated child."""
         if self.result_path:
             with open(self.result_path, "w", encoding="utf-8") as fh:
                 fh.write(_json.dumps(payload, indent=2, default=str) + "\n")
+
+    def result(self, payload: dict, render_human: Callable[[Console], None]) -> None:
+        self.capture(payload)
         if self.json:
             sys.stdout.write(_json.dumps(payload, indent=2, default=str) + "\n")
         else:

@@ -67,6 +67,9 @@ def _render_elevated_result(app: AppContext, payload: dict) -> None:
     if app.json:
         sys.stdout.write(json.dumps(payload, indent=2, default=str) + "\n")
         return
+    if "error" in payload:  # the child's error funnel wrote it
+        app.out.error(f"{payload.get('message') or payload['error']} (ran as Administrator)")
+        return
     app.out.console.print("[dim]result (ran as Administrator):[/dim]")
     app.out.console.print_json(data=payload)
 
@@ -85,7 +88,10 @@ def _run_elevated(app: AppContext) -> None:
         if text.strip():
             _render_elevated_result(app, json.loads(text))
         elif code != 0:
-            raise CryptnoxError(f"elevated FIDO2 command failed (exit {code}).")
+            raise CryptnoxError(
+                f"elevated FIDO2 command failed (exit {code}) and left no result; run it from "
+                "an Administrator terminal to see its output."
+            )
         sys.exit(code)
     finally:
         with contextlib.suppress(OSError):
