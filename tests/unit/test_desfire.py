@@ -12,6 +12,7 @@ from cryptnox_id_cli.applets.mifare.desfire import (
     DesfireFrameTooLargeError,
     DesfireTransport,
 )
+from cryptnox_id_cli.transport.errors import CryptnoxError
 from cryptnox_id_cli.transport.pcsc import CardSession
 
 
@@ -79,8 +80,9 @@ def test_value_arg_and_parse_value():
     assert DesfireTransport.value_arg(0x01, 50).hex().upper() == "0132000000"
     assert desfire.parse_value(bytes.fromhex("64000000")) == 100
     assert desfire.parse_value((-5).to_bytes(4, "little", signed=True)) == -5
-    with pytest.raises(ValueError):
-        desfire.parse_value(b"\x01\x02")
+    for answer in (b"\x01\x02", bytes(16)):
+        with pytest.raises(CryptnoxError, match="GetValue: expected 4 bytes"):
+            desfire.parse_value(answer)
 
 
 def test_create_record_file_frames():

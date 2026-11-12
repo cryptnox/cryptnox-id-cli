@@ -80,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `mifare read --full` on a file that is not in FULL mode, and `mifare value
+  get` on a value file that is, fail with an error instead of printing wrong
+  data or a traceback.
 - In `shell`, Ctrl-C during a command and a declined confirmation return to
   the prompt instead of ending the shell.
 - `mifare read --full`, `mifare write --full`, `mifare sdm setup` and

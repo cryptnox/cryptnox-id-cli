@@ -272,7 +272,8 @@ def command_full(
     ``plaintext`` data is AES-CBC encrypted (IV = E(Kenc, A55A||TI||CmdCtr||0)), the
     whole ``header||ciphertext`` is MACed and chain-sent, and the response data is
     MAC-verified then decrypted (IV uses 5AA5||TI||CmdCtr after the counter advances).
-    Returns the decrypted response truncated to ``response_len`` (0 = all).
+    Returns the decrypted response without its padding, exactly ``response_len`` bytes
+    when that is set.
 
     Every answer must carry a response MAC, except the OK of a command that ends the
     session (ChangeKey of the authenticated key); pass ``terminates_session=True`` for it."""
@@ -311,8 +312,18 @@ def command_full(
         raise Ev2Error(f"{ctx}: response MAC verification failed.")
     if not resp_enc:
         return b""
+    # A MAC-mode file answers with a valid MAC over plaintext, so only the padding exposes it.
+    not_full = f"{ctx}: the response is not FULL-mode ciphertext; is the file's comm mode FULL?"
+    if len(resp_enc) % 16:
+        raise Ev2Error(not_full)
     plain = _aes_cbc_iv(session.k_enc, _full_iv(session, (0x5A, 0xA5)), resp_enc, encrypt=False)
-    return plain[:response_len] if response_len else plain
+    unpadded = plain.rstrip(b"\x00")
+    if not unpadded.endswith(b"\x80") or len(plain) - len(unpadded) > 15:
+        raise Ev2Error(not_full)
+    data = unpadded[:-1]
+    if response_len and len(data) != response_len:
+        raise Ev2Error(f"{ctx}: expected {response_len} bytes, got {len(data)}.")
+    return data
 
 
 def change_key_same(

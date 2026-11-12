@@ -363,6 +363,9 @@ class DesfireTransport:
 
 def parse_value(data: bytes) -> int:
     """A GetValue response payload: a signed 4-byte little-endian integer."""
-    if len(data) < 4:
-        raise ValueError(f"GetValue response too short ({len(data)} bytes)")
-    return int.from_bytes(data[:4], "little", signed=True)
+    if len(data) != 4:
+        # 16 bytes is a FULL-mode file's encrypted answer to the MAC-mode read.
+        raise CryptnoxError(
+            f"GetValue: expected 4 bytes, got {len(data)}; is the value file's comm mode MAC?"
+        )
+    return int.from_bytes(data, "little", signed=True)

@@ -493,3 +493,115 @@ def test_keys_change_of_the_authenticated_key_succeeds_on_a_bare_ok(monkeypatch,
     args += ["--new-key-env", "NEWK"]
     result = run(["--yes", *(["--json"] if json_mode else []), *args])
     assert result.exit_code == 0, result.output
+
+
+def _card_side(
+    k_enc: bytes = bytes(range(16)), k_mac: bytes = bytes(16), ti: bytes = b""
+) -> ev2.Ev2Session:
+    """The card's view of the first command after authentication."""
+    return ev2.Ev2Session(k_enc=k_enc, k_mac=k_mac, ti=ti or bytes.fromhex("AABBCCDD"), cmd_ctr=1)
+
+
+def _full_answer(card: ev2.Ev2Session, data: bytes) -> bytes:
+    """A FULL-mode file's answer: E(data || padding) || MACt."""
+    iv = ev2._full_iv(card, (0x5A, 0xA5))
+    enc = ev2._aes_cbc_iv(card.k_enc, iv, ev2._pad_full(data), encrypt=True)
+    return enc + card.response_mac(0x00, enc)
+
+
+def _mac_answer(card: ev2.Ev2Session, data: bytes) -> bytes:
+    """A MAC-mode file's answer to the same command: data || MACt."""
+    return data + card.response_mac(0x00, data)
+
+
+def _full_read(answer: bytes, length: int) -> bytes:
+    conn = QueueConn([(answer, 0x91, 0x00)])
+    header = DesfireTransport.data_header(1, 0, length)
+    return ev2.command_full(
+        DesfireTransport(CardSession(conn)),
+        _full_session(),
+        df.CMD_READ_DATA,
+        header=header,
+        response_len=length,
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [bytes.fromhex("04958CAA5C5E80"), bytes(4), bytes(range(16))],
+    ids=["ends-in-80", "zeros", "block-aligned"],
+)
+def test_full_read_strips_exactly_the_padding(data):
+    # AN12196 table 28: a UID ending in 0x80 is followed by the 0x80 that starts the padding.
+    assert _full_read(_full_answer(_card_side(), data), len(data)) == data
+
+
+@pytest.mark.parametrize(
+    ("answer", "length", "message"),
+    [
+        pytest.param(
+            _mac_answer(_card_side(), bytes(range(0x41, 0x51))),
+            16,
+            "not FULL-mode ciphertext",
+            id="mac-mode-aligned",
+        ),
+        pytest.param(
+            _mac_answer(_card_side(), bytes(range(0x41, 0x55))),
+            20,
+            "not FULL-mode ciphertext",
+            id="mac-mode-unaligned",
+        ),
+        pytest.param(
+            _full_answer(_card_side(), bytes(8)), 16, "expected 16 bytes, got 8", id="short"
+        ),
+    ],
+)
+def test_full_read_refuses_what_is_not_padded_ciphertext_of_the_length(answer, length, message):
+    with pytest.raises(ev2.Ev2Error, match=message):
+        _full_read(answer, length)
+
+
+class _AnswersAfterAuth(FakeEv2Card):
+    """Authenticates for real, then answers the next command with ``answer(card_side)``."""
+
+    def __init__(self, answer, key: bytes) -> None:
+        super().__init__(key, RNDB, ti=bytes.fromhex("A1B2C3D4"))
+        self.answer = answer
+
+    def transmit(self, apdu):
+        if bytes(apdu)[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        if self.rnda is None:
+            return [], 0x91, 0x00
+        k_enc, k_mac = ev2.derive_session_keys(self.key, self.rnda, self.rndb)
+        return list(self.answer(_card_side(k_enc, k_mac, self.ti))), 0x91, 0x00
+
+
+@pytest.mark.parametrize("length", [16, 20])
+def test_full_read_of_a_mac_mode_file_fails_and_writes_nothing(monkeypatch, tmp_path, length):
+    data = bytes(range(0x41, 0x41 + length))
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, data), bytes(16)))
+    out = tmp_path / "file01.bin"
+    args = ["--json", "mifare", "read", "--aid", "010203", "--file-id", "01", "--full"]
+    result = run([*args, "--length", str(length), "--zero-key", "--out", str(out)])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert not out.exists()
+
+
+VALUE_GET = ["--json", "mifare", "value", "get", "--aid", "010203", "--file-id", "03", "--zero-key"]
+
+
+def test_value_get_reads_a_mac_mode_value_file(monkeypatch):
+    value = (1234).to_bytes(4, "little", signed=True)
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, value), bytes(16)))
+    result = run(VALUE_GET)
+    assert result.exit_code == 0, result.output
+    assert '"value": 1234' in result.output
+
+
+def test_value_get_of_a_full_mode_value_file_fails(monkeypatch):
+    value = (1234).to_bytes(4, "little", signed=True)
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _full_answer(card, value), bytes(16)))
+    result = run(VALUE_GET)
+    assert result.exit_code == 1, result.output
+    assert "GetValue: expected 4 bytes, got 16" in result.output
