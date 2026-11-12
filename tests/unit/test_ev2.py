@@ -1,7 +1,7 @@
 """DESFire EV2 auth + secure-messaging tests (offline; the card is the final arbiter)."""
 
 import pytest
-from _cardfakes import QueueConn
+from _cardfakes import QueueConn, run, wire_session
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 
@@ -371,3 +371,125 @@ def test_full_write_pads_block_aligned_payload_on_the_wire():
     assert len(card.key_data) == 32  # 16 data + 16-byte pad block
     assert card.key_data[:16] == bytes(range(16))
     assert card.key_data[16] == 0x80 and card.key_data[17:] == bytes(15)
+
+
+BARE_OK = (b"", 0x91, 0x00)
+NEW_KEY = bytes(range(16, 32))
+
+
+def _full_session() -> ev2.Ev2Session:
+    return ev2.Ev2Session(k_enc=bytes(range(16)), k_mac=bytes(16), ti=bytes.fromhex("AABBCCDD"))
+
+
+MACED_IN_FULL_MODE = [
+    pytest.param(
+        lambda t, s: ev2.command_full(
+            t, s, df.CMD_READ_DATA, header=DesfireTransport.data_header(1, 0, 16), response_len=16
+        ),
+        id="ReadData",
+    ),
+    pytest.param(
+        lambda t, s: ev2.command_full(
+            t,
+            s,
+            df.CMD_WRITE_DATA,
+            header=DesfireTransport.data_header(1, 0, 4),
+            plaintext=bytes(4),
+        ),
+        id="WriteData",
+    ),
+    pytest.param(lambda t, s: ev2.change_file_settings(t, s, 1, bytes(3)), id="ChangeFileSettings"),
+    pytest.param(
+        lambda t, s: ev2.change_key_cross(t, s, 1, NEW_KEY, bytes(16)), id="ChangeKey-other-key"
+    ),
+]
+
+
+@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
+@pytest.mark.parametrize("send", MACED_IN_FULL_MODE)
+def test_full_mode_refuses_an_ok_that_carries_no_response_mac(send):
+    # Of the FULL commands the CLI sends, only ChangeKey of the authenticated key ends the session.
+    with pytest.raises(ev2.Ev2Error, match="response MAC missing"):
+        send(DesfireTransport(CardSession(QueueConn([BARE_OK]))), _full_session())
+
+
+def test_change_key_same_accepts_the_bare_ok_that_ends_the_session():
+    conn = QueueConn([BARE_OK])
+    ev2.change_key_same(DesfireTransport(CardSession(conn)), _full_session(), 0, NEW_KEY)
+    assert conn.sent[0][1] == df.CMD_CHANGE_KEY
+
+
+@pytest.mark.parametrize(
+    ("reply", "message"),
+    [
+        pytest.param(bytes(4), "response MAC missing", id="short"),
+        pytest.param(bytes(8), "response MAC verification failed", id="wrong-mac"),
+    ],
+)
+def test_change_key_same_still_checks_a_mac_the_card_sends(reply, message):
+    conn = QueueConn([(reply, 0x91, 0x00)])
+    with pytest.raises(ev2.Ev2Error, match=message):
+        ev2.change_key_same(DesfireTransport(CardSession(conn)), _full_session(), 0, NEW_KEY)
+
+
+class _OkWithoutMacAfterAuth(FakeEv2Card):
+    """Authenticates for real, then answers every other command with a bare OK."""
+
+    def transmit(self, apdu):
+        if bytes(apdu)[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        return [], 0x91, 0x00
+
+
+@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_full_read_without_a_response_mac_fails_and_writes_nothing(
+    monkeypatch, tmp_path, json_mode
+):
+    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
+    out = tmp_path / "file01.bin"
+    args = ["mifare", "read", "--aid", "010203", "--file-id", "01", "--full", "--length", "16"]
+    args += ["--zero-key", "--out", str(out)]
+    result = run(["--json", *args] if json_mode else args)
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert "ReadData (FULL): response MAC missing" in result.output
+    assert not out.exists()
+
+
+FULL_MODE_COMMANDS = [
+    pytest.param(
+        ["mifare", "write", "--aid", "010203", "--file-id", "01", "--data", "AABB", "--full"]
+        + ["--zero-key"],
+        "WriteData (FULL)",
+        id="write",
+    ),
+    pytest.param(
+        ["mifare", "keys", "change", "--aid", "010203", "--key-no", "1", "--zero-key"]
+        + ["--new-key-env", "NEWK", "--auth-key-no", "0", "--auth-zero-key"],
+        "ChangeKey (cross)",
+        id="keys-change-other-key",
+    ),
+]
+
+
+@pytest.mark.xfail(strict=True, reason="command_full accepts a bare OK without a MAC")
+@pytest.mark.parametrize("json_mode", [True, False])
+@pytest.mark.parametrize(("args", "context"), FULL_MODE_COMMANDS)
+def test_full_mode_commands_fail_on_an_ok_without_a_response_mac(
+    monkeypatch, args, context, json_mode
+):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
+    result = run(["--yes", *(["--json"] if json_mode else []), *args])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert f"{context}: response MAC missing" in result.output
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_keys_change_of_the_authenticated_key_succeeds_on_a_bare_ok(monkeypatch, json_mode):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
+    args = ["mifare", "keys", "change", "--aid", "010203", "--key-no", "0", "--zero-key"]
+    args += ["--new-key-env", "NEWK"]
+    result = run(["--yes", *(["--json"] if json_mode else []), *args])
+    assert result.exit_code == 0, result.output
