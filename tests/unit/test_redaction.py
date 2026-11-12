@@ -38,7 +38,6 @@ def test_registered_secret_masked_everywhere():
     assert PIN_HEX not in r.mask("AA" + PIN_HEX + "BB")
 
 
-@pytest.mark.xfail(strict=True, reason="an all-zero key is registered as a secret")
 @pytest.mark.parametrize("length", [1, 16, 24])
 def test_an_all_zero_value_is_never_a_secret(length):
     r = Redactor()

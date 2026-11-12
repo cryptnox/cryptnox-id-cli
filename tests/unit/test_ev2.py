@@ -663,7 +663,6 @@ ZERO_KEY_READ = ["mifare", "read", "--aid", "010203", "--file-id", "01", "--full
 ZERO_KEY_READ += ["--zero-key"]
 
 
-@pytest.mark.xfail(strict=True, reason="the public zero key is registered as a secret")
 @pytest.mark.parametrize("json_mode", [True, False])
 def test_full_read_with_the_zero_key_shows_zero_bytes_as_hex(monkeypatch, json_mode):
     conn = _AnswersAfterAuth(lambda card: _full_answer(card, bytes(20)), bytes(16))
@@ -674,7 +673,6 @@ def test_full_read_with_the_zero_key_shows_zero_bytes_as_hex(monkeypatch, json_m
     assert "REDACTED" not in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="the public zero key is registered as a secret")
 def test_write_with_the_zero_key_keeps_zero_bytes_in_the_apdu_log(monkeypatch, tmp_path):
     wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, b""), bytes(16)))
     log = tmp_path / "apdu.log"
