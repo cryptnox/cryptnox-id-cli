@@ -80,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- In `shell`, Ctrl-C during a command and a declined confirmation return to
+  the prompt instead of ending the shell.
 - `mifare read --full`, `mifare write --full`, `mifare sdm setup` and
   `mifare keys change` with `--auth-key-no` fail with `ev2_error` (exit 11)
   when the card answers OK without a response MAC, instead of reporting
