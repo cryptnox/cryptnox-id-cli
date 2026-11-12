@@ -86,7 +86,6 @@ def test_tries_left_is_not_a_block(monkeypatch, mock_connection, args, apdu, env
     assert "now blocked" not in human
 
 
-@pytest.mark.xfail(strict=True, reason="6983 is reported as a proven block")
 @pytest.mark.parametrize(("args", "apdu", "env", "verifier"), COMMANDS)
 def test_6983_names_both_causes_and_the_status_check(
     monkeypatch, mock_connection, args, apdu, env, verifier
@@ -106,7 +105,6 @@ def test_6983_names_both_causes_and_the_status_check(
     assert f"The {verifier} is blocked" in human and "status" in human
 
 
-@pytest.mark.xfail(strict=True, reason="6983 is reported as a proven block")
 def test_6983_names_a_reader_that_advertises_contactless(monkeypatch, mock_connection):
     args, apdu, env, _ = COMMANDS[0].values
     _wire(monkeypatch, mock_connection, apdu, "6983", reader_name=PICC_READER)

@@ -762,18 +762,42 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
     app.out.result(payload, human)
 
 
+_PIN_6983 = (
+    "The PIN is blocked, or the card's contactless limit for it is reached (contact tries may "
+    "remain). Check `piv pin status`, which does not consume a try; if it reports blocked, "
+    "recover with `piv pin unblock` (needs the PUK)."
+)
+_PUK_6983 = (
+    "The PUK is blocked, or the card's contactless limit for it is reached (contact tries may "
+    "remain). Check `piv pin status`, which does not consume a try. A blocked PUK has no "
+    "recovery path."
+)
+
+
 def _change_secret_result(
-    app: AppContext, label: str, resp, *, blocked_hint: str | None = None
+    app: AppContext,
+    label: str,
+    resp,
+    session=None,
+    *,
+    blocked_hint: str | None = None,
+    on_6983: str | None = None,
 ) -> None:
     info = describe_sw(resp.sw1, resp.sw2)
     payload: dict[str, object] = {"changed": resp.ok, "sw": info.sw_hex(), "message": info.message}
-    blocked = not resp.ok and (resp.sw == 0x6983 or info.retries == 0)
+    # Only 63C0 proves a block; the card also answers 6983 at the verifier's contactless limit.
+    blocked = not resp.ok and info.retries == 0
+    hint = None
     if not resp.ok and info.retries is not None:
         payload["retries_remaining"] = info.retries
     if blocked:
         payload["blocked"] = True
         if blocked_hint:
             payload["recovery"] = blocked_hint
+    elif not resp.ok and resp.sw == 0x6983 and on_6983:
+        where = _contactless_reader(session)
+        hint = f"{on_6983} {where} advertises a contactless interface." if where else on_6983
+        payload["hint"] = hint
 
     def human(c: Console) -> None:
         if resp.ok:
@@ -782,6 +806,8 @@ def _change_secret_result(
             c.print(f"[red]{label} not changed:[/red] {info.message} (SW={info.sw_hex()})")
             if blocked and blocked_hint:
                 c.print(f"  [red]{blocked_hint}[/red]")
+            elif hint:
+                c.print(f"  [yellow]{hint}[/yellow]")
 
     app.out.result(payload, human)
 
@@ -811,7 +837,9 @@ def pin_change(app: AppContext, old_pin: str | None, new_pin: str | None) -> Non
         app,
         "PIN",
         resp,
+        session,
         blocked_hint="PIN is now blocked. Recover it with `piv pin unblock` (needs the PUK).",
+        on_6983=_PIN_6983,
     )
 
 
@@ -844,7 +872,9 @@ def pin_unblock(app: AppContext, puk_value: str | None, new_pin: str | None) -> 
         app,
         "PIN",
         resp,
+        session,
         blocked_hint="the PUK just used is now blocked - there is no recovery path.",
+        on_6983=_PUK_6983,
     )
 
 
@@ -875,7 +905,12 @@ def puk_change(app: AppContext, old_puk: str | None, new_puk: str | None) -> Non
     with app.open_session() as session:
         resp = _select(session).change_reference(old, new, pivc.REF_PUK)
     _change_secret_result(
-        app, "PUK", resp, blocked_hint="PUK is now blocked - there is no recovery path."
+        app,
+        "PUK",
+        resp,
+        session,
+        blocked_hint="PUK is now blocked - there is no recovery path.",
+        on_6983=_PUK_6983,
     )
 
 
@@ -1636,18 +1671,25 @@ def _write_standard(adm: PivAdmin, keys, names: tuple[str, ...]) -> list[dict[st
     return results
 
 
+def _contactless_reader(session=None) -> str | None:
+    """``Reader '<name>'`` when the session's reader advertises contactless, else None."""
+    if session is None:
+        return None
+    name = getattr(session, "reader_name", None)
+    atr = None
+    with contextlib.suppress(Exception):
+        atr = session.atr
+    if not is_contactless_interface(name, atr):
+        return None
+    return f"Reader '{escape(name)}'" if name else "This reader"
+
+
 def _interface_hint(session=None) -> str:
     """The 6982-on-PIN explanation, naming the reader when it advertises contactless."""
-    hint = PIN_INTERFACE_REFUSED_HINT
-    if session is not None:
-        name = getattr(session, "reader_name", None)
-        atr = None
-        with contextlib.suppress(Exception):
-            atr = session.atr
-        if is_contactless_interface(name, atr):
-            where = f"Reader '{escape(name)}'" if name else "This reader"
-            hint = f"{hint} {where} advertises a contactless interface."
-    return hint
+    where = _contactless_reader(session)
+    if where:
+        return f"{PIN_INTERFACE_REFUSED_HINT} {where} advertises a contactless interface."
+    return PIN_INTERFACE_REFUSED_HINT
 
 
 def _check_pin_verify(resp, session=None) -> None:
