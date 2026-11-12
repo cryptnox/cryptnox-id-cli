@@ -80,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An all-zero key is no longer masked as a secret: `mifare read --full` with
+  `--zero-key` prints zero bytes as hex instead of `<REDACTED:16B>`, and the
+  APDU transcript keeps them.
 - `piv certs list` without `--json` marks a certificate it cannot parse as
   unreadable and prints the parse error under the table, instead of showing
   it as present with no subject or expiry.

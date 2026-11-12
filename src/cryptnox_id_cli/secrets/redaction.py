@@ -122,7 +122,8 @@ class Redactor:
 
     def register(self, secret: bytes | bytearray | None) -> None:
         """Register a secret so it is masked anywhere it later appears."""
-        if not secret:
+        # All zeros is the public default key, not a secret; masking it hides every zero run.
+        if not secret or not any(secret):
             return
         b = bytes(secret)
         if len(b) >= 1 and b not in self._secrets:

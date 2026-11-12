@@ -3,6 +3,8 @@
 
 """Golden tests: secrets must never survive into a transcript."""
 
+import pytest
+
 from cryptnox_id_cli.secrets.redaction import Redactor
 
 PIN_HEX = "313233343536"  # ASCII "123456"
@@ -34,6 +36,19 @@ def test_registered_secret_masked_everywhere():
     r = Redactor()
     r.register(b"123456")
     assert PIN_HEX not in r.mask("AA" + PIN_HEX + "BB")
+
+
+@pytest.mark.parametrize("length", [1, 16, 24])
+def test_an_all_zero_value_is_never_a_secret(length):
+    r = Redactor()
+    r.register(bytes(length))
+    assert r.mask("00" * 32) == "00" * 32
+
+
+def test_a_value_with_one_non_zero_byte_is_still_a_secret():
+    r = Redactor()
+    r.register(bytes(15) + b"\x01")
+    assert "REDACTED" in r.mask("00" * 15 + "01")
 
 
 def test_non_sensitive_command_untouched():
