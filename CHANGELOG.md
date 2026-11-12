@@ -80,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `piv certs list` without `--json` marks a certificate it cannot parse as
+  unreadable and prints the parse error under the table, instead of showing
+  it as present with no subject or expiry.
 - `mifare keys change` without `--auth-key-no` authenticates with the new key
   after the change and fails with `ev2_error` (exit 11) when it does not,
   instead of reporting a change the card never confirmed.

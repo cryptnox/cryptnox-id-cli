@@ -387,10 +387,13 @@ def certs_list(app: AppContext) -> None:
                 str(e["slot"]),
                 str(e["object"]),
                 "[green]yes[/green]" if e["present"] else "[dim]no[/dim]",
-                str(cert.get("subject", "-")),
+                "[red]unreadable[/red]" if "error" in e else str(cert.get("subject", "-")),
                 str(cert.get("not_after", "-")),
             )
         c.print(table)
+        for e in out:
+            if "error" in e:
+                c.print(f"[red]{e['slot']}:[/red] {escape(str(e['error']))}")
 
     app.out.result({"certificates": out}, human)
 
