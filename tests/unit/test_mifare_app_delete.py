@@ -47,7 +47,6 @@ class _AppCard(FakeEv2Card):
         return [], 0x91, 0x1C
 
 
-@pytest.mark.xfail(strict=True, reason="deleted is reported on the bare OK alone")
 @pytest.mark.parametrize("mode", MODES)
 def test_deleted_is_reported_once_the_application_no_longer_selects(monkeypatch, mode):
     card = _AppCard()
@@ -59,7 +58,6 @@ def test_deleted_is_reported_once_the_application_no_longer_selects(monkeypatch,
     assert card.sent[-1] == SELECT_AID
 
 
-@pytest.mark.xfail(strict=True, reason="deleted is reported on the bare OK alone")
 @pytest.mark.parametrize("mode", MODES)
 def test_an_ok_that_left_the_application_in_place_is_an_error(monkeypatch, mode):
     card = _AppCard(relay=True)
@@ -71,7 +69,6 @@ def test_an_ok_that_left_the_application_in_place_is_an_error(monkeypatch, mode)
     assert card.present
 
 
-@pytest.mark.xfail(strict=True, reason="deleted is reported on the bare OK alone")
 def test_any_other_answer_to_the_check_is_a_desfire_error(monkeypatch):
     wire_session(monkeypatch, QueueConn([(b"", 0x91, 0x00), (b"", 0x91, 0x1C)]))
     result = run(DELETE)

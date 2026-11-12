@@ -235,6 +235,18 @@ def app_create(app: AppContext, aid: str, num_keys: int, key_type: str) -> None:
     )
 
 
+def _check_application_gone(dtx: DesfireTransport, aid: str, aid_bytes: bytes) -> None:
+    """Select the AID after DeleteApplication; the card must not find it."""
+    status, _ = dtx.raw_command(df.CMD_SELECT_APPLICATION, aid_bytes, context="SelectApplication")
+    if status == df.STATUS_OK:
+        raise CryptnoxError(
+            f"DeleteApplication: the card answered OK, but application {aid.upper()} still "
+            "selects, so it was not deleted."
+        )
+    if status != df.STATUS_APPLICATION_NOT_FOUND:
+        raise df.DesfireError(status, "SelectApplication")
+
+
 @app_group.command("delete")
 @click.option("--aid", required=True, help="Application AID, 3 bytes hex.")
 @click.option("--key-no", default=0, show_default=True, type=int, help="App master key number.")
@@ -271,6 +283,8 @@ def app_delete(app: AppContext, aid: str, key_no: int, zero_key: bool, key_env: 
             )
         else:
             dtx.delete_application(aid_bytes)
+        # The OK carries no MAC, so check the application is gone before reporting it.
+        _check_application_gone(dtx, aid, aid_bytes)
     app.out.result(
         {"aid": aid.upper(), "deleted": True},
         lambda c: c.print(f"[green]Deleted application {aid.upper()}.[/green]"),
