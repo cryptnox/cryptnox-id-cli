@@ -485,14 +485,66 @@ def test_full_mode_commands_fail_on_an_ok_without_a_response_mac(
     assert f"{context}: response MAC missing" in result.output
 
 
+class _KeyChangingCard(FakeEv2Card):
+    """Takes a same-key ChangeKey and answers a bare OK.
+
+    ``relay`` answers in the card's place: ``"change"`` the ChangeKey, ``"change+auth"`` also
+    the authentication after it.
+    """
+
+    def __init__(self, relay: str = "") -> None:
+        super().__init__(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4"))
+        self.relay = relay
+        self.change_answered = False
+
+    def transmit(self, apdu):
+        raw = bytes(apdu)
+        forged_auth = self.relay == "change+auth" and self.change_answered
+        if forged_auth and raw[1] == ev2.CMD_ADDITIONAL_FRAME:
+            return [0] * 32, 0x91, 0x00
+        if raw[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        if raw[1] == ev2.CMD_CHANGE_KEY and self.rnda is not None:
+            self.change_answered = True
+            if not self.relay:
+                k_enc, k_mac = ev2.derive_session_keys(self.key, self.rnda, self.rndb)
+                session = ev2.Ev2Session(k_enc=k_enc, k_mac=k_mac, ti=self.ti)
+                key_data = raw[6 : 5 + raw[4] - 8]
+                iv = ev2._full_iv(session, (0xA5, 0x5A))
+                self.key = ev2._aes_cbc_iv(k_enc, iv, key_data, encrypt=False)[:16]
+                self.rnda = None
+        return [], 0x91, 0x00
+
+
+SAME_KEY_CHANGE = ["--yes", "mifare", "keys", "change", "--aid", "010203", "--key-no", "0"]
+SAME_KEY_CHANGE += ["--zero-key", "--new-key-env", "NEWK"]
+
+
 @pytest.mark.parametrize("json_mode", [True, False])
 def test_keys_change_of_the_authenticated_key_succeeds_on_a_bare_ok(monkeypatch, json_mode):
     monkeypatch.setenv("NEWK", NEW_KEY.hex())
-    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
-    args = ["mifare", "keys", "change", "--aid", "010203", "--key-no", "0", "--zero-key"]
-    args += ["--new-key-env", "NEWK"]
-    result = run(["--yes", *(["--json"] if json_mode else []), *args])
+    card = _KeyChangingCard()
+    wire_session(monkeypatch, card)
+    result = run([*(["--json"] if json_mode else []), *SAME_KEY_CHANGE])
     assert result.exit_code == 0, result.output
+    assert card.key == NEW_KEY
+    assert card.rnda is not None  # authenticated with the new key after the change
+    assert json_mode or "the new key authenticates" in result.output
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+@pytest.mark.parametrize("relay", ["change", "change+auth"])
+def test_keys_change_of_the_authenticated_key_fails_when_the_card_kept_the_old_key(
+    monkeypatch, relay, json_mode
+):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    card = _KeyChangingCard(relay)
+    wire_session(monkeypatch, card)
+    result = run([*(["--json"] if json_mode else []), *SAME_KEY_CHANGE])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert "the new key does not authenticate" in result.output
+    assert '"changed"' not in result.output
+    assert card.key == bytes(16)
 
 
 def _card_side(

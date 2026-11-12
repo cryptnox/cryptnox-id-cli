@@ -80,6 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `mifare keys change` without `--auth-key-no` authenticates with the new key
+  after the change and fails with `ev2_error` (exit 11) when it does not,
+  instead of reporting a change the card never confirmed.
 - `mifare read --full` on a file that is not in FULL mode, and `mifare value
   get` on a value file that is, fail with an error instead of printing wrong
   data or a traceback.
