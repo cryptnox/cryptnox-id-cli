@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Consent gates on `fido config` policy writes.
 
 Safety review 2026-08-21 (medium findings): `min-pin-length` skipped its

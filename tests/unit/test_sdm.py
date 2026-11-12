@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV3 SDM / SUN host-side verification crypto (per NXP AN12196).
 
 These check our helpers against an independent re-derivation of the documented scheme;

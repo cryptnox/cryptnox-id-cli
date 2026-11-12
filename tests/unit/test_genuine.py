@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Genuineness / attestation applet: SELECT/GET CERT/ATTEST client, signature
 verification, chain ordering + anchoring, and the read-only state detector.
 

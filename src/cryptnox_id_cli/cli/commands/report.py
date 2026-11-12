@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``report`` — machine-readable, secret-safe status reports.
 
 Reports contain only non-secret, shareable data: states, versions, object

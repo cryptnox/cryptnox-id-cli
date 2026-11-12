@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``remote`` — operations carried out by the Cryptnox remote PIV service.
 
 The card stays in the local reader. The service holds the keys that make a card

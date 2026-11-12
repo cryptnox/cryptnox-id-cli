@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Transcript test: the detector must classify the real ACS card correctly."""
 
 from cryptnox_id_cli.state import StateDetector

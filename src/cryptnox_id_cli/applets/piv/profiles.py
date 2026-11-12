@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV pre-personalization profiles: a validated model that compiles to a BULK
 PUT DATA ADMIN payload. ``cryptnox-default`` reproduces the applet's own reference
 profile byte-for-byte.

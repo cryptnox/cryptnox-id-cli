@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The ``remote attest`` command: wiring, overwrite gate, post-verification. No socket, no card."""
 
 import contextlib

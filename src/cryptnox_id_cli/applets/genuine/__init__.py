@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Cryptnox Genuineness / attestation applet (RID A0000010, AID A000001000024701).
 
 Read-only client for the on-card attestation applet: SELECT, GET INFO, GET CERT

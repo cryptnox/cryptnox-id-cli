@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``genuine`` — inspect and verify the Cryptnox genuineness applet.
 
 Read-only. ``genuine info`` reports what the applet stores; ``genuine verify`` runs

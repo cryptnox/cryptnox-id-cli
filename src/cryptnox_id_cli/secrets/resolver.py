@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Resolve secret values for card operations.
 
 PIN/PUK/password resolution order: an explicit CLI option value when the caller

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """CTAP2 PIN/UV Auth Protocol (one and two) - the crypto under FIDO PIN + token ops.
 
 Both protocols agree a shared secret over ECDH (P-256), then provide ``encrypt`` /

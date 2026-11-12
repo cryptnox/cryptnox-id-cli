@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """FIDO CTAP client tests: framing, getInfo parsing, error decode, OS-block path."""
 
 import cbor2

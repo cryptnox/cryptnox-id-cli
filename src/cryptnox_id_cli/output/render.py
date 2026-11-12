@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Unified output: each command builds a JSON-able payload plus a human renderer."""
 
 from __future__ import annotations

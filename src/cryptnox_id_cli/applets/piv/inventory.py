@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Keyless inventory of the PIV applet: version, status, config, and the structure
 (key objects, verifiers, containers) with their access rules.
 

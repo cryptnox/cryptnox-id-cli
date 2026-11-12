@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV SELECT must survive the 6700 the multi-applet card returns for the first
 case-4 ISO SELECT issued right after a DESFire native-command session (seen on a
 contactless reader). The identical SELECT sent as case-3 (no Le) is accepted."""

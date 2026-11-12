@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Keyless inventory of the PIV applet (GET DATA ``2F47xx``). The response bytes
 were captured from a D600 card carrying the ``cryptnox-default`` structure."""
 

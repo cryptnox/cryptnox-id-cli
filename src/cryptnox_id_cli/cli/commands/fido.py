@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``fido`` — FIDO2 / CTAP 2.1 inspection and management.
 
 ``ping``, ``info``/``get-info``, ``pin status`` and ``config show`` only read;

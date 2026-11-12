@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`factory piv preperso set-mgmt-key`: what it writes, and what it refuses to write.
 
 Loading a card's administration key changes who can administer the card, so the

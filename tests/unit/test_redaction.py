@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Golden tests: secrets must never survive into a transcript."""
 
 from cryptnox_id_cli.secrets.redaction import Redactor

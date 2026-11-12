@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Guards surfaced by the pre-ship review: error-funnel membership + option conflicts."""
 
 import contextlib

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Fail-closed --dry-run enforcement.
 
 Safety review 2026-08-21, finding 1 (high): the global --dry-run was honored by only a

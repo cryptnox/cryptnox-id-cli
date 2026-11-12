@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 # PyInstaller spec for a single-file build.
 #   pip install -e ".[dev]"
 #   pyinstaller packaging/cryptnox-id.spec

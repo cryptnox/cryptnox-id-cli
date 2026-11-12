@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Cardholder PIN/PUK lifecycle wire format: CHANGE REFERENCE DATA (INS 24) and
 RESET RETRY COUNTER (INS 2C). Both bodies are current||new, each 0xFF-padded to 8.
 No admin channel: the cardholder proves the current secret in-band."""
