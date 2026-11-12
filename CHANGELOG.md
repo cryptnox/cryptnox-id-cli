@@ -83,6 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `mifare app delete` selects the application after deleting it and fails
   with an error if the card still finds it, instead of reporting `deleted` on
   the card's bare OK.
+- On Windows, a `fido` command re-run through the UAC prompt reports the
+  elevated run's error message, not only its exit code.
 - `piv pin change`, `piv pin unblock` and `piv puk change` no longer report a
   blocked PIN or PUK on `6983` alone, which the card also answers when the
   verifier's contactless limit is reached. They name both causes, point to
