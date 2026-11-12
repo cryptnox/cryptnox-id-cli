@@ -536,7 +536,6 @@ def test_full_read_strips_exactly_the_padding(data):
     assert _full_read(_full_answer(_card_side(), data), len(data)) == data
 
 
-@pytest.mark.xfail(strict=True, reason="command_full returns whatever decrypts")
 @pytest.mark.parametrize(
     ("answer", "length", "message"),
     [
@@ -578,7 +577,6 @@ class _AnswersAfterAuth(FakeEv2Card):
         return list(self.answer(_card_side(k_enc, k_mac, self.ti))), 0x91, 0x00
 
 
-@pytest.mark.xfail(strict=True, reason="command_full returns whatever decrypts")
 @pytest.mark.parametrize("length", [16, 20])
 def test_full_read_of_a_mac_mode_file_fails_and_writes_nothing(monkeypatch, tmp_path, length):
     data = bytes(range(0x41, 0x41 + length))
@@ -601,7 +599,6 @@ def test_value_get_reads_a_mac_mode_value_file(monkeypatch):
     assert '"value": 1234' in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="parse_value reads the first 4 bytes of anything longer")
 def test_value_get_of_a_full_mode_value_file_fails(monkeypatch):
     value = (1234).to_bytes(4, "little", signed=True)
     wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _full_answer(card, value), bytes(16)))
