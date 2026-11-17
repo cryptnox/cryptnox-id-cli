@@ -387,7 +387,7 @@ def certs_list(app: AppContext) -> None:
                 str(e["slot"]),
                 str(e["object"]),
                 "[green]yes[/green]" if e["present"] else "[dim]no[/dim]",
-                "[red]unreadable[/red]" if "error" in e else str(cert.get("subject", "-")),
+                "[red]unreadable[/red]" if "error" in e else escape(str(cert.get("subject", "-"))),
                 str(cert.get("not_after", "-")),
             )
         c.print(table)
@@ -447,7 +447,7 @@ def certs_inspect(app: AppContext, slot: str) -> None:
 
     def human(c: Console) -> None:
         for key, value in desc.items():
-            c.print(f"  {key}: {value}")
+            c.print(f"  {key}: {escape(str(value))}")
 
     app.out.result({"present": True, "slot": slot, "certificate": desc}, human)
 
