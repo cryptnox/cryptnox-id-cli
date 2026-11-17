@@ -62,7 +62,6 @@ def test_json_carries_the_names_unchanged(card):
     assert by_slot["9C"]["subject"] == BOLD_SUBJECT
 
 
-@pytest.mark.xfail(strict=True, reason="the subject is printed as console markup")
 def test_list_prints_each_subject_as_written(card):
     result = run(["piv", "certs", "list"])
     assert result.exit_code == 0, result.output
@@ -71,7 +70,6 @@ def test_list_prints_each_subject_as_written(card):
     assert BOLD_SUBJECT in rows["9C"]
 
 
-@pytest.mark.xfail(strict=True, reason="the subject and issuer are printed as console markup")
 @pytest.mark.parametrize(
     ("slot", "subject", "issuer"),
     [("9A", BROKEN_TAG, BOLD_ISSUER), ("9C", BOLD_SUBJECT, BOLD_SUBJECT)],
