@@ -80,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `info` prints a genuineness certificate subject that contains square
+  brackets as written, instead of failing or dropping part of it.
 - A command the card answers with a corrected length (`6Cxx`) is resent with
   its data intact. A command with data and no expected length used to lose
   its last data byte on the resend.

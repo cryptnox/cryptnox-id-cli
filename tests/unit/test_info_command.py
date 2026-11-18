@@ -199,7 +199,6 @@ def test_cplc_is_null_when_it_cannot_be_read(mock_connection, monkeypatch, excha
     assert "(CPLC)" not in text
 
 
-@pytest.mark.xfail(strict=True, reason="the genuineness subject is printed as console markup")
 @pytest.mark.parametrize("common_name", ["Device a[/x]b", "Device [b]S[/b]"])
 def test_the_genuineness_subject_is_printed_as_written(mock_connection, monkeypatch, common_name):
     _, text = _invoke(mock_connection, monkeypatch, *_personalized_contact(leaf_cn=common_name))
