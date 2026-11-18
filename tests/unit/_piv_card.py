@@ -22,6 +22,12 @@ from cryptnox_id_cli.util import tlv
 OK = (b"", 0x90, 0x00)
 
 
+def _status(sw: tuple[int, int]) -> tuple[bytes, int, int]:
+    """A reply with no data and status word ``sw``."""
+    sw1, sw2 = sw
+    return b"", sw1, sw2
+
+
 class UnwrappingScp03Card(FakeScp03Card):
     """FakeScp03Card that checks the C-MAC, strips C-ENC and answers secured commands.
 
@@ -87,7 +93,7 @@ class PivResponder:
             return (self.apt, 0x90, 0x00) if pivc.PIV_AID in raw else (b"", 0x6A, 0x82)
         if ins == 0x20:
             if not body:
-                return (b"", *self.status[raw[3]])
+                return _status(self.status[raw[3]])
             if self.pin is None:
                 return b"", 0x6A, 0x88
             return OK if body[:8] == self.pin.ljust(8, b"\xff") else (b"", 0x63, 0xC2)
@@ -100,9 +106,9 @@ class PivResponder:
         if ins == 0x87:
             digest = tlv.find(tlv.parse(body), 0x81).value
             if digest == b"\x00":
-                return (b"", *self.probe_sw)
+                return _status(self.probe_sw)
             if self.sign_sw:
-                return (b"", *self.sign_sw)
+                return _status(self.sign_sw)
             alg = hashes.SHA256() if len(digest) == 32 else hashes.SHA384()
             sig = self.key.sign(digest, ec.ECDSA(utils.Prehashed(alg)))
             return tlv.build_constructed(0x7C, tlv.build(0x82, sig)), 0x90, 0x00
@@ -110,7 +116,7 @@ class PivResponder:
 
     def secured(self, ins: int, p1: int, p2: int, body: bytes):
         if ins in self.secured_sw:
-            return (b"", *self.secured_sw[ins])
+            return _status(self.secured_sw[ins])
         if (ins, p1, p2) == (0x24, 0xFF, 0x80):
             self.pin = body.rstrip(b"\xff")
         if ins == 0x47:

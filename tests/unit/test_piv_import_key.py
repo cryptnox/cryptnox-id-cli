@@ -117,7 +117,7 @@ def test_unreadable_key_file_is_refused(tmp_path):
 
 
 def test_world_readable_key_file_warns(tmp_path):
-    path = _key_file(tmp_path, ec.generate_private_key(ec.SECP256R1()), mode=0o644)
+    path = _key_file(tmp_path, ec.generate_private_key(ec.SECP256R1()), mode=0o640)
     result = run(["piv", "perso", "import-key", "--slot", "9C", "--key", path, "--dry-run"])
     assert "group/world-readable; consider chmod 600" in result.output
 
