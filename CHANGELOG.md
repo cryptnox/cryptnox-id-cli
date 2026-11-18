@@ -107,8 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `piv pin change`, `piv pin unblock` and `piv puk change` no longer report a
   blocked PIN or PUK on `6983` alone, which the card also answers when the
   verifier's contactless limit is reached. They name both causes, point to
-  `piv pin status`, and say when the reader advertises contactless. `63C0`
-  still reports the block.
+  `piv pin status` on a contact reader, and say when the reader advertises
+  contactless. `63C0` still reports the block.
+- A PIN refused with `6983` while signing or reading a PIN-protected object
+  is reported as blocked or at its contactless limit, instead of pointing to
+  a key slot the profile never populated.
 - An all-zero key is no longer masked as a secret: `mifare read --full` with
   `--zero-key` prints zero bytes as hex instead of `<REDACTED:16B>`, and the
   APDU transcript keeps them.

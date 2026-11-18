@@ -783,13 +783,13 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
 
 _PIN_6983 = (
     "The PIN is blocked, or the card's contactless limit for it is reached (contact tries may "
-    "remain). Check `piv pin status`, which does not consume a try; if it reports blocked, "
-    "recover with `piv pin unblock` (needs the PUK)."
+    "remain). Check `piv pin status` from a contact reader, which does not consume a try; if "
+    "it reports blocked, recover with `piv pin unblock` (needs the PUK)."
 )
 _PUK_6983 = (
     "The PUK is blocked, or the card's contactless limit for it is reached (contact tries may "
-    "remain). Check `piv pin status`, which does not consume a try. A blocked PUK has no "
-    "recovery path."
+    "remain). Check `piv pin status` from a contact reader, which does not consume a try. A "
+    "blocked PUK has no recovery path."
 )
 
 
@@ -814,8 +814,7 @@ def _change_secret_result(
         if blocked_hint:
             payload["recovery"] = blocked_hint
     elif not resp.ok and resp.sw == 0x6983 and on_6983:
-        where = _contactless_reader(session)
-        hint = f"{on_6983} {where} advertises a contactless interface." if where else on_6983
+        hint = _with_reader_note(on_6983, session)
         payload["hint"] = hint
 
     def human(c: Console) -> None:
@@ -1703,25 +1702,23 @@ def _contactless_reader(session=None) -> str | None:
     return f"Reader '{escape(name)}'" if name else "This reader"
 
 
+def _with_reader_note(text: str, session=None) -> str:
+    """``text``, plus a note when the session's reader advertises contactless."""
+    where = _contactless_reader(session)
+    return f"{text} {where} advertises a contactless interface." if where else text
+
+
 def _interface_hint(session=None) -> str:
     """The 6982-on-PIN explanation, naming the reader when it advertises contactless."""
-    where = _contactless_reader(session)
-    if where:
-        return f"{PIN_INTERFACE_REFUSED_HINT} {where} advertises a contactless interface."
-    return PIN_INTERFACE_REFUSED_HINT
+    return _with_reader_note(PIN_INTERFACE_REFUSED_HINT, session)
 
 
 def _check_pin_verify(resp, session=None) -> None:
-    """Raise on a failed PIN verification, naming the PUK-unblock recovery path
-    once the PIN is actually blocked rather than a generic status word.
+    """Raise on a failed PIN verification.
 
-    ``session`` lets the 6982 message name a contactless reader.
-
-    Only ``63C0`` (retry counter exhausted) proves a blocked PIN. ``6983`` is
-    reported for a blocked verifier *and* when the PIN cannot be used for the
-    operation at hand - e.g. a slot the profile never populated - so it must not
-    assert a blocked PIN outright; saying so sent people to `pin unblock` for a
-    card whose PIN was fine.
+    Only ``63C0`` proves a blocked PIN; the card also answers ``6983`` at the PIN's
+    contactless limit, so that message names both. ``session`` lets the 6983 and 6982
+    messages name a contactless reader.
     """
     if resp.ok:
         return
@@ -1733,11 +1730,8 @@ def _check_pin_verify(resp, session=None) -> None:
         )
     if resp.sw == 0x6983:
         raise CryptnoxError(
-            f"PIN verification refused (SW={info.sw_hex()}): either the PIN is blocked, or "
-            "this PIN cannot be used for this operation (for example a key slot the card's "
-            "profile never populated). Check `piv pin status` first - it does not consume a "
-            "try - and if it reports 0 tries remaining, recover with `piv pin unblock` "
-            "(needs the PUK)."
+            f"PIN verification refused (SW={info.sw_hex()}): "
+            f"{_with_reader_note(_PIN_6983, session)}"
         )
     if resp.sw == 0x6982:
         raise CryptnoxError(
