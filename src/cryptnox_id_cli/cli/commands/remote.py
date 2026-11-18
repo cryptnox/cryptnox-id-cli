@@ -492,9 +492,14 @@ def _clean(value: object, depth: int = 0) -> object:
     return None
 
 
-def _print_ping(c: Console, url: str, payload: dict[str, object]) -> None:
-    service = payload["service"]
-    assert isinstance(service, dict)
+def _print_ping(
+    c: Console,
+    url: str,
+    service: dict[str, object],
+    available: list[str],
+    others: list[str],
+    skew: int | None,
+) -> None:
     c.print(f"[bold]remote ping[/bold]  {escape(url)}")
 
     build = service.get("build")
@@ -508,9 +513,6 @@ def _print_ping(c: Console, url: str, payload: dict[str, object]) -> None:
         text = "not reported"
     c.print(f"  Service build:     {escape(text)}")
 
-    available = payload["operations_available"]
-    others = payload["operations_not_in_this_client"]
-    assert isinstance(available, list) and isinstance(others, list)
     c.print(f"  Operations:        {escape(', '.join(available) or 'none this tool runs')}")
     if others:
         c.print(f"                     offered, not run by this tool: {escape(', '.join(others))}")
@@ -546,8 +548,7 @@ def _print_ping(c: Console, url: str, payload: dict[str, object]) -> None:
                 + ("refused" if scp["refuse_contactless_admin"] else "allowed")
             )
 
-    skew = payload.get("clock_skew_seconds")
-    if isinstance(skew, int) and abs(skew) > 120:
+    if skew is not None and abs(skew) > 120:
         c.print(
             f"  [yellow]This computer's clock differs from the service's by {abs(skew)} "
             "seconds; certificate dates are checked against this computer's clock.[/yellow]"
@@ -571,8 +572,8 @@ def ping(ctx: click.Context) -> None:
     with rchannel.open_channel(url) as ch:
         answer = relay.ping(ch)
 
-    service = _clean({k: v for k, v in answer.items() if k not in _PING_HIDDEN})
-    assert isinstance(service, dict)
+    cleaned = _clean({k: v for k, v in answer.items() if k not in _PING_HIDDEN})
+    service: dict[str, object] = cleaned if isinstance(cleaned, dict) else {}
     ops = service.get("ops")
     offered = sorted(str(o) for o in ops) if isinstance(ops, list) else []
     server_time = answer.get("server_time")
@@ -583,16 +584,18 @@ def ping(ctx: click.Context) -> None:
         and math.isfinite(server_time)
         else None
     )
+    available = [op for op in _CLIENT_OPS if op in offered]
+    others = [op for op in offered if op not in _CLIENT_OPS]
     payload: dict[str, object] = {
         "op": "ping",
         "endpoint": url,
         "client": {"name": CLI_NAME, "version": __version__, "operations": list(_CLIENT_OPS)},
         "service": service,
-        "operations_available": [op for op in _CLIENT_OPS if op in offered],
-        "operations_not_in_this_client": [op for op in offered if op not in _CLIENT_OPS],
+        "operations_available": available,
+        "operations_not_in_this_client": others,
         "clock_skew_seconds": skew,
     }
-    app.out.result(payload, lambda c: _print_ping(c, url, payload))
+    app.out.result(payload, lambda c: _print_ping(c, url, service, available, others, skew))
 
 
 # --------------------------------------------------------------------------- #
