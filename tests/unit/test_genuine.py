@@ -12,8 +12,10 @@ applet does, exercising the true proof-of-possession path."""
 from __future__ import annotations
 
 import datetime
+import json
 
 import pytest
+from _cardfakes import run, run_both_modes, wire_session
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -26,6 +28,7 @@ from cryptnox_id_cli.applets.genuine.verify import (
     verify_attestation_signature,
     verify_genuineness,
 )
+from cryptnox_id_cli.cli.commands.genuine import _load_dir_anchors
 from cryptnox_id_cli.state.detector import StateDetector
 from cryptnox_id_cli.state.model import CardState, DesfireState, GenuinenessState
 from cryptnox_id_cli.transport.errors import AppletNotFoundError
@@ -60,16 +63,15 @@ def _ca(subject: str, issuer_name, issuer_key, *, self_signed: bool):
     return key, name, cert
 
 
-@pytest.fixture
-def pki():
+def _chain(root_cn: str, sub_cn: str, leaf_cn: str) -> dict[str, bytes]:
     """A synthetic chain: ROOT -> SUB-CA -> device LEAF, plus a valid ATTEST sig."""
-    root_key, root_name, root = _ca("TEST ROOT CA", None, None, self_signed=True)
-    sub_key, sub_name, sub = _ca("TEST SUB CA", root_name, root_key, self_signed=False)
+    root_key, root_name, root = _ca(root_cn, None, None, self_signed=True)
+    sub_key, sub_name, sub = _ca(sub_cn, root_name, root_key, self_signed=False)
 
     dev_key = ec.generate_private_key(ec.SECP256R1())
     leaf = (
         x509.CertificateBuilder()
-        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Device DEV-TEST-01")]))
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, leaf_cn)]))
         .issuer_name(sub_name)
         .public_key(dev_key.public_key())
         .serial_number(x509.random_serial_number())
@@ -86,6 +88,11 @@ def pki():
         "root": der(root),
         "sig": sig,
     }
+
+
+@pytest.fixture
+def pki():
+    return _chain("TEST ROOT CA", "TEST SUB CA", "Device DEV-TEST-01")
 
 
 class _DictConn:
@@ -320,3 +327,197 @@ def test_detector_finds_present_applet_after_fido_probe():
     ).detect()
     # GET INFO / GET CERT land on the (mock) applet and fail -> PRESENT, not personalized.
     assert st.genuine == GenuinenessState.PRESENT
+
+
+_GET_CERT_ISSUER = "80020100000000"
+MARKUP_NAMES = ("TEST [b]ROOT[/b]", "SUB a[/x]b", "Device [b]S[/b]")
+
+
+def _pem(der: bytes) -> bytes:
+    return x509.load_der_x509_certificate(der).public_bytes(serialization.Encoding.PEM)
+
+
+def _without_basic_constraints() -> bytes:
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "NO BASIC CONSTRAINTS")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(_NB)
+        .not_valid_after(_NA)
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.PEM)
+
+
+def test_anchor_dir_keeps_cas_and_classifies_them(tmp_path, pki):
+    (tmp_path / "a-root.PEM").write_bytes(_pem(pki["root"]))
+    (tmp_path / "b-sub.crt").write_bytes(pki["sub"])  # DER under a PEM-style suffix
+    (tmp_path / "c-leaf.pem").write_bytes(_pem(pki["leaf"]))  # not a CA
+    (tmp_path / "d-nobc.cer").write_bytes(_without_basic_constraints())
+    (tmp_path / "e-junk.cer").write_bytes(b"not a certificate")
+    (tmp_path / "f-notes.txt").write_bytes(_pem(pki["root"]))  # wrong suffix
+    (tmp_path / "g-dir.pem").mkdir()
+
+    assert _load_dir_anchors(str(tmp_path)) == ([pki["root"]], [pki["sub"]])
+
+
+def test_one_pem_file_may_carry_a_whole_bundle(tmp_path, pki):
+    (tmp_path / "bundle.pem").write_bytes(_pem(pki["sub"]) + _pem(pki["root"]))
+
+    assert _load_dir_anchors(str(tmp_path)) == ([pki["root"]], [pki["sub"]])
+
+
+def test_empty_anchor_dir_adds_nothing(tmp_path):
+    assert _load_dir_anchors(str(tmp_path)) == ([], [])
+
+
+def _card(monkeypatch, pki, *, leaf=True, info="01000711|9000", sig=None):
+    exchanges = {_SELECT_C4: "|9000", _GET_INFO: info}
+    if leaf:
+        exchanges[_GET_CERT_LEAF] = f"{pki['leaf'].hex()}|9000"
+        exchanges[_GET_CERT_ISSUER] = f"{pki['sub'].hex()}|9000"
+        exchanges[_ATTEST] = f"{(sig or pki['sig']).hex()}|9000"
+    conn = _DictConn(exchanges)
+    wire_session(monkeypatch, conn, reader_name="ACS ACR39U ICC Reader 0")
+    return conn
+
+
+def _anchor_dir(tmp_path, pki) -> str:
+    (tmp_path / "root.pem").write_bytes(_pem(pki["root"]))
+    return str(tmp_path)
+
+
+def _both(args):
+    as_json, human = run_both_modes(args)
+    assert as_json.exit_code == 0, as_json.output
+    assert human.exit_code == 0, human.output
+    return json.loads(as_json.stdout), " ".join(human.output.split())
+
+
+def test_info_reports_leaf_and_issuer(monkeypatch, pki):
+    _card(monkeypatch, pki)
+    payload, text = _both(["genuine", "info"])
+
+    assert payload["personalized"] is True
+    assert payload["info"] == "01000711"
+    assert payload["leaf"]["subject"] == "CN=Device DEV-TEST-01"
+    assert payload["issuer"]["subject"] == "CN=TEST SUB CA"
+    assert "Info: 01000711" in text
+    assert "Device leaf: CN=Device DEV-TEST-01 issuer: CN=TEST SUB CA" in text
+
+
+def test_info_on_a_blank_applet_says_not_personalized(monkeypatch, pki):
+    _card(monkeypatch, pki, leaf=False, info="|6D00")
+    payload, text = _both(["genuine", "info"])
+
+    assert payload == {
+        "present": True,
+        "personalized": False,
+        "info": None,
+        "leaf": None,
+        "issuer": None,
+    }
+    assert "Info:" not in text
+    assert "No device leaf certificate (applet not personalized)." in text
+
+
+def test_verify_proves_a_card_chained_to_a_pinned_anchor(monkeypatch, pki, tmp_path):
+    conn = _card(monkeypatch, pki)
+    args = ["genuine", "verify", "--nonce", _NONCE.hex(), "--anchors", _anchor_dir(tmp_path, pki)]
+    payload, text = _both(args)
+
+    assert payload["genuine"] is True
+    assert payload["chain"]["chain"] == [
+        "CN=Device DEV-TEST-01",
+        "CN=TEST SUB CA",
+        "CN=TEST ROOT CA",
+    ]
+    assert conn.sent.count(_ATTEST) == 2  # the caller's nonce, once per mode
+    assert "Genuineness: GENUINE" in text
+    assert "proof of possession (ATTEST): valid" in text
+    assert "device leaf: CN=Device DEV-TEST-01" in text
+    assert "certificate chain: verified" in text
+    assert "CN=Device DEV-TEST-01 -> CN=TEST SUB CA -> CN=TEST ROOT CA" in text
+
+
+def test_verify_without_the_anchor_is_not_proven(monkeypatch, pki):
+    _card(monkeypatch, pki)
+    payload, text = _both(["genuine", "verify", "--nonce", _NONCE.hex()])
+
+    assert payload["proof_of_possession"] is True
+    assert payload["genuine"] is False
+    assert payload["chain"]["reasons"] == ["not anchored: no pinned root issues 'CN=TEST SUB CA'"]
+    assert "Genuineness: NOT proven" in text
+    assert "certificate chain: not verified" in text
+    assert "- not anchored: no pinned root issues 'CN=TEST SUB CA'" in text
+
+
+def test_verify_rejects_a_signature_that_does_not_match(monkeypatch, pki, tmp_path):
+    _card(monkeypatch, pki, sig=b"\x30\x00")
+    args = ["genuine", "verify", "--nonce", _NONCE.hex(), "--anchors", _anchor_dir(tmp_path, pki)]
+    payload, text = _both(args)
+
+    assert payload["proof_of_possession"] is False
+    assert payload["chain"]["verified"] is True
+    assert payload["genuine"] is False
+    assert "proof of possession (ATTEST): invalid" in text
+
+
+def test_verify_on_a_blank_applet_sends_no_attest(monkeypatch, pki):
+    conn = _card(monkeypatch, pki, leaf=False)
+    payload, text = _both(["genuine", "verify"])
+
+    assert payload["genuine"] is False
+    assert payload["chain"] is None
+    assert not any(c.startswith("8004") for c in conn.sent)
+    assert "Genuineness: NOT proven" in text
+    assert "device leaf:" not in text and "certificate chain" not in text
+    assert "* Genuineness applet present but carries no device leaf certificate." in text
+
+
+@pytest.mark.parametrize("nonce", ["zz", "abc"])
+def test_verify_refuses_a_nonce_that_is_not_hex(nonce):
+    result = run(["genuine", "verify", "--nonce", nonce])
+
+    assert result.exit_code == 2
+    assert "nonce must be hex" in result.output
+
+
+@pytest.fixture
+def markup_pki():
+    return _chain(*MARKUP_NAMES)
+
+
+def test_json_carries_bracketed_names_unchanged(monkeypatch, markup_pki):
+    _card(monkeypatch, markup_pki)
+    as_json, _ = run_both_modes(["genuine", "info"])
+    payload = json.loads(as_json.stdout)
+    assert payload["leaf"]["subject"] == "CN=Device [b]S[/b]"
+    assert payload["leaf"]["issuer"] == "CN=SUB a[/x]b"
+
+
+@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
+def test_info_prints_bracketed_names_as_written(monkeypatch, markup_pki):
+    _card(monkeypatch, markup_pki)
+    _, text = _both(["genuine", "info"])
+    assert "Device leaf: CN=Device [b]S[/b] issuer: CN=SUB a[/x]b" in text
+
+
+@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
+def test_verify_prints_bracketed_names_as_written(monkeypatch, markup_pki, tmp_path):
+    _card(monkeypatch, markup_pki)
+    anchors = _anchor_dir(tmp_path, markup_pki)
+    _, text = _both(["genuine", "verify", "--nonce", _NONCE.hex(), "--anchors", anchors])
+    assert "device leaf: CN=Device [b]S[/b]" in text
+    assert "CN=Device [b]S[/b] -> CN=SUB a[/x]b -> CN=TEST [b]ROOT[/b]" in text
+
+
+@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
+def test_verify_prints_a_reason_naming_a_bracketed_issuer_as_written(monkeypatch, markup_pki):
+    _card(monkeypatch, markup_pki)
+    _, text = _both(["genuine", "verify", "--nonce", _NONCE.hex()])
+    assert "- not anchored: no pinned root issues 'CN=SUB a[/x]b'" in text
