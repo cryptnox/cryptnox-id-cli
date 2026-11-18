@@ -3,10 +3,8 @@
 
 """`_check_pin_verify` must not claim a blocked PIN unless the card actually said so.
 
-Only 63C0 (retry counter exhausted) proves it. 6983 is also returned when the PIN
-cannot be used for the operation at hand - e.g. a key slot the profile never
-populated - so asserting "PIN is blocked" there sent people to `pin unblock` for a
-card whose PIN was fine.
+Only 63C0 (retry counter exhausted) proves it. The card also answers 6983 over a
+contactless reader once the PIN's contactless limit is reached, with contact tries left.
 """
 
 from __future__ import annotations
@@ -49,7 +47,7 @@ def test_6983_does_not_assert_a_blocked_pin():
     with pytest.raises(CryptnoxError) as exc:
         _check_pin_verify(_Resp(0x6983))
     msg = str(exc.value)
-    assert "either the PIN is blocked, or" in msg  # hedged, both causes named
+    assert "The PIN is blocked, or" in msg  # hedged, both causes named
     assert "pin status" in msg  # non-decrementing check offered first
 
 
@@ -66,7 +64,6 @@ def test_other_failures_stay_generic():
         _check_pin_verify(_Resp(0x6A82))
 
 
-@pytest.mark.xfail(strict=True, reason="6983 is blamed on an unpopulated key slot")
 def test_6983_names_the_contactless_limit_and_a_contact_reader():
     with pytest.raises(CryptnoxError) as exc:
         _check_pin_verify(_Resp(0x6983))
@@ -76,7 +73,6 @@ def test_6983_names_the_contactless_limit_and_a_contact_reader():
     assert "never populated" not in msg
 
 
-@pytest.mark.xfail(strict=True, reason="6983 is blamed on an unpopulated key slot")
 def test_6983_names_a_reader_that_advertises_contactless():
     session = CardSession(RecordingConn(atr=bytes.fromhex(PICC_ATR)), reader_name=PICC_READER)
     with pytest.raises(CryptnoxError) as exc:
@@ -84,7 +80,6 @@ def test_6983_names_a_reader_that_advertises_contactless():
     assert str(exc.value).endswith(f"Reader '{PICC_READER}' advertises a contactless interface.")
 
 
-@pytest.mark.xfail(strict=True, reason="6983 is blamed on an unpopulated key slot")
 def test_a_pin_protected_read_refused_with_6983_names_both_causes(monkeypatch, mock_connection):
     exchanges = {SELECT_PIV: "|9000", VERIFY_123456: "|6983"}
     wire_session(monkeypatch, mock_connection("3B00", exchanges, []))

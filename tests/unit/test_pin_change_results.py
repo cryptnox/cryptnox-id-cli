@@ -113,7 +113,6 @@ def test_6983_names_a_reader_that_advertises_contactless(monkeypatch, mock_conne
     assert "ACR1552" in human and "advertises" in human
 
 
-@pytest.mark.xfail(strict=True, reason="the 6983 hint trusts pin status over any reader")
 @pytest.mark.parametrize(("args", "apdu", "env", "verifier"), COMMANDS)
 def test_6983_hint_says_to_check_from_a_contact_reader(
     monkeypatch, mock_connection, args, apdu, env, verifier
