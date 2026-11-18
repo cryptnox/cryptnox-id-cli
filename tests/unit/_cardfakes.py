@@ -22,9 +22,14 @@ underscore keeps it out of collection.
 
 from __future__ import annotations
 
+import datetime
 from collections.abc import Iterable, Sequence
 
 from click.testing import CliRunner
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
@@ -157,3 +162,20 @@ def run_both_modes(args: Sequence[str], **kwargs):
     invocation is usually the cheapest coverage in any wave.
     """
     return run(["--json", *args], **kwargs), run(list(args), **kwargs)
+
+
+def self_signed_der(common_name: str) -> bytes:
+    """A self-signed P-256 certificate for ``CN=common_name``, valid 2026-2036."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc))
+        .not_valid_after(datetime.datetime(2036, 1, 1, tzinfo=datetime.timezone.utc))
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.DER)

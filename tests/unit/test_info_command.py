@@ -5,15 +5,10 @@
 
 from __future__ import annotations
 
-import datetime
 import json
 
 import pytest
-from _cardfakes import run_both_modes, wire_session
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.x509.oid import NameOID
+from _cardfakes import run_both_modes, self_signed_der, wire_session
 
 CONTACT = "ACS ACR39U ICC Reader 0"
 PICC = "ACS ACR1552 1S CL Reader PICC 0"
@@ -50,22 +45,6 @@ DESFIRE_VERSION = "9060000000"
 EV2_VERSION = "04010112001A0504010102001A050411223344556601020304052021"
 
 
-def _leaf(common_name: str) -> str:
-    key = ec.generate_private_key(ec.SECP256R1())
-    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
-    cert = (
-        x509.CertificateBuilder()
-        .subject_name(name)
-        .issuer_name(name)
-        .public_key(key.public_key())
-        .serial_number(1)
-        .not_valid_before(datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc))
-        .not_valid_after(datetime.datetime(2036, 1, 1, tzinfo=datetime.timezone.utc))
-        .sign(key, hashes.SHA256())
-    )
-    return cert.public_bytes(serialization.Encoding.DER).hex()
-
-
 def _personalized_contact(pin_answer: str = "63C3", leaf_cn: str = "Device DEV-TEST-01"):
     return (
         CONTACT,
@@ -85,7 +64,7 @@ def _personalized_contact(pin_answer: str = "63C3", leaf_cn: str = "Device DEV-T
             SELECT_DEFAULT: "|9000",
             SELECT_GENUINE: "|9000",
             GENUINE_INFO: "01000711|9000",
-            GENUINE_LEAF: f"{_leaf(leaf_cn)}|9000",
+            GENUINE_LEAF: f"{self_signed_der(leaf_cn).hex()}|9000",
         },
     )
 
