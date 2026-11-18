@@ -116,7 +116,7 @@ def test_a_refused_pin_says_so_in_text_too(monkeypatch, mock_connection):
 
 
 def test_a_blocked_pin_exits_6_with_the_recovery_path(monkeypatch, mock_connection):
-    _wire(monkeypatch, mock_connection, CHANGE_PIN, "6983")
+    _wire(monkeypatch, mock_connection, CHANGE_PIN, "63C0")  # 63C0 proves the block; 6983 does not
     res = _cardfakes.run(
         ["--json", "piv", "pin", "change", "--old-pin", "123456", "--new-pin", "654321"]
     )

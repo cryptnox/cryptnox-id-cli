@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Offline SCP02 tests: primitive known-answers and a full handshake against a sim card.
 
 The primitive tests recompute the expected values with an independent inline

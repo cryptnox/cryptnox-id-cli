@@ -112,6 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failure: a key attestation the card could not store is reported as
   unchecked, and `--out` is checked for a writable directory before anything
   is sent.
+- The licence is stated as `LGPL-3.0-only OR LicenseRef-Commercial` in the
+  package metadata and in an SPDX header at the top of every source file.
 - The package ships the text of the GNU GPL version 3, which the LGPL
   incorporates, next to the LGPL and the commercial licence.
 - Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
@@ -161,6 +163,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text the service supplies is stripped of control sequences and markup
   before display, in results and in the error line; a bracketed path in a
   service message no longer breaks the error line.
+- `info`, `genuine info` and `genuine verify` print certificate names that
+  contain square brackets as written, instead of failing or dropping part of
+  them. So do `report` in human mode, which prints the report's JSON, and
+  the `--out` path it names, `fido ping`, `fido info` and
+  `fido credential list` for the strings the authenticator returns, and
+  `mifare sdm read` for the tag's NDEF text.
+- A command the card answers with a corrected length (`6Cxx`) is resent with
+  its data intact. A command with data and no expected length used to lose
+  its last data byte on the resend.
+- A value that is not valid hex, or a `--slot` that is not a key reference,
+  ends in an error with exit code 2 instead of a traceback. Bad hex is
+  reported as `invalid_input` without repeating the value.
+- A DESFire answer shorter than expected ends in an error instead of a
+  traceback.
+- `piv perso generate-csr` and `self-sign-cert` accept a DER public key as
+  well as PEM.
+- `piv quickstart --csr-out` on a slot whose certificate it keeps stops before
+  writing anything and names `piv perso generate-csr`, instead of exiting 0
+  without a CSR. `--public-out` then writes the kept certificate's public key.
+- `info` reads the card serial correctly when the CPLC answer uses a long-form
+  length.
+- `piv objects read --out` writes a file only the owner can read.
+- `piv certs list` and `piv certs inspect` print a certificate subject or
+  issuer that contains square brackets as written, instead of failing or
+  dropping part of it.
+- `mifare app delete` selects the application after deleting it and fails
+  with an error if the card still finds it, instead of reporting `deleted` on
+  the card's bare OK.
+- On Windows, a `fido` command re-run through the UAC prompt reports the
+  elevated run's error message, not only its exit code.
+- `piv pin change`, `piv pin unblock` and `piv puk change` no longer report a
+  blocked PIN or PUK on `6983` alone, which the card also answers when the
+  verifier's contactless limit is reached. They name both causes, point to
+  `piv pin status` on a contact reader, and say when the reader advertises
+  contactless. `63C0` still reports the block.
+- A PIN refused with `6983` while signing or reading a PIN-protected object
+  is reported as blocked or at its contactless limit, instead of pointing to
+  a key slot the profile never populated.
+- An all-zero key is no longer masked as a secret: `mifare read --full` with
+  `--zero-key` prints zero bytes as hex instead of `<REDACTED:16B>`, and the
+  APDU transcript keeps them.
+- `piv certs list` without `--json` marks a certificate it cannot parse as
+  unreadable and prints the parse error under the table, instead of showing
+  it as present with no subject or expiry.
+- `mifare keys change` without `--auth-key-no` authenticates with the new key
+  after the change and fails with `ev2_error` (exit 11) when it does not,
+  instead of reporting a change the card never confirmed.
+- `mifare read --full` on a file that is not in FULL mode, and `mifare value
+  get` on a value file that is, fail with an error instead of printing wrong
+  data or a traceback.
+- In `shell`, Ctrl-C during a command and a declined confirmation return to
+  the prompt instead of ending the shell.
+- `mifare read --full`, `mifare write --full`, `mifare sdm setup` and
+  `mifare keys change` with `--auth-key-no` fail with `ev2_error` (exit 11)
+  when the card answers OK without a response MAC, instead of reporting
+  success with nothing verified.
 - `piv perso generate-key` warns that it destroys the slot's key only when the
   slot's certificate is for a key of the same algorithm.
 - A signature refused because the key object holds no key yet (`6983`) says

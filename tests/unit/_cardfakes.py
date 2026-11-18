@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Shared card doubles and wiring helpers.
 
 Two transmit conventions exist in this suite and both are deliberate:
@@ -19,10 +22,17 @@ underscore keeps it out of collection.
 
 from __future__ import annotations
 
+import datetime
+import sys
 from collections.abc import Iterable, Sequence
 
 from click.testing import CliRunner
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 
+from cryptnox_id_cli.applets.fido.constants import CTAP_CLIENT_PIN
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 
@@ -124,11 +134,12 @@ def wire_session(monkeypatch, conn, *, reader_name: str | None = None) -> None:
     Commands that import ``connect``/``pick_reader`` directly (``doctor``, ``readers``)
     are not covered by this - use :func:`wire_pcsc` for those.
     """
-    monkeypatch.setattr(
-        AppContext,
-        "open_session",
-        lambda self: self.make_session(conn, reader_name=reader_name),
-    )
+
+    def open_session(self: AppContext):
+        self.resolved_reader = reader_name
+        return self.make_session(conn, reader_name=reader_name)
+
+    monkeypatch.setattr(AppContext, "open_session", open_session)
 
 
 def wire_pcsc(monkeypatch, module, conn, *, reader_name: str, infos=None) -> None:
@@ -140,7 +151,8 @@ def wire_pcsc(monkeypatch, module, conn, *, reader_name: str, infos=None) -> Non
 
 
 def run(args: Sequence[str], **kwargs):
-    """Invoke the CLI through CliRunner."""
+    """Invoke the CLI through CliRunner, on a console wide enough that tables do not wrap."""
+    kwargs["env"] = {"COLUMNS": "200", **(kwargs.get("env") or {})}
     return CliRunner().invoke(root, list(args), **kwargs)
 
 
@@ -152,3 +164,62 @@ def run_both_modes(args: Sequence[str], **kwargs):
     invocation is usually the cheapest coverage in any wave.
     """
     return run(["--json", *args], **kwargs), run(list(args), **kwargs)
+
+
+def self_signed_der(common_name: str) -> bytes:
+    """A self-signed P-256 certificate for ``CN=common_name``, valid 2026-2036."""
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc))
+        .not_valid_after(datetime.datetime(2036, 1, 1, tzinfo=datetime.timezone.utc))
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.DER)
+
+
+class _TtySys:
+    """The real ``sys``, but ``stdin.isatty()`` is true; reads still use CliRunner's stdin."""
+
+    class _Stdin:
+        def isatty(self) -> bool:
+            return True
+
+        def __getattr__(self, name):
+            return getattr(sys.stdin, name)
+
+    stdin = _Stdin()
+
+    def __getattr__(self, name):
+        return getattr(sys, name)
+
+
+def fake_tty(monkeypatch, module) -> None:
+    """Make ``module`` see a terminal on stdin, so its interactive prompts run."""
+    monkeypatch.setattr(module, "sys", _TtySys())
+
+
+class CtapRouter:
+    """One authenticator from two doubles: clientPIN to ``pin_card``, the rest to ``card``."""
+
+    def __init__(self, pin_card: object, card: object) -> None:
+        self.pin_card = pin_card
+        self.card = card
+        self.sent: list[bytes] = []
+
+    def transmit(self, apdu: list[int]) -> _Reply:
+        raw = bytes(apdu)
+        self.sent.append(raw)
+        target = self.pin_card if raw[1] == 0x10 and raw[5] == CTAP_CLIENT_PIN else self.card
+        return target.transmit(apdu)  # type: ignore[attr-defined]
+
+    def get_atr(self) -> bytes:
+        return b""
+
+    def disconnect(self) -> None:
+        pass

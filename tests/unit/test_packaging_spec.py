@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The PyInstaller spec names what it freezes; those names must exist.
 
 No job builds the spec, so a wrong name in it surfaces only in a frozen build,

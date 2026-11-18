@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Extended-length SCP03 command wrapping (the pre-perso BULK is ~316 bytes)."""
 
 from cryptnox_id_cli.transport.apdu import APDU

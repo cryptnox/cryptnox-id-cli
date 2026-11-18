@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``factory`` - MANUFACTURING-ONLY operations.
 
 Pre-personalization is structural and (at finalize) irreversible. It is isolated

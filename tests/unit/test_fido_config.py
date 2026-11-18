@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """FIDO authenticatorConfig (0x0D): request shaping + pinUvAuthParam construction.
 
 The pinUvAuthParam is a MAC over ``32×0xFF || 0x0D || subCommand || subCommandParams``

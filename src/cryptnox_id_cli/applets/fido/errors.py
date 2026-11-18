@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """CTAP2 status-code decoding (CTAP 2.1; matches the Android client's table)."""
 
 from __future__ import annotations

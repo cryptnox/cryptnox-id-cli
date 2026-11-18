@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``genuine`` — inspect and verify the Cryptnox genuineness applet.
 
 Read-only. ``genuine info`` reports what the applet stores; ``genuine verify`` runs
@@ -15,6 +18,7 @@ import click
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli import trust
 from cryptnox_id_cli.applets.genuine import constants as gc
@@ -118,8 +122,8 @@ def info(app: AppContext) -> None:
         if blob:
             c.print(f"  Info: {blob.hex}")
         if leaf:
-            c.print(f"  Device leaf: {leaf['subject']}")
-            c.print(f"    issuer:  {leaf['issuer']}")
+            c.print(f"  Device leaf: {escape(str(leaf['subject']))}")
+            c.print(f"    issuer:  {escape(str(leaf['issuer']))}")
             c.print(f"    serial:  {leaf['serial']}")
             c.print(f"    expires: {leaf['not_after']}")
         else:
@@ -191,14 +195,14 @@ def verify(app: AppContext, nonce_hex: str | None, anchors_dir: str | None) -> N
         pop = "[green]valid[/green]" if result.attested else "[red]invalid[/red]"
         c.print(f"  proof of possession (ATTEST): {pop}  [dim]{result.attest_detail}[/dim]")
         if result.leaf_subject:
-            c.print(f"  device leaf: {result.leaf_subject}")
+            c.print(f"  device leaf: {escape(result.leaf_subject)}")
         if result.chain is not None:
             cv = "[green]verified[/green]" if result.chain.verified else "[red]not verified[/red]"
             c.print(f"  certificate chain: {cv}")
             if result.chain.chain:
-                c.print(f"    {' -> '.join(result.chain.chain)}")
+                c.print(f"    {escape(' -> '.join(result.chain.chain))}")
             for reason in result.chain.reasons:
-                c.print(f"    [yellow]-[/yellow] {reason}")
+                c.print(f"    [yellow]-[/yellow] {escape(reason)}")
         for note in result.notes:
             c.print(f"  [yellow]*[/yellow] {note}")
         c.print(f"\n[dim]{_ISD_SSD_NOTE}[/dim]")

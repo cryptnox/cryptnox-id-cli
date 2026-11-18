@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV constants for the OpenFIPS201 applet under test.
 
 Values reflect what THIS applet implements (verified from source + the live card),

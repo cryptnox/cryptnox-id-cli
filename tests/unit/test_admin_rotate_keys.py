@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`piv admin rotate-keys` and `piv admin delete-factory-keyset`: the PUT KEY /
 DELETE KEY encoding, the guards, and the post-checks. Key check values are
 GlobalPlatform known answers (the default test key's 3DES KCV is the familiar 8BAF47)."""

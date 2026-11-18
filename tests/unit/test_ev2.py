@@ -1,7 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV2 auth + secure-messaging tests (offline; the card is the final arbiter)."""
 
 import pytest
-from _cardfakes import QueueConn
+from _cardfakes import QueueConn, run, wire_session
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.cmac import CMAC
 
@@ -371,3 +374,321 @@ def test_full_write_pads_block_aligned_payload_on_the_wire():
     assert len(card.key_data) == 32  # 16 data + 16-byte pad block
     assert card.key_data[:16] == bytes(range(16))
     assert card.key_data[16] == 0x80 and card.key_data[17:] == bytes(15)
+
+
+BARE_OK = (b"", 0x91, 0x00)
+NEW_KEY = bytes(range(16, 32))
+
+
+def _full_session() -> ev2.Ev2Session:
+    return ev2.Ev2Session(k_enc=bytes(range(16)), k_mac=bytes(16), ti=bytes.fromhex("AABBCCDD"))
+
+
+MACED_IN_FULL_MODE = [
+    pytest.param(
+        lambda t, s: ev2.command_full(
+            t, s, df.CMD_READ_DATA, header=DesfireTransport.data_header(1, 0, 16), response_len=16
+        ),
+        id="ReadData",
+    ),
+    pytest.param(
+        lambda t, s: ev2.command_full(
+            t,
+            s,
+            df.CMD_WRITE_DATA,
+            header=DesfireTransport.data_header(1, 0, 4),
+            plaintext=bytes(4),
+        ),
+        id="WriteData",
+    ),
+    pytest.param(lambda t, s: ev2.change_file_settings(t, s, 1, bytes(3)), id="ChangeFileSettings"),
+    pytest.param(
+        lambda t, s: ev2.change_key_cross(t, s, 1, NEW_KEY, bytes(16)), id="ChangeKey-other-key"
+    ),
+]
+
+
+@pytest.mark.parametrize("send", MACED_IN_FULL_MODE)
+def test_full_mode_refuses_an_ok_that_carries_no_response_mac(send):
+    # Of the FULL commands the CLI sends, only ChangeKey of the authenticated key ends the session.
+    with pytest.raises(ev2.Ev2Error, match="response MAC missing"):
+        send(DesfireTransport(CardSession(QueueConn([BARE_OK]))), _full_session())
+
+
+def test_change_key_same_accepts_the_bare_ok_that_ends_the_session():
+    conn = QueueConn([BARE_OK])
+    ev2.change_key_same(DesfireTransport(CardSession(conn)), _full_session(), 0, NEW_KEY)
+    assert conn.sent[0][1] == df.CMD_CHANGE_KEY
+
+
+@pytest.mark.parametrize(
+    ("reply", "message"),
+    [
+        pytest.param(bytes(4), "response MAC missing", id="short"),
+        pytest.param(bytes(8), "response MAC verification failed", id="wrong-mac"),
+    ],
+)
+def test_change_key_same_still_checks_a_mac_the_card_sends(reply, message):
+    conn = QueueConn([(reply, 0x91, 0x00)])
+    with pytest.raises(ev2.Ev2Error, match=message):
+        ev2.change_key_same(DesfireTransport(CardSession(conn)), _full_session(), 0, NEW_KEY)
+
+
+class _OkWithoutMacAfterAuth(FakeEv2Card):
+    """Authenticates for real, then answers every other command with a bare OK."""
+
+    def transmit(self, apdu):
+        if bytes(apdu)[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        return [], 0x91, 0x00
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_full_read_without_a_response_mac_fails_and_writes_nothing(
+    monkeypatch, tmp_path, json_mode
+):
+    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
+    out = tmp_path / "file01.bin"
+    args = ["mifare", "read", "--aid", "010203", "--file-id", "01", "--full", "--length", "16"]
+    args += ["--zero-key", "--out", str(out)]
+    result = run(["--json", *args] if json_mode else args)
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert "ReadData (FULL): response MAC missing" in result.output
+    assert not out.exists()
+
+
+FULL_MODE_COMMANDS = [
+    pytest.param(
+        ["mifare", "write", "--aid", "010203", "--file-id", "01", "--data", "AABB", "--full"]
+        + ["--zero-key"],
+        "WriteData (FULL)",
+        id="write",
+    ),
+    pytest.param(
+        ["mifare", "keys", "change", "--aid", "010203", "--key-no", "1", "--zero-key"]
+        + ["--new-key-env", "NEWK", "--auth-key-no", "0", "--auth-zero-key"],
+        "ChangeKey (cross)",
+        id="keys-change-other-key",
+    ),
+]
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+@pytest.mark.parametrize(("args", "context"), FULL_MODE_COMMANDS)
+def test_full_mode_commands_fail_on_an_ok_without_a_response_mac(
+    monkeypatch, args, context, json_mode
+):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    wire_session(monkeypatch, _OkWithoutMacAfterAuth(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4")))
+    result = run(["--yes", *(["--json"] if json_mode else []), *args])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert f"{context}: response MAC missing" in result.output
+
+
+class _KeyChangingCard(FakeEv2Card):
+    """Takes a same-key ChangeKey and answers a bare OK.
+
+    ``relay`` answers in the card's place: ``"change"`` the ChangeKey, ``"change+auth"`` also
+    the authentication after it.
+    """
+
+    def __init__(self, relay: str = "") -> None:
+        super().__init__(bytes(16), RNDB, ti=bytes.fromhex("A1B2C3D4"))
+        self.relay = relay
+        self.change_answered = False
+
+    def transmit(self, apdu):
+        raw = bytes(apdu)
+        forged_auth = self.relay == "change+auth" and self.change_answered
+        if forged_auth and raw[1] == ev2.CMD_ADDITIONAL_FRAME:
+            return [0] * 32, 0x91, 0x00
+        if raw[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        if raw[1] == ev2.CMD_CHANGE_KEY and self.rnda is not None:
+            self.change_answered = True
+            if not self.relay:
+                k_enc, k_mac = ev2.derive_session_keys(self.key, self.rnda, self.rndb)
+                session = ev2.Ev2Session(k_enc=k_enc, k_mac=k_mac, ti=self.ti)
+                key_data = raw[6 : 5 + raw[4] - 8]
+                iv = ev2._full_iv(session, (0xA5, 0x5A))
+                self.key = ev2._aes_cbc_iv(k_enc, iv, key_data, encrypt=False)[:16]
+                self.rnda = None
+        return [], 0x91, 0x00
+
+
+SAME_KEY_CHANGE = ["--yes", "mifare", "keys", "change", "--aid", "010203", "--key-no", "0"]
+SAME_KEY_CHANGE += ["--zero-key", "--new-key-env", "NEWK"]
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_keys_change_of_the_authenticated_key_succeeds_on_a_bare_ok(monkeypatch, json_mode):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    card = _KeyChangingCard()
+    wire_session(monkeypatch, card)
+    result = run([*(["--json"] if json_mode else []), *SAME_KEY_CHANGE])
+    assert result.exit_code == 0, result.output
+    assert card.key == NEW_KEY
+    assert card.rnda is not None  # authenticated with the new key after the change
+    assert json_mode or "the new key authenticates" in result.output
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+@pytest.mark.parametrize("relay", ["change", "change+auth"])
+def test_keys_change_of_the_authenticated_key_fails_when_the_card_kept_the_old_key(
+    monkeypatch, relay, json_mode
+):
+    monkeypatch.setenv("NEWK", NEW_KEY.hex())
+    card = _KeyChangingCard(relay)
+    wire_session(monkeypatch, card)
+    result = run([*(["--json"] if json_mode else []), *SAME_KEY_CHANGE])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert "the new key does not authenticate" in result.output
+    assert '"changed"' not in result.output
+    assert card.key == bytes(16)
+
+
+def _card_side(
+    k_enc: bytes = bytes(range(16)), k_mac: bytes = bytes(16), ti: bytes = b""
+) -> ev2.Ev2Session:
+    """The card's view of the first command after authentication."""
+    return ev2.Ev2Session(k_enc=k_enc, k_mac=k_mac, ti=ti or bytes.fromhex("AABBCCDD"), cmd_ctr=1)
+
+
+def _full_answer(card: ev2.Ev2Session, data: bytes) -> bytes:
+    """A FULL-mode file's answer: E(data || padding) || MACt."""
+    iv = ev2._full_iv(card, (0x5A, 0xA5))
+    enc = ev2._aes_cbc_iv(card.k_enc, iv, ev2._pad_full(data), encrypt=True)
+    return enc + card.response_mac(0x00, enc)
+
+
+def _mac_answer(card: ev2.Ev2Session, data: bytes) -> bytes:
+    """A MAC-mode file's answer to the same command: data || MACt."""
+    return data + card.response_mac(0x00, data)
+
+
+def _full_read(answer: bytes, length: int) -> bytes:
+    conn = QueueConn([(answer, 0x91, 0x00)])
+    header = DesfireTransport.data_header(1, 0, length)
+    return ev2.command_full(
+        DesfireTransport(CardSession(conn)),
+        _full_session(),
+        df.CMD_READ_DATA,
+        header=header,
+        response_len=length,
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [bytes.fromhex("04958CAA5C5E80"), bytes(4), bytes(range(16))],
+    ids=["ends-in-80", "zeros", "block-aligned"],
+)
+def test_full_read_strips_exactly_the_padding(data):
+    # AN12196 table 28: a UID ending in 0x80 is followed by the 0x80 that starts the padding.
+    assert _full_read(_full_answer(_card_side(), data), len(data)) == data
+
+
+@pytest.mark.parametrize(
+    ("answer", "length", "message"),
+    [
+        pytest.param(
+            _mac_answer(_card_side(), bytes(range(0x41, 0x51))),
+            16,
+            "not FULL-mode ciphertext",
+            id="mac-mode-aligned",
+        ),
+        pytest.param(
+            _mac_answer(_card_side(), bytes(range(0x41, 0x55))),
+            20,
+            "not FULL-mode ciphertext",
+            id="mac-mode-unaligned",
+        ),
+        pytest.param(
+            _full_answer(_card_side(), bytes(8)), 16, "expected 16 bytes, got 8", id="short"
+        ),
+    ],
+)
+def test_full_read_refuses_what_is_not_padded_ciphertext_of_the_length(answer, length, message):
+    with pytest.raises(ev2.Ev2Error, match=message):
+        _full_read(answer, length)
+
+
+class _AnswersAfterAuth(FakeEv2Card):
+    """Authenticates for real, then answers the next command with ``answer(card_side)``."""
+
+    def __init__(self, answer, key: bytes) -> None:
+        super().__init__(key, RNDB, ti=bytes.fromhex("A1B2C3D4"))
+        self.answer = answer
+
+    def transmit(self, apdu):
+        if bytes(apdu)[1] in (ev2.CMD_AUTHENTICATE_EV2_FIRST, ev2.CMD_ADDITIONAL_FRAME):
+            return super().transmit(apdu)
+        if self.rnda is None:
+            return [], 0x91, 0x00
+        k_enc, k_mac = ev2.derive_session_keys(self.key, self.rnda, self.rndb)
+        return list(self.answer(_card_side(k_enc, k_mac, self.ti))), 0x91, 0x00
+
+
+@pytest.mark.parametrize("length", [16, 20])
+def test_full_read_of_a_mac_mode_file_fails_and_writes_nothing(monkeypatch, tmp_path, length):
+    data = bytes(range(0x41, 0x41 + length))
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, data), bytes(16)))
+    out = tmp_path / "file01.bin"
+    args = ["--json", "mifare", "read", "--aid", "010203", "--file-id", "01", "--full"]
+    result = run([*args, "--length", str(length), "--zero-key", "--out", str(out)])
+    assert result.exit_code == ev2.Ev2Error.exit_code, result.output
+    assert not out.exists()
+
+
+VALUE_GET = ["--json", "mifare", "value", "get", "--aid", "010203", "--file-id", "03", "--zero-key"]
+
+
+def test_value_get_reads_a_mac_mode_value_file(monkeypatch):
+    value = (1234).to_bytes(4, "little", signed=True)
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, value), bytes(16)))
+    result = run(VALUE_GET)
+    assert result.exit_code == 0, result.output
+    assert '"value": 1234' in result.output
+
+
+def test_value_get_of_a_full_mode_value_file_fails(monkeypatch):
+    value = (1234).to_bytes(4, "little", signed=True)
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _full_answer(card, value), bytes(16)))
+    result = run(VALUE_GET)
+    assert result.exit_code == 1, result.output
+    assert "GetValue: expected 4 bytes, got 16" in result.output
+
+
+ZERO_KEY_READ = ["mifare", "read", "--aid", "010203", "--file-id", "01", "--full", "--length", "20"]
+ZERO_KEY_READ += ["--zero-key"]
+
+
+@pytest.mark.parametrize("json_mode", [True, False])
+def test_full_read_with_the_zero_key_shows_zero_bytes_as_hex(monkeypatch, json_mode):
+    conn = _AnswersAfterAuth(lambda card: _full_answer(card, bytes(20)), bytes(16))
+    wire_session(monkeypatch, conn)
+    result = run(["--json", *ZERO_KEY_READ] if json_mode else ZERO_KEY_READ)
+    assert result.exit_code == 0, result.output
+    assert "00" * 20 in result.output
+    assert "REDACTED" not in result.output
+
+
+def test_write_with_the_zero_key_keeps_zero_bytes_in_the_apdu_log(monkeypatch, tmp_path):
+    wire_session(monkeypatch, _AnswersAfterAuth(lambda card: _mac_answer(card, b""), bytes(16)))
+    log = tmp_path / "apdu.log"
+    args = [
+        "--yes",
+        "--apdu-log",
+        str(log),
+        "mifare",
+        "write",
+        "--aid",
+        "010203",
+        "--file-id",
+        "01",
+    ]
+    result = run([*args, "--data", "00" * 16, "--zero-key"])
+    assert result.exit_code == 0, result.output
+    write_line = next(line for line in log.read_text().splitlines() if line.startswith("> 903D"))
+    assert "00" * 16 in write_line
+    assert "REDACTED" not in write_line

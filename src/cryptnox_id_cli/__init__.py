@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """cryptnox-id — CLI for the Cryptnox multi-applet smartcard.
 
 Three independent functions live on one physical card and are managed by

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV2 authentication (AuthenticateEV2First) and secure messaging.
 
 Session keys are derived per NXP AN12343 with an AES-CMAC KDF:
@@ -262,13 +265,18 @@ def command_full(
     plaintext: bytes = b"",
     response_len: int = 0,
     context: str | None = None,
+    terminates_session: bool = False,
     max_frame: int = MAX_COMMAND_FRAME,
 ) -> bytes:
     """Send a command in EV2 CommMode.FULL: the command header stays in the clear, the
     ``plaintext`` data is AES-CBC encrypted (IV = E(Kenc, A55A||TI||CmdCtr||0)), the
     whole ``header||ciphertext`` is MACed and chain-sent, and the response data is
     MAC-verified then decrypted (IV uses 5AA5||TI||CmdCtr after the counter advances).
-    Returns the decrypted response truncated to ``response_len`` (0 = all)."""
+    Returns the decrypted response without its padding, exactly ``response_len`` bytes
+    when that is set.
+
+    Every answer must carry a response MAC, except the OK of a command that ends the
+    session (ChangeKey of the authenticated key); pass ``terminates_session=True`` for it."""
     ctx = context or f"DESFire {cmd:02X} (FULL)"
     enc = (
         _aes_cbc_iv(
@@ -295,7 +303,7 @@ def command_full(
     session.cmd_ctr += 1
     if status != STATUS_OK:
         raise DesfireError(status, ctx)
-    if len(acc) == 0:
+    if terminates_session and len(acc) == 0:
         return b""
     if len(acc) < 8:
         raise Ev2Error(f"{ctx}: response MAC missing.")
@@ -304,8 +312,18 @@ def command_full(
         raise Ev2Error(f"{ctx}: response MAC verification failed.")
     if not resp_enc:
         return b""
+    # A MAC-mode file answers with a valid MAC over plaintext, so only the padding exposes it.
+    not_full = f"{ctx}: the response is not FULL-mode ciphertext; is the file's comm mode FULL?"
+    if len(resp_enc) % 16:
+        raise Ev2Error(not_full)
     plain = _aes_cbc_iv(session.k_enc, _full_iv(session, (0x5A, 0xA5)), resp_enc, encrypt=False)
-    return plain[:response_len] if response_len else plain
+    unpadded = plain.rstrip(b"\x00")
+    if not unpadded.endswith(b"\x80") or len(plain) - len(unpadded) > 15:
+        raise Ev2Error(not_full)
+    data = unpadded[:-1]
+    if response_len and len(data) != response_len:
+        raise Ev2Error(f"{ctx}: expected {response_len} bytes, got {len(data)}.")
+    return data
 
 
 def change_key_same(
@@ -333,6 +351,7 @@ def change_key_same(
         header=bytes([key_no]),
         plaintext=bytes(new_key) + bytes([key_version & 0xFF]),
         context=context or "ChangeKey",
+        terminates_session=True,
     )
 
 

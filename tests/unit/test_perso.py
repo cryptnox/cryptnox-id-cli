@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Perso grammar tests (GENERATE request, PIN padding, CHANGE REF DATA, PUT DATA)."""
 
 import pytest

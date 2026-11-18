@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """6982 on the PIN probe or on VERIFY means "not over this interface", not "not set".
 
 A card personalized over a contactless reader runs ``set-pin`` and ``set-puk`` fine

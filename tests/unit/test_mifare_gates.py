@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """mifare data-destroying gates and default-key disclosure.
 
 Safety review 2026-08-21: `mifare record clear` and `mifare write` ran ungated while

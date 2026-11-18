@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
+import pytest
+
 from cryptnox_id_cli.applets.piv.apt import parse_apt
 from cryptnox_id_cli.util import tlv
 
@@ -33,3 +38,34 @@ def test_parse_apt():
     assert info.aid_hex == "A000000308000010000100"
     assert info.label == "OpenFIPS201"
     assert info.url is not None and info.url.endswith("800-73-4.pdf")
+
+
+def test_a_multibyte_tag_cut_short_is_rejected_by_parse_and_unreadable_by_peek():
+    with pytest.raises(ValueError, match="truncated multi-byte tag"):
+        tlv.parse(bytes.fromhex("5FC1"))
+    assert tlv.peek(bytes.fromhex("5FC1")) is None
+
+
+@pytest.mark.parametrize(
+    ("tag", "length", "header"),
+    [(0x5FC102, 0x10000, "5FC102" + "83010000"), (0x7F61, 0x100, "7F61" + "820100")],
+)
+def test_long_tags_and_lengths_round_trip_through_parse(tag, length, header):
+    raw = tlv.build(tag, bytes(length))
+    assert raw[: len(header) // 2].hex().upper() == header
+    [node] = tlv.parse(raw, recurse=False)
+    assert (node.tag, len(node.value)) == (tag, length)
+
+
+@pytest.mark.parametrize(
+    ("call", "message"),
+    [
+        (lambda: tlv.encode_tag(-1), "non-negative"),
+        (lambda: tlv.encode_tag(0x1000000), "tag too large"),
+        (lambda: tlv.encode_length(0x1000000), "value too long"),
+    ],
+    ids=["negative-tag", "tag-too-large", "length-too-long"],
+)
+def test_encoder_limits(call, message):
+    with pytest.raises(ValueError, match=message):
+        call()

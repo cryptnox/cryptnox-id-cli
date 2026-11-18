@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """CTAP2-over-APDU client (read-only commands for Phase 7A).
 
 Framing (verified against the applet source and the Android client):

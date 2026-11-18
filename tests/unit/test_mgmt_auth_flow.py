@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The 9B mutual-authentication driver against a loop-back card.
 
 The applet decides in a fixed order - does the (key reference, mechanism) pair exist,

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The GlobalPlatform security domain that administers the PIV applet: keyless facts
 (which SCP it speaks, which key versions it holds) and the key-management commands
 (PUT KEY, DELETE KEY) that a holder of its keys sends it.

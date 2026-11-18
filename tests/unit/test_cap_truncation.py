@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The two response-layer behaviours, exercised through the real transport.
 
 test_generate_truncation.py pins the rule against hand-built responses. This one puts

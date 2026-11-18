@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Exception hierarchy and friendly ISO 7816 status-word decoding.
 
 Every status word is mapped to a plain-language message plus the raw code, so the
@@ -18,6 +21,13 @@ class CryptnoxError(Exception):
 
     def to_dict(self) -> dict[str, object]:
         return {"error": self.code, "message": str(self)}
+
+
+class InputError(CryptnoxError, ValueError):
+    """A value the user supplied cannot be used (bad hex, wrong length)."""
+
+    code = "invalid_input"
+    exit_code = 2
 
 
 class TransportError(CryptnoxError):

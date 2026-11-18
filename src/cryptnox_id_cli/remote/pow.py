@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Proof-of-work for the remote PIV service.
 
 The service gates each operation behind a small hash puzzle: find a nonce whose

@@ -194,7 +194,7 @@ Copyright (C) 2026 Cryptnox SA.
 
 `cryptnox-id-cli` is dual-licensed:
 
-- **LGPL-3.0** for open-source projects and proprietary projects that comply
+- **LGPL-3.0-only** for open-source projects and proprietary projects that comply
   with LGPL requirements (see [`LICENSE`](LICENSE); the LGPL incorporates the GNU
   GPL, included as [`LICENSES/GPL-3.0.txt`](LICENSES/GPL-3.0.txt))
 - **Commercial license** for projects that require a proprietary license

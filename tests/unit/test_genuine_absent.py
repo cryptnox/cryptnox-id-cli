@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """A card without the genuineness applet: what `genuine` and the detector say."""
 
 from __future__ import annotations

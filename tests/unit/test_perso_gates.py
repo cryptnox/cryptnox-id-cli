@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Safety-review follow-ups on the perso admin-channel writes and object reads.
 
 Safety review 2026-08-21:

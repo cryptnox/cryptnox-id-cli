@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Keyless facts about the PIV admin security domain: SELECT by AID plus the key
 information template, never INITIALIZE UPDATE. On this chip an INITIALIZE UPDATE
 that is not followed by a successful EXTERNAL AUTHENTICATE counts as a failed

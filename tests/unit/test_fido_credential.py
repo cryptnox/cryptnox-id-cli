@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """makeCredential / getAssertion: request shaping, authData parsing, sign/verify loopback."""
 
 import hashlib

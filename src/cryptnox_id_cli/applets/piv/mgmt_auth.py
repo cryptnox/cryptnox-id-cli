@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV management key (key reference 9B): authentication and value management.
 
 The applet administers each key object either through the GlobalPlatform secure

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The rule that decides a GENERATE response was cut short.
 
 Getting this wrong in either direction is expensive: a false positive sends a working

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Configurable trust store: bundled anchors plus $CRYPTNOX_TRUST_DIR / an explicit dir.
 
 The anchor set decides whether an attestation chain can be verified at all, so the

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The seam the card doubles hang on, and the boundary that keeps it honest.
 
 Substituting the card happens in one of two places, and which one depends on how the

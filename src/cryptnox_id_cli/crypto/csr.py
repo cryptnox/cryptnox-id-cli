@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Build CSRs and self-signed certs around an external (on-card) signer.
 
 The PIV private key never leaves the card, so we assemble the ASN.1 with

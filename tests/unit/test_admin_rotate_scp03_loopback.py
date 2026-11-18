@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`piv admin rotate-keys` and `delete-factory-keyset` over SCP03, end to end against a
 loopback security domain: the real session (C-ENC + C-MAC), the static-DEK key
 encryption and the key check values all run for real. The double keeps a key table,

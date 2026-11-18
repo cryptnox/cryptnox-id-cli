@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Consent gates on `fido config` policy writes.
 
 Safety review 2026-08-21 (medium findings): `min-pin-length` skipped its
@@ -12,8 +15,7 @@ while it contains reset and other writes.
 
 from __future__ import annotations
 
-import sys
-
+from _cardfakes import fake_tty
 from click.testing import CliRunner
 
 from cryptnox_id_cli.cli.commands import fido as fido_cmd
@@ -31,27 +33,6 @@ def _wire(monkeypatch, payload: dict):
 
     monkeypatch.setattr(fido_cmd, "_with_fido", fake_with_fido)
     return calls
-
-
-class _FakeSys:
-    """The real ``sys``, but ``stdin.isatty()`` reports a terminal. Reads still go
-    through whatever stdin CliRunner injected at call time."""
-
-    class _Stdin:
-        def isatty(self):
-            return True
-
-        def __getattr__(self, name):
-            return getattr(sys.stdin, name)
-
-    stdin = _Stdin()
-
-    def __getattr__(self, name):
-        return getattr(sys, name)
-
-
-def _fake_tty(monkeypatch):
-    monkeypatch.setattr(fido_cmd, "sys", _FakeSys())
 
 
 def _run(args, **kw):
@@ -117,7 +98,7 @@ def test_min_pin_piped_stdin_refuses_and_names_yes(monkeypatch):
 
 def test_min_pin_json_refuses_without_yes(monkeypatch):
     calls = _wire(monkeypatch, MIN_PIN_PAYLOAD)
-    _fake_tty(monkeypatch)  # even on a tty, --json means no prompt: refuse
+    fake_tty(monkeypatch, fido_cmd)  # even on a tty, --json means no prompt: refuse
     result = _run(["--json", *MIN_PIN])
     assert result.exit_code != 0
     assert calls["card"] is False
@@ -140,7 +121,7 @@ def test_min_pin_yes_proceeds_under_json(monkeypatch):
 
 def test_min_pin_interactive_confirm_proceeds(monkeypatch):
     calls = _wire(monkeypatch, MIN_PIN_PAYLOAD)
-    _fake_tty(monkeypatch)
+    fake_tty(monkeypatch, fido_cmd)
     result = _run(MIN_PIN, input="y\n")
     assert result.exit_code == 0, result.output
     assert calls["card"] is True
@@ -148,7 +129,7 @@ def test_min_pin_interactive_confirm_proceeds(monkeypatch):
 
 def test_min_pin_interactive_decline_aborts(monkeypatch):
     calls = _wire(monkeypatch, MIN_PIN_PAYLOAD)
-    _fake_tty(monkeypatch)
+    fake_tty(monkeypatch, fido_cmd)
     result = _run(MIN_PIN, input="n\n")
     assert result.exit_code != 0
     assert calls["card"] is False

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """FIDO2 / CTAP 2.1 applet support (Cryptnox NXP applet).
 
 Phase 7A scope is read-only: SELECT, authenticatorGetInfo, ping, clientPIN status,

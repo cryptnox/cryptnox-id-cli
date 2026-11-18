@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``mifare`` — MIFARE DESFire EV2 (contactless; reads AND writes).
 
 DESFire is the card's default applet; these commands need a DESFire-capable
@@ -15,6 +18,7 @@ from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli.applets.mifare import desfire as df
 from cryptnox_id_cli.applets.mifare.desfire import DesfireTransport
@@ -24,6 +28,7 @@ from cryptnox_id_cli.applets.mifare.ev1 import (
     format_picc_iso,
 )
 from cryptnox_id_cli.applets.mifare.ev2 import (
+    Ev2Error,
     authenticate_ev2_first,
     change_file_settings,
     change_key_cross,
@@ -231,6 +236,18 @@ def app_create(app: AppContext, aid: str, num_keys: int, key_type: str) -> None:
     )
 
 
+def _check_application_gone(dtx: DesfireTransport, aid: str, aid_bytes: bytes) -> None:
+    """Select the AID after DeleteApplication; the card must not find it."""
+    status, _ = dtx.raw_command(df.CMD_SELECT_APPLICATION, aid_bytes, context="SelectApplication")
+    if status == df.STATUS_OK:
+        raise CryptnoxError(
+            f"DeleteApplication: the card answered OK, but application {aid.upper()} still "
+            "selects, so it was not deleted."
+        )
+    if status != df.STATUS_APPLICATION_NOT_FOUND:
+        raise df.DesfireError(status, "SelectApplication")
+
+
 @app_group.command("delete")
 @click.option("--aid", required=True, help="Application AID, 3 bytes hex.")
 @click.option("--key-no", default=0, show_default=True, type=int, help="App master key number.")
@@ -267,6 +284,8 @@ def app_delete(app: AppContext, aid: str, key_no: int, zero_key: bool, key_env: 
             )
         else:
             dtx.delete_application(aid_bytes)
+        # The OK carries no MAC, so check the application is gone before reporting it.
+        _check_application_gone(dtx, aid, aid_bytes)
     app.out.result(
         {"aid": aid.upper(), "deleted": True},
         lambda c: c.print(f"[green]Deleted application {aid.upper()}.[/green]"),
@@ -386,6 +405,14 @@ def keys_change(
         else:
             ev2 = authenticate_ev2_first(dtx, key_no, current)
             change_key_same(dtx, ev2, key_no, new_key, key_version=key_version)
+            # The card's OK to this ChangeKey carries no MAC, so only the new key proves it.
+            try:
+                authenticate_ev2_first(dtx, key_no, new_key)
+            except (df.DesfireError, Ev2Error) as exc:
+                raise Ev2Error(
+                    "ChangeKey: the card answered OK, but the new key does not authenticate; "
+                    f"key {key_no} may still hold its old value."
+                ) from exc
     app.out.result(
         {
             "aid": aid.upper(),
@@ -396,8 +423,12 @@ def keys_change(
         },
         lambda c: c.print(
             f"[green]Changed key {key_no}[/green] of {aid.upper()} "
-            + (f"(cross-key; authenticated with key {auth_key_no})." if cross else "(same-key).")
-            + " Re-authenticate with the new key now."
+            + (
+                f"(cross-key; authenticated with key {auth_key_no}). "
+                "Re-authenticate with the new key now."
+                if cross
+                else "(same-key); the new key authenticates."
+            )
         ),
     )
 
@@ -1089,7 +1120,7 @@ def sdm_read(app: AppContext, aid: str, file_id: str) -> None:
     }
 
     def human(c: Console) -> None:
-        c.print(f"NDEF: {text}")
+        c.print(f"NDEF: {escape(text)}")
         c.print(f"  decrypted UID: {uid.hex().upper()}")
         c.print(f"  read counter:  {ctr}")
         if valid:

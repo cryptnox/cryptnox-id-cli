@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The ``piv`` command — PIV management and personalization.
 
 Read-only inspection (info/status/slots/certs/objects), PIN operations, the SCP03
@@ -66,6 +69,7 @@ from cryptnox_id_cli.secrets.resolver import (
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.transport.errors import (
     CryptnoxError,
+    InputError,
     Scp02Error,
     Scp03Error,
     StatusWordError,
@@ -93,6 +97,24 @@ WINDOWS_LOGON_PROFILES = ("ms-logon", "ms-logon-nfc")
 @click.group("piv")
 def command() -> None:
     """Manage the PIV applet (status, PIN, certs, objects, personalization)."""
+
+
+def _write_private(path: str, data: bytes) -> None:
+    """Write ``data`` readable by the owner only; card objects can hold personal data."""
+    import os
+
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+
+
+def _slot_ref(slot: str) -> int:
+    try:
+        return int(slot, 16)
+    except ValueError:
+        raise click.BadParameter(
+            f"{slot!r} is not a hex key reference such as 9A", param_hint="--slot"
+        ) from None
 
 
 def _select(session: object) -> PivApplet:
@@ -392,10 +414,13 @@ def certs_list(app: AppContext) -> None:
                 str(e["slot"]),
                 str(e["object"]),
                 "[green]yes[/green]" if e["present"] else "[dim]no[/dim]",
-                str(cert.get("subject", "-")),
+                "[red]unreadable[/red]" if "error" in e else escape(str(cert.get("subject", "-"))),
                 str(cert.get("not_after", "-")),
             )
         c.print(table)
+        for e in out:
+            if "error" in e:
+                c.print(f"[red]{e['slot']}:[/red] {escape(str(e['error']))}")
 
     app.out.result({"certificates": out}, human)
 
@@ -407,7 +432,7 @@ def certs_list(app: AppContext) -> None:
 @click.pass_obj
 def certs_export(app: AppContext, slot: str, out_: str, der: bool) -> None:
     """Export a slot's certificate (PEM by default). Certificates are not secret."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = SLOT_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(f"slot {slot} has no certificate container")
@@ -433,7 +458,7 @@ def certs_export(app: AppContext, slot: str, out_: str, der: bool) -> None:
 @click.pass_obj
 def certs_inspect(app: AppContext, slot: str) -> None:
     """Show certificate details for a slot."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = SLOT_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(f"slot {slot} has no certificate container")
@@ -449,7 +474,7 @@ def certs_inspect(app: AppContext, slot: str) -> None:
 
     def human(c: Console) -> None:
         for key, value in desc.items():
-            c.print(f"  {key}: {value}")
+            c.print(f"  {key}: {escape(str(value))}")
 
     app.out.result({"present": True, "slot": slot, "certificate": desc}, human)
 
@@ -482,7 +507,7 @@ def _csr_spki(path: str) -> bytes:
 @click.pass_obj
 def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) -> None:
     """Export the on-card key-attestation leaf (PEM chain incl. bundled intermediates)."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = ATTESTATION_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(
@@ -540,7 +565,7 @@ def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) 
 @click.pass_obj
 def verify_attestation(app: AppContext, slot: str, csr_file: str | None) -> None:
     """Validate the on-card attestation chain against the pinned Cryptnox root."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = ATTESTATION_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(
@@ -678,7 +703,7 @@ def objects_read(app: AppContext, object_name: str, out_: str | None) -> None:
         )
         return
     if out_:
-        Path(out_).write_bytes(val)
+        _write_private(out_, val)
     payload = {
         "name": obj.name,
         "present": True,
@@ -799,18 +824,41 @@ def _exit_if_refused(ok: bool) -> None:
         sys.exit(6)
 
 
+_PIN_6983 = (
+    "The PIN is blocked, or the card's contactless limit for it is reached (contact tries may "
+    "remain). Check `piv pin status` from a contact reader, which does not consume a try; if "
+    "it reports blocked, recover with `piv pin unblock` (needs the PUK)."
+)
+_PUK_6983 = (
+    "The PUK is blocked, or the card's contactless limit for it is reached (contact tries may "
+    "remain). Check `piv pin status` from a contact reader, which does not consume a try. A "
+    "blocked PUK has no recovery path."
+)
+
+
 def _change_secret_result(
-    app: AppContext, label: str, resp, *, blocked_hint: str | None = None
+    app: AppContext,
+    label: str,
+    resp,
+    session=None,
+    *,
+    blocked_hint: str | None = None,
+    on_6983: str | None = None,
 ) -> None:
     info = describe_sw(resp.sw1, resp.sw2)
     payload: dict[str, object] = {"changed": resp.ok, "sw": info.sw_hex(), "message": info.message}
-    blocked = not resp.ok and (resp.sw == 0x6983 or info.retries == 0)
+    # Only 63C0 proves a block; the card also answers 6983 at the verifier's contactless limit.
+    blocked = not resp.ok and info.retries == 0
+    hint = None
     if not resp.ok and info.retries is not None:
         payload["retries_remaining"] = info.retries
     if blocked:
         payload["blocked"] = True
         if blocked_hint:
             payload["recovery"] = blocked_hint
+    elif not resp.ok and resp.sw == 0x6983 and on_6983:
+        hint = _with_reader_note(on_6983, session)
+        payload["hint"] = hint
 
     def human(c: Console) -> None:
         if resp.ok:
@@ -819,6 +867,8 @@ def _change_secret_result(
             c.print(f"[red]{label} not changed:[/red] {info.message} (SW={info.sw_hex()})")
             if blocked and blocked_hint:
                 c.print(f"  [red]{blocked_hint}[/red]")
+            elif hint:
+                c.print(f"  [yellow]{hint}[/yellow]")
 
     app.out.result(payload, human)
     _exit_if_refused(resp.ok)
@@ -849,7 +899,9 @@ def pin_change(app: AppContext, old_pin: str | None, new_pin: str | None) -> Non
         app,
         "PIN",
         resp,
+        session,
         blocked_hint="PIN is now blocked. Recover it with `piv pin unblock` (needs the PUK).",
+        on_6983=_PIN_6983,
     )
 
 
@@ -882,7 +934,9 @@ def pin_unblock(app: AppContext, puk_value: str | None, new_pin: str | None) -> 
         app,
         "PIN",
         resp,
+        session,
         blocked_hint="the PUK just used is now blocked - there is no recovery path.",
+        on_6983=_PUK_6983,
     )
 
 
@@ -913,7 +967,12 @@ def puk_change(app: AppContext, old_puk: str | None, new_puk: str | None) -> Non
     with app.open_session() as session:
         resp = _select(session).change_reference(old, new, pivc.REF_PUK)
     _change_secret_result(
-        app, "PUK", resp, blocked_hint="PUK is now blocked - there is no recovery path."
+        app,
+        "PUK",
+        resp,
+        session,
+        blocked_hint="PUK is now blocked - there is no recovery path.",
+        on_6983=_PUK_6983,
     )
 
 
@@ -1407,7 +1466,7 @@ def perso_generate_key(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     alg = algorithm.upper()
     mech = perso_mod.ALGORITHMS.get(alg)
     if mech is None or mech not in pivc.SUPPORTED_ALGORITHMS:
@@ -1674,6 +1733,25 @@ def _write_standard(adm: PivAdmin, keys, names: tuple[str, ...]) -> list[dict[st
     return results
 
 
+def _contactless_reader(session=None) -> str | None:
+    """``Reader '<name>'`` when the session's reader advertises contactless, else None."""
+    if session is None:
+        return None
+    name = getattr(session, "reader_name", None)
+    atr = None
+    with contextlib.suppress(Exception):
+        atr = session.atr
+    if not is_contactless_interface(name, atr):
+        return None
+    return f"Reader '{escape(name)}'" if name else "This reader"
+
+
+def _with_reader_note(text: str, session=None) -> str:
+    """``text``, plus a note when the session's reader advertises contactless."""
+    where = _contactless_reader(session)
+    return f"{text} {where} advertises a contactless interface." if where else text
+
+
 def _interface_hint(session=None, *, puk_only: bool = False) -> str:
     """The 6982-on-PIN explanation, naming the reader when it advertises contactless.
 
@@ -1681,28 +1759,15 @@ def _interface_hint(session=None, *, puk_only: bool = False) -> str:
     set up for the PIN over contactless shows there.
     """
     hint = PUK_INTERFACE_REFUSED_HINT if puk_only else PIN_INTERFACE_REFUSED_HINT
-    if session is not None:
-        name = getattr(session, "reader_name", None)
-        atr = None
-        with contextlib.suppress(Exception):
-            atr = session.atr
-        if is_contactless_interface(name, atr):
-            where = f"Reader '{escape(name)}'" if name else "This reader"
-            hint = f"{hint} {where} advertises a contactless interface."
-    return hint
+    return _with_reader_note(hint, session)
 
 
 def _check_pin_verify(resp, session=None) -> None:
-    """Raise on a failed PIN verification, naming the PUK-unblock recovery path
-    once the PIN is actually blocked rather than a generic status word.
+    """Raise on a failed PIN verification.
 
-    ``session`` lets the 6982 message name a contactless reader.
-
-    Only ``63C0`` (retry counter exhausted) proves a blocked PIN. ``6983`` is
-    reported for a blocked verifier *and* when the PIN cannot be used for the
-    operation at hand - e.g. a slot the profile never populated - so it must not
-    assert a blocked PIN outright; saying so sent people to `pin unblock` for a
-    card whose PIN was fine.
+    Only ``63C0`` proves a blocked PIN; the card also answers ``6983`` at the PIN's
+    contactless limit, so that message names both. ``session`` lets the 6983 and 6982
+    messages name a contactless reader.
     """
     if resp.ok:
         return
@@ -1714,11 +1779,8 @@ def _check_pin_verify(resp, session=None) -> None:
         )
     if resp.sw == 0x6983:
         raise CryptnoxError(
-            f"PIN verification refused (SW={info.sw_hex()}): either the PIN is blocked, or "
-            "this PIN cannot be used for this operation (for example a key slot the card's "
-            "profile never populated). Check `piv pin status` first - it does not consume a "
-            "try - and if it reports 0 tries remaining, recover with `piv pin unblock` "
-            "(needs the PUK)."
+            f"PIN verification refused (SW={info.sw_hex()}): "
+            f"{_with_reader_note(_PIN_6983, session)}"
         )
     if resp.sw == 0x6982:
         raise CryptnoxError(
@@ -2124,7 +2186,7 @@ def perso_create_key_object(
     refuses new ones. A slot can hold one object per algorithm, so a slot whose key
     cannot sign gets a signing key by adding an object for another algorithm.
     """
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     slot = f"{ref:02X}"
     mech = _resolve_asym_mech(algorithm)
     try:
@@ -2266,7 +2328,7 @@ def perso_import_key(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     key = _load_private_key_file(app, Path(key_file).read_bytes(), password)
     mech = keyimport.mechanism_for_key(key)
     keyimport.validate_slot_mechanism(ref, mech)
@@ -2422,7 +2484,7 @@ def perso_import_p12(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     if ref not in SLOT_CERT_OBJECT:
         raise click.BadParameter(
             f"slot {slot} has no certificate container; import-p12 needs one "
@@ -2643,7 +2705,14 @@ def _resolve_asym_mech(algorithm: str) -> int:
 def _load_spki(pubkey_file: str) -> bytes:
     from cryptography.hazmat.primitives import serialization
 
-    pub = serialization.load_pem_public_key(Path(pubkey_file).read_bytes())
+    raw = Path(pubkey_file).read_bytes()
+    try:
+        pub = serialization.load_pem_public_key(raw)
+    except ValueError:
+        try:
+            pub = serialization.load_der_public_key(raw)
+        except ValueError as exc:
+            raise InputError(f"{pubkey_file} is not a PEM or DER public key") from exc
     return pub.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
     )
@@ -2699,7 +2768,7 @@ def perso_generate_csr(
     out_: str | None,
 ) -> None:
     """Generate a PKCS#10 CSR; the signature is computed ON-CARD by the slot key."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     spki = _load_spki(pubkey_file)
     pem = _sign_on_card(
@@ -2741,7 +2810,7 @@ def perso_self_sign_cert(
     import secrets
 
     app.out.warn("Self-signed certificates are for development/testing only.")
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     spki = _load_spki(pubkey_file)
     serial = int.from_bytes(secrets.token_bytes(8), "big") | 1
@@ -2878,7 +2947,7 @@ def perso_import_cert(
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     if ref not in SLOT_CERT_OBJECT:
         raise click.BadParameter(f"slot {slot} has no certificate container")
     raw = Path(cert_file).read_bytes()
@@ -3046,7 +3115,7 @@ def perso_smoke_test(app: AppContext, slot: str, algorithm: str, pin_value: str 
     """Fast post-perso check: verify the PIN and perform one on-card signature."""
     import os
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     # Digest size must match the mechanism's hash (SHA-256=32, SHA-384=48); a fixed 32-byte
     # challenge makes the card reject ECCP384 with 6A80. Mirror the import/quickstart paths.
@@ -3538,7 +3607,7 @@ def quickstart(
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     # ms-logon on 9A is the Windows shape, and the only built-in profile that gives a slot
     # an RSA key object. It matters because the Windows inbox minidriver does not enumerate
     # EC keys at all (confirmed 2026-08-14, reproduced on a YubiKey, so a Windows limit
@@ -3643,6 +3712,13 @@ def quickstart(
                 f"the key object quickstart adds to slot {ref:02X} gets the role "
                 f"{prof_mod.role_name(new_role)} from profile '{profile.name}' and cannot sign; "
                 "it is permanent."
+            )
+
+        if csr_out and not by_step["certificate"].run:
+            raise CryptnoxError(
+                f"slot {ref:02X} already has a certificate for this key, so quickstart keeps the "
+                f"key and makes no CSR. For a CSR on that key use `{CLI_NAME} piv perso "
+                f"generate-csr --slot {ref:02X}`."
             )
 
         if dry_run or app.dry_run:
@@ -3891,6 +3967,14 @@ def quickstart(
                 record(planned_step.step, "failed", reason=str(exc))
                 failed = True
                 break
+
+        if public_out and outputs["public_key"] is None and not failed:
+            cert_name = SLOT_CERT_OBJECT.get(ref)
+            kept_der = _read_cert_der(_select(session), cert_name) if cert_name else None
+            if kept_der is not None:
+                public_key = x509.load_der_x509_certificate(kept_der).public_key()
+                Path(public_out).write_bytes(perso_mod.public_key_pem(public_key))
+                outputs["public_key"] = public_out
 
         try:
             _, state_after = _collect_quickstart_facts(session, ref, mech)

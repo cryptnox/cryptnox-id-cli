@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """SCP03 secure channel (GlobalPlatform Amendment D), used for PIV admin commands.
 
 Implements the SP 800-108 counter-mode KDF (AES-CMAC PRF), session-key derivation,

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Shared test fixtures: a mock card transport driven by recorded transcripts."""
 
 from __future__ import annotations

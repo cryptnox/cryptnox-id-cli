@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Frame codec for the remote PIV service.
 
 The service exchanges JSON objects over a WebSocket. Frames are sent one

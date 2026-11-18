@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``fido`` — FIDO2 / CTAP 2.1 inspection and management.
 
 ``ping``, ``info``/``get-info``, ``pin status`` and ``config show`` only read;
@@ -23,6 +26,7 @@ from typing import TypeVar
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli.applets.fido import authdata
 from cryptnox_id_cli.applets.fido import constants as fido_c
@@ -64,6 +68,9 @@ def _render_elevated_result(app: AppContext, payload: dict) -> None:
     if app.json:
         sys.stdout.write(json.dumps(payload, indent=2, default=str) + "\n")
         return
+    if "error" in payload:  # the child's error funnel wrote it
+        app.out.error(f"{payload.get('message') or payload['error']} (ran as Administrator)")
+        return
     app.out.console.print("[dim]result (ran as Administrator):[/dim]")
     app.out.console.print_json(data=payload)
 
@@ -82,7 +89,10 @@ def _run_elevated(app: AppContext) -> None:
         if text.strip():
             _render_elevated_result(app, json.loads(text))
         elif code != 0:
-            raise CryptnoxError(f"elevated FIDO2 command failed (exit {code}).")
+            raise CryptnoxError(
+                f"elevated FIDO2 command failed (exit {code}) and left no result; run it from "
+                "an Administrator terminal to see its output."
+            )
         sys.exit(code)
     finally:
         with contextlib.suppress(OSError):
@@ -116,7 +126,9 @@ def ping(app: AppContext) -> None:
     version = _with_fido(app, lambda ctap: ctap.select())
     app.out.result(
         {"selected": True, "version": version},
-        lambda c: c.print(f"[green]FIDO2 applet selected.[/green] Version string: {version}"),
+        lambda c: c.print(
+            f"[green]FIDO2 applet selected.[/green] Version string: {escape(version)}"
+        ),
     )
 
 
@@ -153,15 +165,15 @@ def _render_info(app: AppContext, info: dict[str, object]) -> None:
         ]
         table = app.out.table("Property", "Value")
         for name, value in rows:
-            table.add_row(name, value)
+            table.add_row(name, escape(value))
         options = info.get("options")
         if isinstance(options, dict):
             for opt, val in sorted(options.items()):
-                table.add_row(f"option {opt}", str(val))
+                table.add_row(escape(f"option {opt}"), escape(str(val)))
         algorithms = info.get("algorithms")
         if isinstance(algorithms, list):
             algs = ", ".join(f"{a.get('alg')} ({a.get('type')})" for a in algorithms)
-            table.add_row("Algorithms", algs)
+            table.add_row("Algorithms", escape(algs))
         c.print(table)
 
     app.out.result(info, human)
@@ -514,7 +526,8 @@ def credential_list(app: AppContext, pin_env: str, protocol: str) -> None:
             f"(room for ~{payload['max_remaining']} more)"
         )
         for cr in payload["credentials"]:  # type: ignore[attr-defined]
-            c.print(f"  - rp={cr['rp_id']}  user={cr['user']}  id={cr['credential_id']}")
+            rp, user = escape(str(cr["rp_id"])), escape(str(cr["user"]))
+            c.print(f"  - rp={rp}  user={user}  id={cr['credential_id']}")
 
     app.out.result(payload, human)
 

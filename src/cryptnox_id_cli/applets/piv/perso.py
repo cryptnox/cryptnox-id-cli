@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV personalization wire grammar: set verifier (PIN/PUK) values, on-card key
 generation, and writing data objects.
 

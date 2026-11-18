@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``doctor`` must tell the session which reader it is on.
 
 ``is_contactless_interface`` takes two independent signals: the reader name and the ATR.

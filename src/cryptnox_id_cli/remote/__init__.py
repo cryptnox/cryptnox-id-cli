@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Client for the Cryptnox remote PIV service.
 
 The card stays in the holder's own reader; the service drives. This package

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Where the PIV management key (9B) value may come from, and where it may not.
 
 Same rule as the admin-channel keys: a flag for the published development value, an

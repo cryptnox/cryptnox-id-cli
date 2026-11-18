@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`piv admin keys`: the key table is read without authenticating; `--check-default`
 spends exactly one authentication attempt on key version 1 and never searches."""
 

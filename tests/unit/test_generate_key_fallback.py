@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """`_generate_key_on_card`: which path it takes, and what it sends on each.
 
 The seam is shared by `piv perso generate-key` and `piv quickstart`, so both inherit

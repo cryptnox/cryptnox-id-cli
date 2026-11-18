@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The PIV state reads PivPersonalized without a Discovery Object.
 
 Discovery is optional in PIV and no built-in profile creates it; the detector must

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Drift guard: the hand-maintained public command reference must cover the
 real Click tree. The public docs build without importing this package (see the
 documentation plan), so accuracy is enforced here, where the code lives."""

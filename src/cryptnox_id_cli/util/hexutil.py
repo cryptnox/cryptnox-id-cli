@@ -1,8 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Hex helpers. Centralised so formatting stays consistent everywhere."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
+
+from cryptnox_id_cli.transport.errors import InputError
 
 
 def to_hex(data: Iterable[int] | bytes | bytearray, *, sep: str = "") -> str:
@@ -23,12 +28,13 @@ def from_hex(text: str) -> bytes:
         .replace(":", "")
         .replace("-", "")
     )
+    # The value is left out of the message: it is often a key.
     if len(cleaned) % 2 != 0:
-        raise ValueError(f"hex string has an odd number of digits: {text!r}")
+        raise InputError("hex value has an odd number of digits")
     try:
         return bytes.fromhex(cleaned)
     except ValueError as exc:
-        raise ValueError(f"invalid hex string: {text!r}") from exc
+        raise InputError("value is not valid hex") from exc
 
 
 def to_list(data: bytes | bytearray | Iterable[int]) -> list[int]:

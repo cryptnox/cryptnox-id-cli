@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """``report`` — machine-readable, secret-safe status reports.
 
 Reports contain only non-secret, shareable data: states, versions, object
@@ -14,6 +17,7 @@ from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli import CLI_NAME, __version__
 from cryptnox_id_cli.applets.fido.ctap import Ctap2Client, describe_get_info
@@ -140,9 +144,9 @@ def _emit(app: AppContext, payload: dict[str, object], out: str | None) -> None:
 
     def human(c: Console) -> None:
         if out:
-            c.print(f"[green]Report written to {out}[/green] (secret-safe JSON).")
+            c.print(f"[green]Report written to {escape(out)}[/green] (secret-safe JSON).")
         else:
-            c.print(text)
+            c.print(text, markup=False)
 
     app.out.result(payload, human)
 

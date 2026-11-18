@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Read-only client for the Cryptnox Genuineness / attestation applet."""
 
 from __future__ import annotations

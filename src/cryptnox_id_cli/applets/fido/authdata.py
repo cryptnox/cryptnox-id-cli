@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Parse CTAP2 authenticatorData (the signed structure inside make/getAssertion).
 
 Layout: ``rpIdHash(32) || flags(1) || signCount(4 BE) || [attestedCredentialData] ||

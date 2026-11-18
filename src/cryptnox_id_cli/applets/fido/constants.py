@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """FIDO2 / CTAP2 constants (verified against the applet source + Android client)."""
 
 from __future__ import annotations

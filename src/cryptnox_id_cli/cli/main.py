@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """CLI root group, global options and the error funnel."""
 
 from __future__ import annotations
@@ -27,6 +30,8 @@ from cryptnox_id_cli.transport.errors import CryptnoxError
 
 
 def _report(app: AppContext | None, exc: CryptnoxError) -> None:
+    if app is not None:
+        app.out.capture(exc.to_dict())
     if app is not None and app.json:
         sys.stdout.write(_json.dumps(exc.to_dict(), indent=2) + "\n")
     elif app is not None:

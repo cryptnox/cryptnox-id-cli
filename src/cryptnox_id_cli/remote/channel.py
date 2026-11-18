@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The message channel to the remote PIV service.
 
 The relay is written against :class:`FrameChannel`, a two-method view of a

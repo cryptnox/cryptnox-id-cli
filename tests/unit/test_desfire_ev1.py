@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """DESFire EV1 secure messaging for a 2K3DES PICC master key (AuthenticateISO).
 
 The CMAC is checked against cryptography's own CMAC; the handshake, FormatPICC and

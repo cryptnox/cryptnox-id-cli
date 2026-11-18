@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Key roles: the 6985 explanation on signing, `piv perso create-key-object`, the
 profile 9A warning and quickstart's refusal of a certificate step that cannot sign.
 

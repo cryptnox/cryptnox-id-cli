@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Offline verification of the genuineness applet's attestation.
 
 Two independent, KDF-free checks (neither needs the ISD / PIV-SSD secret, so this

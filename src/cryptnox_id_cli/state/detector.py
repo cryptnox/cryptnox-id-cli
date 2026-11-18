@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """Read-only card-state detector. Probes each independent applet defensively so
 that one failing probe never aborts the others. Never mutates the card."""
 

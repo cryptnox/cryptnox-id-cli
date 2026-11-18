@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """PIV administrative access over the OpenFIPS201 admin secure channel.
 
 The PIV admin channel is the secure channel of the Security Domain the applet is

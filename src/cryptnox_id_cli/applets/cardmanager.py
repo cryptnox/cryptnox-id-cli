@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Cryptnox SA
+# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
+
 """The card manager (issuer security domain): lifecycle, loaded content, the JCOP fuse.
 
 Everything here runs inside a secure channel opened to the card manager; the builders
