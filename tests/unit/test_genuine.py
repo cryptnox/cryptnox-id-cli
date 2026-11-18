@@ -500,14 +500,12 @@ def test_json_carries_bracketed_names_unchanged(monkeypatch, markup_pki):
     assert payload["leaf"]["issuer"] == "CN=SUB a[/x]b"
 
 
-@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
 def test_info_prints_bracketed_names_as_written(monkeypatch, markup_pki):
     _card(monkeypatch, markup_pki)
     _, text = _both(["genuine", "info"])
     assert "Device leaf: CN=Device [b]S[/b] issuer: CN=SUB a[/x]b" in text
 
 
-@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
 def test_verify_prints_bracketed_names_as_written(monkeypatch, markup_pki, tmp_path):
     _card(monkeypatch, markup_pki)
     anchors = _anchor_dir(tmp_path, markup_pki)
@@ -516,7 +514,6 @@ def test_verify_prints_bracketed_names_as_written(monkeypatch, markup_pki, tmp_p
     assert "CN=Device [b]S[/b] -> CN=SUB a[/x]b -> CN=TEST [b]ROOT[/b]" in text
 
 
-@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
 def test_verify_prints_a_reason_naming_a_bracketed_issuer_as_written(monkeypatch, markup_pki):
     _card(monkeypatch, markup_pki)
     _, text = _both(["genuine", "verify", "--nonce", _NONCE.hex()])
