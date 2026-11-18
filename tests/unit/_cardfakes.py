@@ -127,11 +127,12 @@ def wire_session(monkeypatch, conn, *, reader_name: str | None = None) -> None:
     Commands that import ``connect``/``pick_reader`` directly (``doctor``, ``readers``)
     are not covered by this - use :func:`wire_pcsc` for those.
     """
-    monkeypatch.setattr(
-        AppContext,
-        "open_session",
-        lambda self: self.make_session(conn, reader_name=reader_name),
-    )
+
+    def open_session(self: AppContext):
+        self.resolved_reader = reader_name
+        return self.make_session(conn, reader_name=reader_name)
+
+    monkeypatch.setattr(AppContext, "open_session", open_session)
 
 
 def wire_pcsc(monkeypatch, module, conn, *, reader_name: str, infos=None) -> None:
@@ -143,7 +144,8 @@ def wire_pcsc(monkeypatch, module, conn, *, reader_name: str, infos=None) -> Non
 
 
 def run(args: Sequence[str], **kwargs):
-    """Invoke the CLI through CliRunner."""
+    """Invoke the CLI through CliRunner, on a console wide enough that tables do not wrap."""
+    kwargs["env"] = {"COLUMNS": "200", **(kwargs.get("env") or {})}
     return CliRunner().invoke(root, list(args), **kwargs)
 
 
