@@ -26,6 +26,7 @@ from typing import TypeVar
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli.applets.fido import authdata
 from cryptnox_id_cli.applets.fido import constants as fido_c
@@ -125,7 +126,9 @@ def ping(app: AppContext) -> None:
     version = _with_fido(app, lambda ctap: ctap.select())
     app.out.result(
         {"selected": True, "version": version},
-        lambda c: c.print(f"[green]FIDO2 applet selected.[/green] Version string: {version}"),
+        lambda c: c.print(
+            f"[green]FIDO2 applet selected.[/green] Version string: {escape(version)}"
+        ),
     )
 
 
@@ -162,15 +165,15 @@ def _render_info(app: AppContext, info: dict[str, object]) -> None:
         ]
         table = app.out.table("Property", "Value")
         for name, value in rows:
-            table.add_row(name, value)
+            table.add_row(name, escape(value))
         options = info.get("options")
         if isinstance(options, dict):
             for opt, val in sorted(options.items()):
-                table.add_row(f"option {opt}", str(val))
+                table.add_row(escape(f"option {opt}"), escape(str(val)))
         algorithms = info.get("algorithms")
         if isinstance(algorithms, list):
             algs = ", ".join(f"{a.get('alg')} ({a.get('type')})" for a in algorithms)
-            table.add_row("Algorithms", algs)
+            table.add_row("Algorithms", escape(algs))
         c.print(table)
 
     app.out.result(info, human)
@@ -523,7 +526,8 @@ def credential_list(app: AppContext, pin_env: str, protocol: str) -> None:
             f"(room for ~{payload['max_remaining']} more)"
         )
         for cr in payload["credentials"]:  # type: ignore[attr-defined]
-            c.print(f"  - rp={cr['rp_id']}  user={cr['user']}  id={cr['credential_id']}")
+            rp, user = escape(str(cr["rp_id"])), escape(str(cr["user"]))
+            c.print(f"  - rp={rp}  user={user}  id={cr['credential_id']}")
 
     app.out.result(payload, human)
 

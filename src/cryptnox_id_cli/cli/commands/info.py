@@ -9,6 +9,7 @@ import contextlib
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.output.render import state_style
@@ -94,7 +95,8 @@ def command(app: AppContext) -> None:
             desfire_detail = f"EV2 {dv.get('storage_bytes')} B, UID {dv.get('uid')}"
         table.add_row("MIFARE DESFire", state_style(state.desfire.label), desfire_detail)
         # Genuineness / attestation applet
-        genuine_detail = state.genuine_leaf_subject or "-"
+        subject = state.genuine_leaf_subject
+        genuine_detail = escape(subject) if subject else "-"
         table.add_row("Genuineness", state_style(state.genuine.label), genuine_detail)
         c.print(table)
 

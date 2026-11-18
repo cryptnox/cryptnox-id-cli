@@ -18,6 +18,7 @@ from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.markup import escape
 
 from cryptnox_id_cli.applets.mifare import desfire as df
 from cryptnox_id_cli.applets.mifare.desfire import DesfireTransport
@@ -1119,7 +1120,7 @@ def sdm_read(app: AppContext, aid: str, file_id: str) -> None:
     }
 
     def human(c: Console) -> None:
-        c.print(f"NDEF: {text}")
+        c.print(f"NDEF: {escape(text)}")
         c.print(f"  decrypted UID: {uid.hex().upper()}")
         c.print(f"  read counter:  {ctr}")
         if valid:

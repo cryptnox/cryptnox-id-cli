@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
+import pytest
+
 from cryptnox_id_cli.transport.errors import StatusWordError, describe_sw
 
 
@@ -33,3 +35,20 @@ def test_status_word_error_carries_context():
     err = StatusWordError(0x69, 0x82, context="reading CHUID")
     assert "reading CHUID" in str(err)
     assert err.to_dict()["sw"] == "6982"
+
+
+@pytest.mark.parametrize(
+    ("sw", "name", "message"),
+    [
+        ((0x63, 0x00), "VERIFY_FAILED", "Verification failed."),
+        ((0x63, 0x81), "WARNING", "counter changed"),
+        ((0x62, 0x83), "WARNING", "SW=6283"),
+        ((0x65, 0x81), "ERROR", "Card returned error SW=6581"),
+        ((0x91, 0x00), "UNKNOWN", "Unrecognised status word SW=9100"),
+    ],
+    ids=["6300", "63xx-other", "62xx", "65xx", "unknown"],
+)
+def test_unlisted_status_words_fall_back_by_family(sw, name, message):
+    info = describe_sw(*sw)
+    assert (info.name, info.ok, info.retries) == (name, False, None)
+    assert message in info.message

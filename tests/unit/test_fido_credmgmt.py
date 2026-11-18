@@ -16,9 +16,10 @@ TOKEN = bytes(range(32))
 
 
 class FakeCredMgmtCard:
-    """One RP (example.com) with two resident credentials."""
+    """One RP (example.com) with two resident credentials, for users ``names``."""
 
-    def __init__(self):
+    def __init__(self, names=("alice", "bob")):
+        self.names = names
         self.sent: list[bytes] = []
         self.deleted: list[bytes] = []
 
@@ -52,7 +53,7 @@ class FakeCredMgmtCard:
             return self._resp(
                 0x00,
                 {
-                    c.CMR_USER: {"id": b"u1", "name": "alice"},
+                    c.CMR_USER: {"id": b"u1", "name": self.names[0]},
                     c.CMR_CREDENTIAL_ID: {"id": b"cred-1", "type": "public-key"},
                     c.CMR_PUBLIC_KEY: {1: 2},
                     c.CMR_TOTAL_CREDENTIALS: 2,
@@ -62,7 +63,7 @@ class FakeCredMgmtCard:
             return self._resp(
                 0x00,
                 {
-                    c.CMR_USER: {"id": b"u2", "name": "bob"},
+                    c.CMR_USER: {"id": b"u2", "name": self.names[1]},
                     c.CMR_CREDENTIAL_ID: {"id": b"cred-2", "type": "public-key"},
                     c.CMR_PUBLIC_KEY: {1: 2},
                 },
