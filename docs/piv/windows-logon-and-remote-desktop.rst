@@ -102,6 +102,11 @@ one in the CSR, which is what happens when an enrollment tool generated a key
 of its own instead of signing the card's request. A certificate for another
 key would be written without complaint and fail only at logon.
 
+A Windows machine that has already enumerated the card keeps presenting the
+certificate it found first until it restarts: the minidriver's cache is keyed
+to the card's CHUID, which the import does not change. Restart before
+``certutil -scinfo`` or the first logon with the new certificate.
+
 **Path A2: enroll on behalf of another user (enrollment agent).** An
 administrator provisioning a card for another Active Directory user cannot use
 the MMC *Enroll on behalf of* wizard: it generates a new key in software, so
@@ -252,7 +257,12 @@ With a card set up by these commands on a contactless reader, Windows
 identifies it as a PIV card, its inbox minidriver builds the key container
 for the 9A certificate, and the Smart Card Key Storage Provider signs with the
 9A key after the PIN, all over NFC. With |cli| over the same reader the PIN is
-accepted, 9A signs and 9C is refused.
+accepted, 9A signs and 9C is refused. On a client joined to a domain whose
+enterprise CA issued the 9A certificate from a smart-card-logon template, the
+sign-in screen offers the card under the account's name, and the PIN over NFC
+completes the logon by Kerberos PKINIT: the domain controller's event 4768
+shows pre-authentication type 16 and the card's certificate. Locking and
+unlocking the session with the card work the same way.
 
 What this costs:
 
@@ -283,8 +293,8 @@ Scope and limits
   enrollment, *Enroll on behalf of*) use the Yubico-style management model and
   do not apply; this card administers over SCP03. To enroll for another user,
   use Path A2.
-* The end-to-end logon path (PKINIT against a domain controller) can only be
-  proven in a domain lab; the card-side personalization and minidriver
+* The end-to-end logon path (PKINIT against a domain controller) needs a
+  domain with an enterprise CA; the card-side personalization and minidriver
   recognition are verifiable standalone with ``certutil -scinfo``.
 
 Next steps

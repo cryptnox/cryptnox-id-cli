@@ -19,6 +19,9 @@ Quick hits:
   NFC); administration works over both interfaces unless the applet's
   contactless-administration lock is set, as it is on a card the remote
   service reinstalled.
+* **A new certificate does not show in** ``certutil -scinfo`` — Windows keeps
+  the certificate it first enumerated from a card until the machine restarts;
+  the import does not change the CHUID the cache is keyed to.
 * **yubico-piv-tool sees nothing** — pass your reader: ``-r <substring>``.
 * **Two readers hold a card** — the CLI refuses to guess; pass ``--reader``.
 
