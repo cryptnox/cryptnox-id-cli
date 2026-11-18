@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cryptnox_id_cli.transport.errors import CryptnoxError
+from cryptnox_id_cli.transport.errors import CryptnoxError, InputError
 from cryptnox_id_cli.transport.pcsc import CardSession
 
 # Native command codes.
@@ -161,7 +161,7 @@ class DesfireVersion:
 
 def parse_version(data: bytes) -> DesfireVersion:
     if len(data) < 28:
-        raise ValueError(f"GetVersion response too short ({len(data)} bytes)")
+        raise CryptnoxError(f"GetVersion: response too short ({len(data)} bytes)")
     return DesfireVersion(
         hw_vendor=data[0],
         hw_type=data[1],
@@ -247,7 +247,7 @@ class DesfireTransport:
 
     def select_application(self, aid: bytes) -> None:
         if len(aid) != 3:
-            raise ValueError("DESFire AID must be 3 bytes")
+            raise InputError("DESFire AID must be 3 bytes")
         self.command(CMD_SELECT_APPLICATION, bytes(aid), context="SelectApplication")
 
     def file_ids(self) -> list[int]:
@@ -261,7 +261,7 @@ class DesfireTransport:
         permit (the factory default does)."""
         data = self.command(CMD_GET_KEY_SETTINGS, context="GetKeySettings")
         if len(data) < 2:
-            raise DesfireError(STATUS_OK, "GetKeySettings (short response)")
+            raise CryptnoxError(f"GetKeySettings: response too short ({len(data)} bytes)")
         return data[0], data[1] & 0xC0, data[1] & 0x0F
 
     # -- write operations (plain comm; MACed variants live in ev2.py) ------- #
@@ -270,9 +270,9 @@ class DesfireTransport:
     ) -> None:
         """CreateApplication. KeySettings2 high bits select AES (0x80)."""
         if len(aid) != 3:
-            raise ValueError("DESFire AID must be 3 bytes")
+            raise InputError("DESFire AID must be 3 bytes")
         if not (1 <= num_keys <= 14):
-            raise ValueError("number of keys must be 1..14")
+            raise InputError("number of keys must be 1..14")
         ks2 = (0x80 if aes else 0x00) | num_keys
         self.command(
             CMD_CREATE_APPLICATION,
@@ -282,7 +282,7 @@ class DesfireTransport:
 
     def delete_application(self, aid: bytes) -> None:
         if len(aid) != 3:
-            raise ValueError("DESFire AID must be 3 bytes")
+            raise InputError("DESFire AID must be 3 bytes")
         self.command(CMD_DELETE_APPLICATION, bytes(aid), context="DeleteApplication")
 
     def create_std_data_file(

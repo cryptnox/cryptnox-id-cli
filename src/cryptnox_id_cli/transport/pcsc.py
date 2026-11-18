@@ -250,6 +250,22 @@ def connect(reader_name: str) -> PCSCConnection:
         raise TransportError(f"Cannot connect to card in {reader_name!r}: {exc}") from exc
 
 
+def _with_le(raw: bytes, le: int) -> bytes | None:
+    """``raw`` with its short Le set to ``le``, or ``None`` for an extended APDU."""
+    if len(raw) == 4:
+        return raw + bytes([le])
+    if len(raw) == 5:
+        return raw[:4] + bytes([le])
+    lc = raw[4]
+    if lc == 0:
+        return None
+    if len(raw) == 5 + lc:
+        return raw + bytes([le])
+    if len(raw) == 6 + lc:
+        return raw[:-1] + bytes([le])
+    return None
+
+
 class CardSession:
     """High-level APDU exchange with chaining and a redacted transcript."""
 
@@ -297,9 +313,11 @@ class CardSession:
 
         data, sw1, sw2 = self._conn.transmit(list(raw))
 
-        # 6Cxx: wrong Le — resend with the corrected Le in the trailing byte.
-        if sw1 == 0x6C and len(raw) >= 5:
-            data, sw1, sw2 = self._conn.transmit(list(raw[:-1]) + [sw2])
+        # 6Cxx: wrong Le; resend with the corrected Le.
+        if sw1 == 0x6C:
+            retry = _with_le(raw, sw2)
+            if retry is not None:
+                data, sw1, sw2 = self._conn.transmit(list(retry))
 
         # 61xx: more data — pull it with GET RESPONSE.
         acc = list(data)

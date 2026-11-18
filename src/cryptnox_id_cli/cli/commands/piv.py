@@ -65,6 +65,7 @@ from cryptnox_id_cli.secrets.resolver import (
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.transport.errors import (
     CryptnoxError,
+    InputError,
     Scp02Error,
     Scp03Error,
     StatusWordError,
@@ -88,6 +89,24 @@ SLOT_CERT_OBJECT = {
 @click.group("piv")
 def command() -> None:
     """Manage the PIV applet (status, PIN, certs, objects, personalization)."""
+
+
+def _write_private(path: str, data: bytes) -> None:
+    """Write ``data`` readable by the owner only; card objects can hold personal data."""
+    import os
+
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+
+
+def _slot_ref(slot: str) -> int:
+    try:
+        return int(slot, 16)
+    except ValueError:
+        raise click.BadParameter(
+            f"{slot!r} is not a hex key reference such as 9A", param_hint="--slot"
+        ) from None
 
 
 def _select(session: object) -> PivApplet:
@@ -405,7 +424,7 @@ def certs_list(app: AppContext) -> None:
 @click.pass_obj
 def certs_export(app: AppContext, slot: str, out_: str, der: bool) -> None:
     """Export a slot's certificate (PEM by default). Certificates are not secret."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = SLOT_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(f"slot {slot} has no certificate container")
@@ -431,7 +450,7 @@ def certs_export(app: AppContext, slot: str, out_: str, der: bool) -> None:
 @click.pass_obj
 def certs_inspect(app: AppContext, slot: str) -> None:
     """Show certificate details for a slot."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = SLOT_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(f"slot {slot} has no certificate container")
@@ -480,7 +499,7 @@ def _csr_spki(path: str) -> bytes:
 @click.pass_obj
 def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) -> None:
     """Export the on-card key-attestation leaf (PEM chain incl. bundled intermediates)."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = ATTESTATION_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(
@@ -538,7 +557,7 @@ def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) 
 @click.pass_obj
 def verify_attestation(app: AppContext, slot: str, csr_file: str | None) -> None:
     """Validate the on-card attestation chain against the pinned Cryptnox root."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     obj_name = ATTESTATION_CERT_OBJECT.get(ref)
     if obj_name is None:
         raise click.BadParameter(
@@ -676,7 +695,7 @@ def objects_read(app: AppContext, object_name: str, out_: str | None) -> None:
         )
         return
     if out_:
-        Path(out_).write_bytes(val)
+        _write_private(out_, val)
     payload = {
         "name": obj.name,
         "present": True,
@@ -1404,7 +1423,7 @@ def perso_generate_key(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     alg = algorithm.upper()
     mech = perso_mod.ALGORITHMS.get(alg)
     if mech is None or mech not in pivc.SUPPORTED_ALGORITHMS:
@@ -2124,7 +2143,7 @@ def perso_create_key_object(
     refuses new ones. A slot can hold one object per algorithm, so a slot whose key
     cannot sign gets a signing key by adding an object for another algorithm.
     """
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     slot = f"{ref:02X}"
     mech = _resolve_asym_mech(algorithm)
     try:
@@ -2266,7 +2285,7 @@ def perso_import_key(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     key = _load_private_key_file(app, Path(key_file).read_bytes(), password)
     mech = keyimport.mechanism_for_key(key)
     keyimport.validate_slot_mechanism(ref, mech)
@@ -2422,7 +2441,7 @@ def perso_import_p12(
 
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     if ref not in SLOT_CERT_OBJECT:
         raise click.BadParameter(
             f"slot {slot} has no certificate container; import-p12 needs one "
@@ -2642,7 +2661,14 @@ def _resolve_asym_mech(algorithm: str) -> int:
 def _load_spki(pubkey_file: str) -> bytes:
     from cryptography.hazmat.primitives import serialization
 
-    pub = serialization.load_pem_public_key(Path(pubkey_file).read_bytes())
+    raw = Path(pubkey_file).read_bytes()
+    try:
+        pub = serialization.load_pem_public_key(raw)
+    except ValueError:
+        try:
+            pub = serialization.load_der_public_key(raw)
+        except ValueError as exc:
+            raise InputError(f"{pubkey_file} is not a PEM or DER public key") from exc
     return pub.public_bytes(
         serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
     )
@@ -2698,7 +2724,7 @@ def perso_generate_csr(
     out_: str | None,
 ) -> None:
     """Generate a PKCS#10 CSR; the signature is computed ON-CARD by the slot key."""
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     spki = _load_spki(pubkey_file)
     pem = _sign_on_card(
@@ -2740,7 +2766,7 @@ def perso_self_sign_cert(
     import secrets
 
     app.out.warn("Self-signed certificates are for development/testing only.")
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     spki = _load_spki(pubkey_file)
     serial = int.from_bytes(secrets.token_bytes(8), "big") | 1
@@ -2877,7 +2903,7 @@ def perso_import_cert(
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     if ref not in SLOT_CERT_OBJECT:
         raise click.BadParameter(f"slot {slot} has no certificate container")
     raw = Path(cert_file).read_bytes()
@@ -3042,7 +3068,7 @@ def perso_smoke_test(app: AppContext, slot: str, algorithm: str, pin_value: str 
     """Fast post-perso check: verify the PIN and perform one on-card signature."""
     import os
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     mech = _resolve_asym_mech(algorithm)
     # Digest size must match the mechanism's hash (SHA-256=32, SHA-384=48); a fixed 32-byte
     # challenge makes the card reject ECCP384 with 6A80. Mirror the import/quickstart paths.
@@ -3531,7 +3557,7 @@ def quickstart(
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
 
-    ref = int(slot, 16)
+    ref = _slot_ref(slot)
     # ms-logon on 9A is the Windows shape, and the only built-in profile that gives a slot
     # an RSA key object. It matters because the Windows inbox minidriver does not enumerate
     # EC keys at all (confirmed 2026-08-14, reproduced on a YubiKey, so a Windows limit
@@ -3632,6 +3658,13 @@ def quickstart(
                 f"the key object quickstart adds to slot {ref:02X} gets the role "
                 f"{prof_mod.role_name(new_role)} from profile '{profile.name}' and cannot sign; "
                 "it is permanent."
+            )
+
+        if csr_out and not by_step["certificate"].run:
+            raise CryptnoxError(
+                f"slot {ref:02X} already has a certificate for this key, so quickstart keeps the "
+                f"key and makes no CSR. For a CSR on that key use `{CLI_NAME} piv perso "
+                f"generate-csr --slot {ref:02X}`."
             )
 
         if dry_run or app.dry_run:
@@ -3880,6 +3913,14 @@ def quickstart(
                 record(planned_step.step, "failed", reason=str(exc))
                 failed = True
                 break
+
+        if public_out and outputs["public_key"] is None and not failed:
+            cert_name = SLOT_CERT_OBJECT.get(ref)
+            kept_der = _read_cert_der(_select(session), cert_name) if cert_name else None
+            if kept_der is not None:
+                public_key = x509.load_der_x509_certificate(kept_der).public_key()
+                Path(public_out).write_bytes(perso_mod.public_key_pem(public_key))
+                outputs["public_key"] = public_out
 
         try:
             _, state_after = _collect_quickstart_facts(session, ref, mech)
