@@ -304,7 +304,6 @@ def test_credential_list_names_each_resident_credential(monkeypatch):
     assert f"- rp=example.com user=alice id={b'cred-1'.hex().upper()}" in text
 
 
-@pytest.mark.xfail(strict=True, reason="names from the card are printed as console markup")
 def test_credential_list_prints_user_names_as_written(monkeypatch):
     names = ("a[/x]b", "[b]bob[/b]")
     wire_session(monkeypatch, _pin_cred_card(b"1234", card=FakeCredMgmtCard(names=names)))
@@ -314,7 +313,6 @@ def test_credential_list_prints_user_names_as_written(monkeypatch):
     assert "user=a[/x]b" in result.stdout and "user=[b]bob[/b]" in result.stdout
 
 
-@pytest.mark.xfail(strict=True, reason="names from the card are printed as console markup")
 def test_ping_prints_the_version_string_as_written(info_card):
     info_card(FULL_INFO, version=b"FIDO_[/x]")
     result = run(["fido", "ping"])
@@ -322,7 +320,6 @@ def test_ping_prints_the_version_string_as_written(info_card):
     assert "Version string: FIDO_[/x]" in result.stdout
 
 
-@pytest.mark.xfail(strict=True, reason="names from the card are printed as console markup")
 def test_info_prints_card_strings_as_written(info_card):
     info = dict(FULL_INFO)
     info[c.INFO_VERSIONS] = ["FIDO_2_1", "[b]X[/b]"]
