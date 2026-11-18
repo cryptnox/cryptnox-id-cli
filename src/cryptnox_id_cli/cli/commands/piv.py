@@ -540,7 +540,7 @@ def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) 
     def human(c: Console) -> None:
         if out_:
             extra = f" (+{len(inter_ders)} intermediate)" if inter_ders else ""
-            c.print(f"[green]Wrote {fmt} attestation to {out_}{extra}[/green]")
+            c.print(f"[green]Wrote {fmt} attestation to {escape(out_)}{extra}[/green]")
         else:
             c.print(to_hex(data) if der else data.decode())
 
@@ -581,14 +581,14 @@ def verify_attestation(app: AppContext, slot: str, csr_file: str | None) -> None
     def human(c: Console) -> None:
         verdict = "[green]verified[/green]" if result.verified else "[red]NOT verified[/red]"
         c.print(f"Attestation (slot {slot}): {verdict}")
-        c.print(f"  subject: {leaf_desc['subject']}")
+        c.print(f"  subject: {escape(str(leaf_desc['subject']))}")
         if result.chain:
-            c.print(f"  chain:   {' -> '.join(result.chain)}")
+            c.print(f"  chain:   {escape(' -> '.join(result.chain))}")
         if result.csr_match is not None:
             mark = "[green]yes[/green]" if result.csr_match else "[red]no[/red]"
             c.print(f"  CSR key match: {mark}")
         for reason in result.reasons:
-            c.print(f"  [yellow]-[/yellow] {reason}")
+            c.print(f"  [yellow]-[/yellow] {escape(reason)}")
 
     app.out.result(payload, human)
 

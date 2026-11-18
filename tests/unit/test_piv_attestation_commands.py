@@ -176,7 +176,6 @@ def test_export_attestation_der_leaf_only(pki, card, tmp_path):
     )
 
 
-@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
 def test_verify_attestation_prints_bracketed_names_as_written(card, monkeypatch, tmp_path):
     root_key, leaf_key = (ec.generate_private_key(ec.SECP256R1()) for _ in range(2))
     root = _cert("Root [b]R[/b]", root_key, "Root [b]R[/b]", root_key, ca=True)
@@ -192,7 +191,6 @@ def test_verify_attestation_prints_bracketed_names_as_written(card, monkeypatch,
     assert "chain:   CN=Leaf a[/x]b -> CN=Root [b]R[/b]" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="certificate names are printed as console markup")
 def test_verify_attestation_prints_a_reason_naming_a_bracketed_leaf_as_written(card):
     stranger = ec.generate_private_key(ec.SECP256R1())
     card(_der(_cert("Leaf a[/x]b", stranger, "Nobody", stranger, ca=False)))
@@ -201,7 +199,6 @@ def test_verify_attestation_prints_a_reason_naming_a_bracketed_leaf_as_written(c
     assert "- not anchored: no pinned root issues 'CN=Leaf a[/x]b'" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="the --out path is printed as console markup")
 def test_export_attestation_names_a_path_with_brackets_as_written(pki, card, tmp_path):
     card(_der(pki["leaf"]))
     folder = tmp_path / "old [draft]"
