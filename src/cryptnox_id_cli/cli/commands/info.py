@@ -18,6 +18,17 @@ from cryptnox_id_cli.transport.apdu import APDU
 from cryptnox_id_cli.transport.pcsc import CardSession
 
 
+def _cplc_body(raw: bytes) -> bytes:
+    """The CPLC data inside a ``9F7F`` response, short or long-form length."""
+    if len(raw) < 3 or raw[:2] != b"\x9f\x7f":
+        return raw
+    if raw[2] == 0x81 and len(raw) >= 4:
+        return raw[4:]
+    if raw[2] == 0x82 and len(raw) >= 5:
+        return raw[5:]
+    return raw[3:]
+
+
 def _read_cplc(session: CardSession) -> dict[str, str] | None:
     """Best-effort CPLC read (card serial / production data) via the ISD."""
     with contextlib.suppress(Exception):
@@ -30,7 +41,7 @@ def _read_cplc(session: CardSession) -> dict[str, str] | None:
         if not cplc.ok or not cplc.data:
             return None
         raw = cplc.data
-        body = raw[3:] if (len(raw) >= 3 and raw[0] == 0x9F and raw[1] == 0x7F) else raw
+        body = _cplc_body(raw)
         serial = body[12:16].hex().upper() if len(body) >= 16 else None
         # Card UID: IC fabrication date || IC serial number || IC batch identifier
         # (CPLC body[10:18], 8 bytes). This is the canonical Cryptnox card UID (cf.

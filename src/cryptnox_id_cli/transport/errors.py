@@ -23,6 +23,13 @@ class CryptnoxError(Exception):
         return {"error": self.code, "message": str(self)}
 
 
+class InputError(CryptnoxError, ValueError):
+    """A value the user supplied cannot be used (bad hex, wrong length)."""
+
+    code = "invalid_input"
+    exit_code = 2
+
+
 class TransportError(CryptnoxError):
     code = "transport_error"
 

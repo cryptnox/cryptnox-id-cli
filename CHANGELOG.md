@@ -80,6 +80,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A command the card answers with a corrected length (`6Cxx`) is resent with
+  its data intact. A command with data and no expected length used to lose
+  its last data byte on the resend.
+- A value that is not valid hex, or a `--slot` that is not a key reference,
+  ends in an error with exit code 2 instead of a traceback. Bad hex is
+  reported as `invalid_input` without repeating the value.
+- A DESFire answer shorter than expected ends in an error instead of a
+  traceback.
+- `piv perso generate-csr` and `self-sign-cert` accept a DER public key as
+  well as PEM.
+- `piv quickstart --csr-out` on a slot whose certificate it keeps stops before
+  writing anything and names `piv perso generate-csr`, instead of exiting 0
+  without a CSR. `--public-out` then writes the kept certificate's public key.
+- `info` reads the card serial correctly when the CPLC answer uses a long-form
+  length.
+- `piv objects read --out` writes a file only the owner can read.
 - `piv certs list` and `piv certs inspect` print a certificate subject or
   issuer that contains square brackets as written, instead of failing or
   dropping part of it.
