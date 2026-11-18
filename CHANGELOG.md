@@ -88,7 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mifare sdm read` for the tag's NDEF text, `info`, `piv info` and
   `piv inventory` for the PIV applet's label, URL and version label, and
   `piv verify-attestation` and `piv export-attestation` for certificate
-  names and the `--out` path.
+  names and the `--out` path, `piv perso import-key` for the `--public-out`
+  path, and `piv perso import-p12` for the certificate's subject.
 - A command the card answers with a corrected length (`6Cxx`) is resent with
   its data intact. A command with data and no expected length used to lose
   its last data byte on the resend.

@@ -152,14 +152,12 @@ def test_certificate_refused_after_the_key_landed(card, tmp_path):
 BRACKETED = _cert("Holder a[/x]b", KEY)
 
 
-@pytest.mark.xfail(strict=True, reason="the certificate subject is printed as console markup")
 def test_dry_run_names_a_bracketed_subject_as_written(tmp_path):
     result = run(_args(_p12(tmp_path, cert=BRACKETED), "--dry-run"))
     assert result.exit_code == 0, result.output
     assert "certificate (CN=Holder a[/x]b): chained PUT DATA" in " ".join(result.output.split())
 
 
-@pytest.mark.xfail(strict=True, reason="the certificate subject is printed as console markup")
 def test_import_names_a_bracketed_subject_as_written(card, tmp_path):
     result = run(_args(_p12(tmp_path, cert=BRACKETED), "--no-smoke-test"))
     assert result.exit_code == 0, result.output

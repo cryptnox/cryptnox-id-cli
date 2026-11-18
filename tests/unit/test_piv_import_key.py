@@ -240,7 +240,6 @@ def test_missing_key_object_is_created_first(card, tmp_path):
     assert [s[0] for s in scp.secured] == [0xDB, 0x24, 0x24, 0x24]
 
 
-@pytest.mark.xfail(strict=True, reason="the --public-out path is printed as console markup")
 def test_public_out_names_a_path_with_brackets_as_written(card, tmp_path):
     folder = tmp_path / "old [draft]"
     folder.mkdir()

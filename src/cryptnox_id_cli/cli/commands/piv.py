@@ -2364,7 +2364,7 @@ def perso_import_key(
         c.print(f"[green]Imported {alg_name} key into slot {slot}[/green] ({len(plan)} elements).")
         c.print(f"  Public key SHA-256: {fingerprint}")
         if public_out:
-            c.print(f"  Public key PEM -> {public_out}")
+            c.print(f"  Public key PEM -> {escape(public_out)}")
         if smoke is None:
             c.print("  [dim]Smoke test skipped.[/dim]")
         elif smoke.get("signed"):
@@ -2503,7 +2503,8 @@ def perso_import_p12(
             for s in steps:
                 via = "chained" if s["chained"] else "single APDU"
                 c.print(f"    {s['element']}: {s['bytes']} bytes ({via}, own SCP03 session)")
-            c.print(f"    certificate ({cert_desc.get('subject')}): chained PUT DATA")
+            subject = escape(str(cert_desc.get("subject")))
+            c.print(f"    certificate ({subject}): chained PUT DATA")
             if extras:
                 c.print(f"    [dim]{len(extras)} chain certificate(s) ignored[/dim]")
             c.print("\n  [dim]Nothing was sent to the card.[/dim]")
@@ -2546,7 +2547,8 @@ def perso_import_p12(
 
     def human(c: Console) -> None:
         c.print(f"[green]Imported {alg_name} credential into slot {slot}[/green].")
-        c.print(f"  Certificate: {cert_desc.get('subject')} (expires {cert_desc.get('not_after')})")
+        subject = escape(str(cert_desc.get("subject")))
+        c.print(f"  Certificate: {subject} (expires {cert_desc.get('not_after')})")
         if extras:
             c.print(f"  [dim]{len(extras)} chain certificate(s) ignored.[/dim]")
         if smoke is None:
