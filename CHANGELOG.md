@@ -83,8 +83,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `info`, `genuine info` and `genuine verify` print certificate names that
   contain square brackets as written, instead of failing or dropping part of
   them. So do `report` in human mode, which prints the report's JSON, and
-  the `--out` path it names, and `fido ping`, `fido info` and
-  `fido credential list` for the strings the authenticator returns.
+  the `--out` path it names, `fido ping`, `fido info` and
+  `fido credential list` for the strings the authenticator returns, and
+  `mifare sdm read` for the tag's NDEF text.
 - A command the card answers with a corrected length (`6Cxx`) is resent with
   its data intact. A command with data and no expected length used to lose
   its last data byte on the resend.

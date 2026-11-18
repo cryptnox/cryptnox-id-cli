@@ -212,7 +212,6 @@ def test_sdm_read_reports_the_url_and_the_mac_verdict(monkeypatch):
     assert f"NDEF: {SDM_URL}" in human.stdout
 
 
-@pytest.mark.xfail(strict=True, reason="the tag's NDEF text is printed as console markup")
 @pytest.mark.parametrize("tail", ["&n=a[/x]b", "&n=[b]S[/b]"])
 def test_sdm_read_prints_the_ndef_text_as_written(monkeypatch, tail):
     _sdm_tag(monkeypatch, SDM_URL + tail)
