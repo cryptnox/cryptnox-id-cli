@@ -23,6 +23,7 @@ underscore keeps it out of collection.
 from __future__ import annotations
 
 import datetime
+import sys
 from collections.abc import Iterable, Sequence
 
 from click.testing import CliRunner
@@ -31,6 +32,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
+from cryptnox_id_cli.applets.fido.constants import CTAP_CLIENT_PIN
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 
@@ -179,3 +181,45 @@ def self_signed_der(common_name: str) -> bytes:
         .sign(key, hashes.SHA256())
     )
     return cert.public_bytes(serialization.Encoding.DER)
+
+
+class _TtySys:
+    """The real ``sys``, but ``stdin.isatty()`` is true; reads still use CliRunner's stdin."""
+
+    class _Stdin:
+        def isatty(self) -> bool:
+            return True
+
+        def __getattr__(self, name):
+            return getattr(sys.stdin, name)
+
+    stdin = _Stdin()
+
+    def __getattr__(self, name):
+        return getattr(sys, name)
+
+
+def fake_tty(monkeypatch, module) -> None:
+    """Make ``module`` see a terminal on stdin, so its interactive prompts run."""
+    monkeypatch.setattr(module, "sys", _TtySys())
+
+
+class CtapRouter:
+    """One authenticator from two doubles: clientPIN to ``pin_card``, the rest to ``card``."""
+
+    def __init__(self, pin_card: object, card: object) -> None:
+        self.pin_card = pin_card
+        self.card = card
+        self.sent: list[bytes] = []
+
+    def transmit(self, apdu: list[int]) -> _Reply:
+        raw = bytes(apdu)
+        self.sent.append(raw)
+        target = self.pin_card if raw[1] == 0x10 and raw[5] == CTAP_CLIENT_PIN else self.card
+        return target.transmit(apdu)  # type: ignore[attr-defined]
+
+    def get_atr(self) -> bytes:
+        return b""
+
+    def disconnect(self) -> None:
+        pass
