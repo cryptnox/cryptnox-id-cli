@@ -167,7 +167,6 @@ def test_out_writes_the_report_and_says_where(wire, tmp_path):
     assert f"Report written to {out}" in " ".join(human.split())
 
 
-@pytest.mark.xfail(strict=True, reason="the human report is printed as console markup")
 @pytest.mark.parametrize("common_name", ["Device a[/x]b", "Device [b]S[/b]"])
 def test_human_report_is_the_json_as_written(wire, common_name):
     wire(_full_card(leaf_cn=common_name))
@@ -176,7 +175,6 @@ def test_human_report_is_the_json_as_written(wire, common_name):
     assert json.loads(human)["genuine"]["leaf_subject"] == f"CN={common_name}"
 
 
-@pytest.mark.xfail(strict=True, reason="the --out path is printed as console markup")
 def test_out_names_a_path_with_brackets_as_written(wire, tmp_path):
     wire({})
     folder = tmp_path / "old [draft]"
