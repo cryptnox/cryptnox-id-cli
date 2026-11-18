@@ -188,7 +188,6 @@ def test_the_genuineness_subject_is_printed_as_written(mock_connection, monkeypa
     assert f"CN={common_name}" in text
 
 
-@pytest.mark.xfail(strict=True, reason="the applet's label is printed as console markup")
 @pytest.mark.parametrize(
     "label", [b"Open[/x]FIPS", b"Open[b]FIPS[/b]"], ids=["closing-tag", "bold"]
 )

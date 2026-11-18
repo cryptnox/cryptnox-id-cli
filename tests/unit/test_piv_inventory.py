@@ -227,7 +227,6 @@ def test_inventory_is_read_only_under_dry_run(monkeypatch, mock_connection):
     assert json.loads(result.stdout)["keys"]
 
 
-@pytest.mark.xfail(strict=True, reason="the applet's version label is printed as console markup")
 @pytest.mark.parametrize(
     "label", [b"Open[/x]FIPS", b"Open[b]FIPS[/b]"], ids=["closing-tag", "bold"]
 )

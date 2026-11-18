@@ -139,7 +139,6 @@ def test_objects_list_and_read(card, tmp_path):
     assert run(["piv", "objects", "read", "--object", "nope"]).exit_code == 2
 
 
-@pytest.mark.xfail(strict=True, reason="the applet's label and URL are printed as console markup")
 @pytest.mark.parametrize(
     ("label", "url"),
     [(b"Open[/x]FIPS", b"http://x.test/a"), (b"Open[b]FIPS[/b]", b"http://x.test/[b]a[/b]")],
