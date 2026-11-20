@@ -37,6 +37,7 @@ CPLC = bytes.fromhex(
 )
 OK = (0x90, 0x00)
 MODULE_AIDS = [m.aid for m in cm.FUSE_MODULES]
+IRREVERSIBLE = "--i-understand-this-is-irreversible"
 
 
 # --------------------------------------------------------------- builders --- #
@@ -205,7 +206,7 @@ def _changes(state: _CardManager) -> list[str]:
 
 # ------------------------------------------------------------------- fuse --- #
 def test_fuse_runs_the_factory_sequence(card):
-    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert [s["step"] for s in payload["steps"]] == [
@@ -234,7 +235,7 @@ def test_fuse_runs_the_factory_sequence(card):
 def test_fuse_skips_what_the_card_has_already_done(card):
     card.lifecycle = cm.SECURED
     card.loaded = set()
-    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert [s["result"] for s in payload["steps"]] == ["absent"] * 4 + ["locked"]
@@ -243,20 +244,28 @@ def test_fuse_skips_what_the_card_has_already_done(card):
 
 def test_fuse_from_initialized_sets_only_secured(card):
     card.lifecycle = cm.INITIALIZED
-    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code == 0, result.output
     assert [c[4:8] for c in card.sent if c.startswith("80F0")] == ["800F"]
 
 
-def test_fuse_global_yes_also_skips_the_prompt(card):
+def test_fuse_global_yes_does_not_skip_the_phrase(card):
     result = run(["--json", "--yes", "factory", "card", "fuse", "--default-keys"])
+    assert result.exit_code != 0
+    assert "--i-understand-this-is-irreversible" in result.output
+    assert _changes(card) == []
+
+
+def test_fuse_proceeds_with_the_irreversible_flag(card):
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["steps"][-1]["result"] == "locked"
 
 
-def test_fuse_without_y_refuses_non_interactively_before_any_change(card):
+def test_fuse_without_the_flag_refuses_non_interactively_before_any_change(card):
     result = run(["--json", "factory", "card", "fuse", "--default-keys"])
     assert result.exit_code != 0
-    assert "pass -y" in result.output
+    assert "--i-understand-this-is-irreversible" in result.output
     assert _changes(card) == []
     assert "cannot be undone" in result.stderr
 
@@ -280,7 +289,7 @@ def test_fuse_proceeds_on_the_phrase(card, monkeypatch):
 
 
 def test_fuse_randomize_needs_out(card):
-    result = run(["factory", "card", "fuse", "--default-keys", "--randomize", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", "--randomize", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "--randomize needs --out" in result.output
     assert card.opened == []
@@ -300,7 +309,7 @@ def test_fuse_randomize_writes_the_key_file_before_the_lock(card, tmp_path, monk
             "--randomize",
             "--out",
             str(out),
-            "-y",
+            IRREVERSIBLE,
         ]
     )
     assert result.exit_code == 0, result.output
@@ -316,7 +325,16 @@ def test_fuse_never_overwrites_a_key_file(card, tmp_path):
     out = tmp_path / "card-keys.json"
     out.write_text("{}")
     result = run(
-        ["factory", "card", "fuse", "--default-keys", "--randomize", "--out", str(out), "-y"]
+        [
+            "factory",
+            "card",
+            "fuse",
+            "--default-keys",
+            "--randomize",
+            "--out",
+            str(out),
+            IRREVERSIBLE,
+        ]
     )
     assert result.exit_code != 0
     assert "never overwritten" in result.output
@@ -326,7 +344,7 @@ def test_fuse_never_overwrites_a_key_file(card, tmp_path):
 def test_fuse_refuses_the_test_key_as_new_key(card, monkeypatch):
     for part in ("ENC", "MAC", "DEK"):
         monkeypatch.setenv(f"CARD_MANAGER_NEW_{part}", DEFAULT_GP_KEY.hex())
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "publicly known test keys" in result.output
     assert card.opened == []
@@ -334,7 +352,7 @@ def test_fuse_refuses_the_test_key_as_new_key(card, monkeypatch):
 
 def test_fuse_requires_new_keys(card, monkeypatch):
     monkeypatch.delenv("CARD_MANAGER_NEW_ENC")
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "CARD_MANAGER_NEW_ENC" in result.output
 
@@ -350,7 +368,7 @@ def test_fuse_dry_run_needs_no_current_keys_and_changes_nothing(card):
 
 def test_fuse_stops_at_a_refusal_and_names_what_was_done(card):
     card.refuse["80E4" + cm.CONFIG_MODULE_AID.hex().upper()] = 0x6985
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "DELETE configuration module refused (SW=6985)" in result.output
     assert "delete egovaccelerators sample module (deleted)" in result.output
@@ -359,7 +377,7 @@ def test_fuse_stops_at_a_refusal_and_names_what_was_done(card):
 
 def test_fuse_refuses_a_locked_card(card):
     card.lifecycle = cm.CARD_LOCKED
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "CARD_LOCKED" in result.output
     assert _changes(card) == []
@@ -372,7 +390,7 @@ def test_fuse_refuses_a_card_manager_with_two_key_versions(card, monkeypatch):
             {SELECT_ISD: (FCI_ISD, *OK), GET_E0: (E0_TWO_VERSIONS, *OK), GET_CPLC: (CPLC, *OK)}
         ),
     )
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "refusing to choose" in result.output
     assert card.opened == []
@@ -391,7 +409,7 @@ def test_status_reports_lifecycle_modules_and_the_sealed_configuration(card):
 
 
 def test_status_after_a_fuse_reports_secured_and_sealed(card, monkeypatch):
-    run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     for part in ("ENC", "MAC", "DEK"):
         monkeypatch.setenv(f"CARD_MANAGER_{part}", TEST_KEY.hex())
     result = run(["--json", "factory", "card", "status"])
@@ -417,7 +435,7 @@ def test_status_on_a_card_that_does_not_list_its_modules(card):
 
 def test_fuse_deletes_modules_the_card_does_not_list(card):
     card.lists_modules = False
-    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert payload["before"]["jcop_modules"]["configuration"] == "not listed"
@@ -428,7 +446,7 @@ def test_fuse_deletes_modules_the_card_does_not_list(card):
 
 def test_fuse_fails_its_check_when_the_configuration_module_is_still_listed(card):
     card.delete_keeps = {cm.CONFIG_MODULE_AID}
-    result = run(["--json", "factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["--json", "factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     first, _ = json.JSONDecoder().raw_decode(result.stdout)  # the result, then the error
     assert first["configuration_sealed"] is False
@@ -463,7 +481,7 @@ def test_fuse_dry_run_lists_the_plan(card):
 )
 def test_fuse_refuses_a_card_manager_it_cannot_read(card, monkeypatch, answers, message):
     wire_session(monkeypatch, _SeqConn(answers))
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert message in result.output
     assert card.opened == []
@@ -472,7 +490,7 @@ def test_fuse_refuses_a_card_manager_it_cannot_read(card, monkeypatch, answers, 
 def test_fuse_refuses_new_keys_equal_to_the_current_ones(card, monkeypatch):
     for part in ("ENC", "MAC", "DEK"):
         monkeypatch.setenv(f"CARD_MANAGER_{part}", TEST_KEY.hex())
-    result = run(["factory", "card", "fuse", "-y"])
+    result = run(["factory", "card", "fuse", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "the new keys equal the current ones" in result.output
     assert card.opened == []
@@ -480,7 +498,7 @@ def test_fuse_refuses_new_keys_equal_to_the_current_ones(card, monkeypatch):
 
 def test_fuse_refuses_a_card_that_hides_its_lifecycle(card):
     card.refuse["80F2"] = 0x6982
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert "did not report the card's lifecycle" in result.output
     assert _changes(card) == []
@@ -496,7 +514,7 @@ def test_fuse_refuses_a_card_that_hides_its_lifecycle(card):
 )
 def test_fuse_stops_at_a_later_refusal(card, refused, message, sent):
     card.refuse[refused] = 0x6985
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     assert message in " ".join(result.output.split())
     assert "delete configuration module (deleted)" in " ".join(result.output.split())
@@ -505,7 +523,7 @@ def test_fuse_stops_at_a_later_refusal(card, refused, message, sent):
 
 def test_fuse_reports_new_keys_that_do_not_authenticate(card):
     card.new_key = bytes(16)
-    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    result = run(["factory", "card", "fuse", "--default-keys", IRREVERSIBLE])
     assert result.exit_code != 0
     text = " ".join(result.output.split())
     assert "card echoed different values" in text
@@ -516,7 +534,16 @@ def test_fuse_reports_new_keys_that_do_not_authenticate(card):
 def test_fuse_human_output_names_the_key_file(card, tmp_path, monkeypatch):
     out = tmp_path / "card-keys.json"
     monkeypatch.setattr(factory_cmd.os, "urandom", lambda n: TEST_KEY[:n])
-    args = ["factory", "card", "fuse", "--default-keys", "--randomize", "--out", str(out), "-y"]
+    args = [
+        "factory",
+        "card",
+        "fuse",
+        "--default-keys",
+        "--randomize",
+        "--out",
+        str(out),
+        IRREVERSIBLE,
+    ]
     result = run(args)
     assert result.exit_code == 0, result.output
     assert f"New keys written to {out}; keep that file safe." in " ".join(result.output.split())

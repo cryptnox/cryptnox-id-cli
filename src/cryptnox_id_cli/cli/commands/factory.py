@@ -684,7 +684,12 @@ def _fuse_failed(steps: list[dict[str, object]], what: str, sw_hex: str) -> Cryp
     help="Write the new card-manager keys to FILE (created with mode 0600, never "
     "overwritten) before anything on the card changes.",
 )
-@click.option("-y", "--yes", "yes", is_flag=True, help="Skip the confirmation prompt.")
+@click.option(
+    "--i-understand-this-is-irreversible",
+    "understood",
+    is_flag=True,
+    help="Required for non-interactive use.",
+)
 @click.option("--dry-run", is_flag=True, help="Show the plan; send nothing that changes the card.")
 @click.pass_obj
 def card_fuse(
@@ -692,7 +697,7 @@ def card_fuse(
     default_keys: bool,
     randomize: bool,
     out_: str | None,
-    yes: bool,
+    understood: bool,
     dry_run: bool,
 ) -> None:
     """IRREVERSIBLY fuse the card: seal the JCOP configuration, set it SECURED, lock it.
@@ -768,9 +773,11 @@ def card_fuse(
             "for good, the lifecycle becomes SECURED and cannot go back, and the card "
             "manager answers only to the new key from now on."
         )
-        if not (yes or app.yes):
+        if not understood:
             if app.json or not sys.stdin.isatty():
-                raise CryptnoxError("fuse asks for confirmation; pass -y in non-interactive use.")
+                raise CryptnoxError(
+                    "fuse requires --i-understand-this-is-irreversible in non-interactive mode."
+                )
             if click.prompt(f"Type {FUSE_PHRASE} to continue") != FUSE_PHRASE:
                 raise click.Abort()
 

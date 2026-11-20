@@ -99,6 +99,7 @@ plan and needs no current key.
    ``fuse`` cannot be undone. The configuration stays sealed, the lifecycle
    cannot go back from SECURED, and the card manager answers only to the new
    key. The command prints the card's state and a warning, then asks you to
-   type ``FUSE-CARD``; ``-y`` skips the question, and non-interactive use
-   requires ``-y``. Keep the new key: without it nobody can administer the
+   type ``FUSE-CARD``. ``--i-understand-this-is-irreversible`` skips the
+   question and is required for non-interactive use; the global ``--yes``
+   does not skip it. Keep the new key: without it nobody can administer the
    card again.
