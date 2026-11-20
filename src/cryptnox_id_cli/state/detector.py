@@ -119,15 +119,15 @@ class StateDetector:
             what = "PIN/PUK state" if pin_refused else "PUK state"
             st.notes.append(f"{what} not readable: {hint}")
 
-        present: dict[str, bool] = {}
+        present: dict[str, bool | None] = {}
         for name in _PROBE_OBJECTS:
             obj = piv_obj.object_by_name(name)
             if obj is None:
                 continue
             try:
-                present[name] = piv.object_present(obj.oid)
+                present[name] = piv.object_state(obj.oid)
             except CryptnoxError:
-                present[name] = False
+                present[name] = None
         st.piv_objects = present
 
         any_verifier = bool(

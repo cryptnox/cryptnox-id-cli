@@ -156,6 +156,13 @@ def info(app: AppContext) -> None:
     app.out.result(payload, human)
 
 
+_OBJECT_PRESENCE = {
+    True: "[green]yes[/green]",
+    False: "[dim]no[/dim]",
+    None: "[yellow]unknown[/yellow] (read failed)",
+}
+
+
 @command.command("status")
 @click.pass_obj
 def status(app: AppContext) -> None:
@@ -193,7 +200,7 @@ def status(app: AppContext) -> None:
         if st.piv_objects:
             table = app.out.table("Object", "Present")
             for name, present in st.piv_objects.items():
-                table.add_row(name, "[green]yes[/green]" if present else "[dim]no[/dim]")
+                table.add_row(name, _OBJECT_PRESENCE[present])
             c.print(table)
         for note in st.notes:
             c.print(f"[yellow]*[/yellow] {note}")
@@ -3221,8 +3228,9 @@ class CardFacts:
     structure_present: bool  # the applet holds key objects or verifiers
     key_object_present: bool  # a (slot, mechanism) key object exists
     cert_present: bool
-    chuid_present: bool
-    ccc_present: bool
+    #: None when the read failed, so a write could replace what the card holds
+    chuid_present: bool | None
+    ccc_present: bool | None
     #: the existing (slot, mechanism) key object can sign; None when unknown
     key_object_can_sign: bool | None = None
     #: CLI names of the slot's other key objects that can sign
@@ -3300,6 +3308,13 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
     # references it yet).
     fresh_slot = not facts.cert_present
     certificate_runs = opts.cert_mode != "none" and fresh_slot
+    for name, present in (("CHUID", facts.chuid_present), ("CCC", facts.ccc_present)):
+        if present is None:
+            raise CryptnoxError(
+                f"quickstart could not read the card's {name}, so it cannot tell whether "
+                f"writing one would replace it. Check `{CLI_NAME} piv objects read "
+                f"--object {name.lower()}`, then re-run."
+            )
     if (not facts.structure_present or not facts.key_object_present) and facts.applet_secured:
         raise CryptnoxError(
             f"quickstart would add a key object to slot {slot}, but the applet is "
@@ -3512,8 +3527,8 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
         structure_present=structure_present,
         key_object_present=key_object_present,
         cert_present=cert_present,
-        chuid_present=bool(objs.get("chuid")),
-        ccc_present=bool(objs.get("ccc")),
+        chuid_present=objs.get("chuid"),
+        ccc_present=objs.get("ccc"),
         key_object_can_sign=key_object_can_sign,
         signing_siblings=signing_siblings,
         applet_secured=bool(st.piv_secured),

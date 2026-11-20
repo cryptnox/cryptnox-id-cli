@@ -160,6 +160,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--create-key-object` it used to add a permanent key object there.
 - `--dry-run piv objects read` refuses a PIN-protected object instead of
   verifying the PIN; public objects still read.
+- `piv quickstart` stops before any write when it cannot read the card's
+  CHUID or CCC, instead of planning to write over it. `piv status`, `report`
+  and `factory piv preperso export-config` show such an object as unknown
+  (`null` in JSON) rather than absent.
 
 ## [1.1.0] - 2026-10-16
 

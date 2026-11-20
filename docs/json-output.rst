@@ -128,11 +128,12 @@ just theirs. The section shapes:
              "retries_remaining": 6, "refused_on_interface": false},
      "puk": {"ref": "81", "configured": true, "blocked": false, "verified": false,
              "retries_remaining": 6, "refused_on_interface": false},
-     "objects_present": ["chuid", "ccc", "auth-cert"],
+     "objects_present": {"chuid": true, "ccc": true, "auth-cert": false},
      "notes": []
    }
 
-``apt`` / ``pin`` / ``puk`` are ``null`` when not available.
+``apt`` / ``pin`` / ``puk`` are ``null`` when not available. An entry in
+``objects_present`` is ``null`` when its read failed, so the object may exist.
 ``refused_on_interface`` is ``true`` when the card answered the PIN or PUK probe
 with 6982, which a contactless reader gets because every built-in profile but
 ``ms-logon-nfc`` makes both contact-only; ``configured`` and
