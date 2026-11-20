@@ -20,11 +20,21 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from test_scp03 import GP_KEY, FakeScp03Card
 
 from cryptnox_id_cli.applets.piv import keyimport
+from cryptnox_id_cli.applets.piv import objects as piv_obj
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
 PROBE = keyimport.probe_apdu(0x9C, 0x11).to_bytes().hex().upper()
 VERIFY_123456 = "0020008008313233343536FFFF"
+GET_CHUID = "00CB3FFF055C035FC10200"
+
+
+def _get_data(oid: bytes) -> str:
+    return f"00CB3FFF{len(oid) + 2:02X}5C{len(oid):02X}{oid.hex().upper()}00"
+
+
+#: A pre-personalized card answers a GET DATA for every container 6A82.
+NO_OBJECTS = {_get_data(o.oid): ([], 0x6A, 0x82) for o in piv_obj.PIV_OBJECTS}
 
 
 @pytest.fixture
@@ -180,16 +190,17 @@ def plain_scp03_card(monkeypatch, apt):
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     monkeypatch.setenv("CRYPTNOX_PIV_NEW_PUK", "12345678")
 
-    def _wire(pin_sw=(0x6A, 0x88), verify_sw=(0x90, 0x00)):
+    def _wire(pin_sw=(0x6A, 0x88), verify_sw=(0x90, 0x00), answers=None):
         conn = ResponseAdapter(
             FakeScp03Card(Scp03Keys.same(GP_KEY), bytes.fromhex("1122334455667788")),
             answers={
+                **NO_OBJECTS,
                 SELECT_PIV: (apt, 0x90, 0x00),
                 "00200080": ([], *pin_sw),
                 "00200081": ([], *pin_sw),
                 PROBE: ([], 0x69, 0x82),
-                "00CB3FFF055C035FC10A00": ([], 0x6A, 0x82),
                 VERIFY_123456: ([], *verify_sw),
+                **(answers or {}),
             },
         )
         wire_session(monkeypatch, conn, reader_name="Fake Reader 00 00")
@@ -236,6 +247,15 @@ def test_declining_the_confirmation_sends_nothing(plain_scp03_card):
     conn = plain_scp03_card()
     result = run(["piv", "quickstart", "--default-keys"], input="n\n")
     assert result.exit_code == 1
+    assert not any(c.startswith("8050") for c in conn.log)
+
+
+@pytest.mark.xfail(strict=True, reason="a failed read is reported as absent")
+def test_an_unreadable_chuid_stops_the_run_before_any_write(plain_scp03_card):
+    conn = plain_scp03_card(answers={GET_CHUID: ([], 0x6F, 0x00)})
+    result = run(["--yes", "piv", "quickstart", "--default-keys"])
+    assert result.exit_code == 1, result.output
+    assert "could not read the card's CHUID" in " ".join(result.output.split())
     assert not any(c.startswith("8050") for c in conn.log)
 
 
