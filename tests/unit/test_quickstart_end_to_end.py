@@ -250,7 +250,6 @@ def test_declining_the_confirmation_sends_nothing(plain_scp03_card):
     assert not any(c.startswith("8050") for c in conn.log)
 
 
-@pytest.mark.xfail(strict=True, reason="a failed read is reported as absent")
 def test_an_unreadable_chuid_stops_the_run_before_any_write(plain_scp03_card):
     conn = plain_scp03_card(answers={GET_CHUID: ([], 0x6F, 0x00)})
     result = run(["--yes", "piv", "quickstart", "--default-keys"])

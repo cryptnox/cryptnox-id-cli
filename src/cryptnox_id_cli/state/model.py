@@ -115,7 +115,8 @@ class CardState:
     piv_apt: APTInfo | None = None
     piv_pin: PinStatus | None = None
     piv_puk: PinStatus | None = None
-    piv_objects: dict[str, bool] = field(default_factory=dict)
+    #: None for an object whose read failed: neither present nor absent.
+    piv_objects: dict[str, bool | None] = field(default_factory=dict)
     #: finalized (SECURED) per the applet's own status object; None when not readable.
     piv_secured: bool | None = None
     fido_versions: list[str] | None = None

@@ -19,8 +19,6 @@ from cryptnox_id_cli.cli.commands.piv import _plan_quickstart
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import CryptnoxError, TransportError
 
-FIXED = pytest.mark.xfail(strict=True, reason="a failed read is reported as absent")
-
 
 @pytest.mark.parametrize(
     ("answer", "expected"),
@@ -28,8 +26,8 @@ FIXED = pytest.mark.xfail(strict=True, reason="a failed read is reported as abse
         ((b"", 0x6A, 0x82), False),
         ((b"\x53\x00", 0x90, 0x00), False),
         ((b"", 0x69, 0x82), True),
-        pytest.param((b"", 0x6F, 0x00), None, marks=FIXED),
-        pytest.param(TransportError("glitch"), None, marks=FIXED),
+        ((b"", 0x6F, 0x00), None),
+        (TransportError("glitch"), None),
     ],
     ids=["not-created", "empty", "access-gated", "unexpected-sw", "transport-error"],
 )
@@ -43,7 +41,6 @@ def test_the_detector_keeps_an_unread_object_apart_from_an_absent_one(answer, ex
     assert st.piv_objects["chuid"] is expected
 
 
-@FIXED
 @pytest.mark.parametrize(("name", "field"), [("CHUID", "chuid_present"), ("CCC", "ccc_present")])
 def test_the_planner_refuses_to_write_over_an_object_it_could_not_read(name, field):
     with pytest.raises(CryptnoxError, match=f"could not read the card's {name}"):
@@ -57,7 +54,6 @@ class UnreadChuidCard(PivAdminCard):
         return super().transmit(apdu)
 
 
-@FIXED
 def test_status_shows_an_unread_object_as_unknown(monkeypatch):
     wire_session(monkeypatch, ResponseAdapter(UnreadChuidCard()))
     as_json = run(["--json", "piv", "status"])

@@ -156,14 +156,20 @@ class PivApplet:
         Two distinct "absent" cases per SP 800-73 4.1.1 (same clause in -4 and
         -5): a container never created at pre-personalization returns 6A82,
         while a created-but-unused container returns a zero-length object
-        (9000). Both count as absent for every caller's purpose (status, slots,
-        validate, quickstart).
+        (9000). Both count as absent, and so does a read that failed.
         """
+        return self.object_state(oid) is True
+
+    def object_state(self, oid: bytes) -> bool | None:
+        """Like :meth:`object_present`, but ``None`` when the read failed, so the
+        object may exist."""
         resp = self.get_data(oid)
         if resp.sw in (0x6982, 0x6983):  # exists but access-gated still counts
             return True
-        if not resp.ok:
+        if resp.sw == 0x6A82:
             return False
+        if not resp.ok:
+            return None
         return bool(obj.unwrap(oid, resp.data))
 
     # -- PIN / PUK ---------------------------------------------------------- #
