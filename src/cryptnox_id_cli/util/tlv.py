@@ -27,10 +27,6 @@ class TLV:
             lead >>= 8
         return bool(lead & 0x20)
 
-    def tag_hex(self) -> str:
-        length = max(1, (self.tag.bit_length() + 7) // 8)
-        return self.tag.to_bytes(length, "big").hex().upper()
-
 
 def _read_tag(data: bytes, off: int) -> tuple[int, int]:
     if off >= len(data):

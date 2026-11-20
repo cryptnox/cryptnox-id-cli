@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""Certificate key descriptions and the hex rendering helper."""
+"""Certificate key descriptions, the hex rendering helper and the output helpers."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.crypto import x509util
+from cryptnox_id_cli.output.render import Output, state_style
 from cryptnox_id_cli.util.hexutil import to_hex
 
 
@@ -51,3 +52,28 @@ def test_certificate_key_description(key, algorithm, description):
 @pytest.mark.parametrize(("sep", "text"), [("", "00A4FF"), (" ", "00 A4 FF"), (":", "00:A4:FF")])
 def test_to_hex_with_and_without_a_separator(sep, text):
     assert to_hex(b"\x00\xa4\xff", sep=sep) == text
+
+
+@pytest.mark.parametrize(
+    ("verbose", "json", "shown"),
+    [(True, False, True), (False, False, False), (True, True, False)],
+    ids=["verbose", "quiet", "json"],
+)
+def test_detail_prints_only_in_verbose_human_mode(capsys, verbose, json, shown):
+    Output(verbose=verbose, json=json, no_color=True).detail("step one")
+    assert ("step one" in capsys.readouterr().out) is shown
+
+
+@pytest.mark.parametrize(
+    ("label", "styled"),
+    [
+        ("PivPersonalized", "[green]PivPersonalized[/green]"),
+        ("FidoBlockedByOS", "[yellow]FidoBlockedByOS[/yellow]"),
+        ("Unknown", "[dim]Unknown[/dim]"),
+        ("PivNotPresent", "[dim]PivNotPresent[/dim]"),
+        ("SomethingElse", "SomethingElse"),
+    ],
+    ids=["good", "warn", "unknown", "not-present", "other"],
+)
+def test_state_style(label, styled):
+    assert state_style(label) == styled

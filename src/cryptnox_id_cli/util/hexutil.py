@@ -35,8 +35,3 @@ def from_hex(text: str) -> bytes:
         return bytes.fromhex(cleaned)
     except ValueError as exc:
         raise InputError("value is not valid hex") from exc
-
-
-def to_list(data: bytes | bytearray | Iterable[int]) -> list[int]:
-    """pyscard wants ``list[int]`` for APDUs."""
-    return list(bytes(data))

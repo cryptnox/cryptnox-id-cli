@@ -47,10 +47,6 @@ class Output:
             render_human(self.console)
 
     # -- ad-hoc messages (suppressed or routed to stderr in JSON mode) ------ #
-    def info(self, message: str) -> None:
-        if not self.json:
-            self.console.print(message)
-
     def detail(self, message: str) -> None:
         if self.verbose and not self.json:
             self.console.print(f"[dim]{message}[/dim]")
@@ -67,20 +63,12 @@ class Output:
     def error(self, message: str) -> None:
         self.err.print(f"[red]error:[/red] {message}")
 
-    def success(self, message: str) -> None:
-        if not self.json:
-            self.console.print(f"[green]OK[/green] {message}")
-
     # -- helpers ------------------------------------------------------------ #
     def table(self, *headers: str, title: str | None = None) -> Table:
         table = Table(title=title, show_lines=False, header_style="bold")
         for h in headers:
             table.add_column(h)
         return table
-
-    def print(self, renderable: object) -> None:
-        if not self.json:
-            self.console.print(renderable)
 
 
 def state_style(label: str) -> str:

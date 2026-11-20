@@ -25,9 +25,6 @@ class GenuinenessInfo:
     def hex(self) -> str:
         return self.raw.hex().upper()
 
-    def to_dict(self) -> dict[str, object]:
-        return {"raw": self.hex}
-
 
 class GenuinenessApplet:
     def __init__(self, session: CardSession) -> None:
