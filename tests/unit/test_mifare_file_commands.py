@@ -349,7 +349,7 @@ def test_a_maced_command_the_card_refuses_surfaces_its_status(monkeypatch):
             self.s.cmd_ctr += 5  # out of step: every MAC the host sends now looks wrong
             return super().transmit(raw)
 
-    card = Ev2Card(bytes(16), lambda k_enc, k_mac, ti: BadMacFile(k_enc, k_mac, ti))
+    card = Ev2Card(bytes(16), BadMacFile)
     wire_session(monkeypatch, ResponseAdapter(card))
     args = ["--json", "mifare", "value", "credit", "--aid", AID, "--file-id", "03", "--amount", "1"]
     result = run([*args, "--zero-key"])
@@ -361,7 +361,7 @@ FORMAT = ["mifare", "format", "--zero-key", "--i-understand-this-erases-all-appl
 
 
 def test_format_of_an_aes_picc_authenticates_and_sends_format_picc(monkeypatch):
-    card = Ev2Card(bytes(16), lambda k_enc, k_mac, ti: MacFile(k_enc, k_mac, ti))
+    card = Ev2Card(bytes(16), MacFile)
     conn = ResponseAdapter(card, answers={GET_KEY_SETTINGS: (b"\x0f\x81", 0x91, 0x00)})
     wire_session(monkeypatch, conn)
     as_json, human = run_both_modes(FORMAT)
