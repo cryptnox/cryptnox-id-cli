@@ -258,7 +258,8 @@ block below is for a blank or pre-personalized card; skip it on this path.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Run the whole block below with the card in a <strong>contact</strong> reader. The PIN,
-the PUK and the 9A key are contact-only on every built-in profile. Over a
+the PUK and the 9A key are contact-only on every built-in profile but
+<code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code>. Over a
 contactless (NFC/PICC) reader the first four commands still succeed, since
 they run inside the admin channel, and <code class="docutils literal notranslate"><span class="pre">self-sign-cert</span></code> is the first one
 to present the PIN. It fails there with <code class="docutils literal notranslate"><span class="pre">PIN</span> <span class="pre">verification</span> <span class="pre">refused</span> <span class="pre">(SW=6982)</span></code>

@@ -187,7 +187,10 @@ an Administrator terminal.</p></td>
 </tr>
 <tr class="row-even"><td><p>6</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">status_word</span></code></p></td>
-<td><p>The card rejected a command (the message carries the ISO status word).</p></td>
+<td><p>The card rejected a command (the message carries the ISO status word).
+A refused PIN, PUK, certificate import or object write also ends with
+this code, after printing its result object in place of an error
+object (see <a class="reference internal" href="json-output.html"><span class="doc">JSON output</span></a>).</p></td>
 </tr>
 <tr class="row-odd"><td><p>7</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">scp03_error</span></code> / <code class="docutils literal notranslate"><span class="pre">mgmt_key</span></code></p></td>
@@ -234,6 +237,14 @@ refuses to send. The message names the command header.</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">remote_failed</span></code></p></td>
 <td><p>The exchange completed, but the remote PIV service reported the
 operation as failed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>17</p></td>
+<td><p>—</p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">remote</span></code> operation ended, but a check <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> makes on its own did
+not hold (a <code class="docutils literal notranslate"><span class="pre">false</span></code> under <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code>): the returned key
+attestation did not verify, the card does not carry the applet build
+asked for, the card is not the one the service reports. The result
+object is printed in place of an error object (see <a class="reference internal" href="json-output.html"><span class="doc">JSON output</span></a>).</p></td>
 </tr>
 </tbody>
 </table>

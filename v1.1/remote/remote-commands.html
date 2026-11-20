@@ -115,9 +115,12 @@
 <li class="toctree-l1"><a class="reference internal" href="remote-guide.html">Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Commands</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#group-options">Group options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-service-itself">The service itself</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#identification-and-inspection">Identification and inspection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#key-attestation">Key attestation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#reset">Reset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#when-the-service-refuses">When the service refuses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#when-a-local-check-fails">When a local check fails</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#endpoint">Endpoint</a></li>
 </ul>
 </li>
@@ -154,10 +157,11 @@ service sends to the card and reports the outcome. What the service asserts
 and what <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> verified locally are shown apart. The service, the relay policy
 and what each operation does to the card are described in
 <a class="reference internal" href="remote-guide.html"><span class="doc">Remote service guide</span></a>.</p>
-<p>Every command opens the local reader first, then connects to the service over
-TLS and answers a small proof-of-work before any command is relayed. Only the
-PIV function and its security domains are reachable through the relay; the
-other card functions are refused by the relay policy.</p>
+<p>Every command except <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">ping</span></code> opens the local reader first, then
+connects to the service over TLS and answers a small proof-of-work before any
+command is relayed. Only the PIV function and its security domains are
+reachable through the relay; the other card functions are refused by the relay
+policy.</p>
 <section id="group-options">
 <h2>Group options<a class="headerlink" href="#group-options" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote [--full-transcript] COMMAND
@@ -169,6 +173,18 @@ Options:
 </pre></div>
 </div>
 </section>
+<section id="the-service-itself">
+<h2>The service itself<a class="headerlink" href="#the-service-itself" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote ping           ask the service what it runs and what it offers: its
+                      build, the operations it serves, the PIV applet builds
+                      it can install, its secure-channel policy. No card is
+                      needed, the reader is not opened, and the call does
+                      not count toward a card's operation limit.
+</pre></div>
+</div>
+<p>Operations the service offers and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> does not run are listed apart; they
+are reserved to Cryptnox’s own tooling.</p>
+</section>
 <section id="identification-and-inspection">
 <h2>Identification and inspection<a class="headerlink" href="#identification-and-inspection" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote authenticate   identify the card to the service: ATR and CPLC UID,
@@ -176,19 +192,23 @@ Options:
 
 remote inspect        probe the PIV function through the service: whether
                       the PIV applet and its security domain are present
-                      and which key versions they carry; key-free but not
-                      free: each key version enumerated costs one
-                      INITIALIZE UPDATE the card counts as a failed
-                      authentication (see the guide)
+                      and which key versions they carry, read from the
+                      key information template; a card that withholds it
+                      may be probed with INITIALIZE UPDATE, which it counts
+                      as a failed authentication (see the guide)
 </pre></div>
 </div>
 <p>Both commands report the card as read locally (reader, ATR, CPLC UID), the
 service’s result as the service asserted it, and a cross-check of the fields
 the two have in common.</p>
+<p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">inspect</span></code> also reads the PIV applet’s build from the applet itself and
+shows it: the FIPS-mode build, or the build with FIPS mode off. The service
+reads the same flag through the relay; <code class="docutils literal notranslate"><span class="pre">piv_build_matches</span></code> under “Verified
+locally” says whether the two agree.</p>
 </section>
 <section id="key-attestation">
 <h2>Key attestation<a class="headerlink" href="#key-attestation" title="Link to this heading"></a></h2>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote attest [--slot 9C] [--algorithm ECCP256] [--ca-obj HEX] [--out FILE]
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote attest [--slot 9C] [--algorithm ECCP256] [--out FILE]
 
                       generate a key in the slot through the service and
                       receive its key-attestation certificate; the service
@@ -200,8 +220,6 @@ the two have in common.</p>
 Options:
   --slot HEX          9A, 9C, 9D, 9E or a retired slot 82 to 95 (default 9C)
   --algorithm NAME    ECCP256 (default), ECCP384, RSA2048, RSA3072, RSA4096
-  --ca-obj HEX        signing sub-CA in the service; omit for the
-                      key-attestation CA
   --out FILE          write the returned certificate (PEM)
 </pre></div>
 </div>
@@ -212,10 +230,39 @@ slot, the trust model must be the server-driven value, and the certified
 public key must equal the certificate read back from the card’s attestation
 container. That the key was generated on the card is the service’s claim; the
 tool cannot witness it and says so.</p>
+<p>The service also names what it signed: the certificate’s serial number and
+SHA-256, and the SHA-256 of the certified public key. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> recomputes the
+three from the returned certificate and reports them as
+<code class="docutils literal notranslate"><span class="pre">certificate_serial_matches</span></code>, <code class="docutils literal notranslate"><span class="pre">certificate_sha256_matches</span></code> and
+<code class="docutils literal notranslate"><span class="pre">public_key_sha256_matches</span></code>.</p>
+<p>The service signs key attestations with one fixed CA key; there is no option
+to choose another.</p>
+<p>The result also names the admin channel the service drove the card over
+(hardened or legacy, see <a class="reference internal" href="remote-guide.html"><span class="doc">Remote service guide</span></a>) and whether the public
+key it certified reached it authenticated by the card. When it did not, or the
+service does not say, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns that something between the service and the
+card could have substituted the key. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> also warns before connecting when
+the selected reader looks contactless: the service refuses <code class="docutils literal notranslate"><span class="pre">attest</span></code> over
+that interface.</p>
+<p><strong>On a finalized applet</strong> nothing can be added, so the service generates the
+new key in the slot’s existing key object: the key now in the slot is
+overwritten and cannot be recovered, and a certificate issued for it stops
+matching the slot. The command reads the applet’s state first, says so, and
+asks before anything is sent (<code class="docutils literal notranslate"><span class="pre">--yes</span></code> answers for a script); only then does
+it send the confirmation the service requires. The slot must already have a
+key object for the algorithm. The key attestation is stored on the card only
+if the applet has an attestation container, which the built-in profiles do
+not create; otherwise it is returned and not stored: the command says so and
+prints the certificate unless <code class="docutils literal notranslate"><span class="pre">--out</span></code> was given. Nothing on the card can
+then be compared with the certificate, so <code class="docutils literal notranslate"><span class="pre">attestation_verified</span></code> and
+<code class="docutils literal notranslate"><span class="pre">attestation_container_written</span></code> are <code class="docutils literal notranslate"><span class="pre">null</span></code>, unchecked rather than failed,
+and the run is not a failure. <code class="docutils literal notranslate"><span class="pre">--out</span></code> is checked for a writable directory
+before anything is sent, so a mistyped path costs the card nothing.</p>
 </section>
 <section id="reset">
 <h2>Reset<a class="headerlink" href="#reset" title="Link to this heading"></a></h2>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote reset [--default-keys] [--i-understand-this-is-irreversible]
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>remote reset [--default-keys] [--piv-variant fips|fipsoff] [--fips-off]
+             [--i-understand-this-is-irreversible]
 
                       IRREVERSIBLY wipe and reinstall the PIV function: the
                       service deletes the PIV applet, its package and its
@@ -225,7 +272,8 @@ tool cannot witness it and says so.</p>
                       phrase RESET-PIV must be typed; non-interactively the
                       flag is required. --yes is not accepted.
 
-remote dev-reset [--default-keys] [--i-understand-this-is-irreversible]
+remote dev-reset [--default-keys] [--piv-variant fips|fipsoff] [--fips-off]
+                 [--i-understand-this-is-irreversible]
 
                       Development cards only. As reset, but the card manager
                       and the PIV security domain are left on the public
@@ -246,20 +294,130 @@ Options:
                       On dev-reset: the card proves it is genuine with key
                       version 2 of its PIV security domain instead of its
                       card-manager key.
+  --piv-variant NAME  the PIV applet build the service installs: fips, the
+                      FIPS-mode build (default), or fipsoff, the same applet
+                      with FIPS mode off
+  --fips-off          short for --piv-variant fipsoff
 </pre></div>
 </div>
+<p>Both builds come from the same applet source and carry the same identifiers;
+the applet reports which one it is. With FIPS mode off the applet accepts
+pre-personalization profiles the FIPS-mode build refuses (a PIN shorter than 6
+digits, more than 15 retries, a PIN usable over the contactless interface
+without secure messaging) and skips the FIPS power-up self-tests. Keys,
+algorithms and commands are the same. After the operation <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> asks the
+applet which build it is and reports <code class="docutils literal notranslate"><span class="pre">piv_build_matches</span></code>; a <code class="docutils literal notranslate"><span class="pre">reset</span></code> without
+the option installs the FIPS-mode build again.</p>
+<p>When the build with FIPS mode off is asked for, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> first asks the service
+whether it offers that build (<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">ping</span></code>) and stops before opening the
+reader when it does not.</p>
 <p>Before asking for consent, both commands read and show what the card holds:
 the PIV personalization state and data objects, the PIV security domain and
 its key versions, and the state of the FIDO2 and genuineness functions, which
 stay outside the operation. The same inventory is read again afterwards and
 shown next to the service’s result.</p>
+<p>The service’s result also names the admin channel it used and, after
+<code class="docutils literal notranslate"><span class="pre">reset</span></code>, whether the applet’s contactless-administration lock was set
+(<code class="docutils literal notranslate"><span class="pre">nfc_admin_lock</span></code>). Both commands warn before asking for consent when the
+selected reader looks contactless: the service administers the PIV function
+over the contact interface.</p>
+</section>
+<section id="when-the-service-refuses">
+<h2>When the service refuses<a class="headerlink" href="#when-the-service-refuses" title="Link to this heading"></a></h2>
+<p>A refused or failed operation exits with code 16. The message says what
+happened and what to do next; with <code class="docutils literal notranslate"><span class="pre">--json</span></code> the error object carries a
+<code class="docutils literal notranslate"><span class="pre">reason</span></code> a script can branch on, the service’s own answer under <code class="docutils literal notranslate"><span class="pre">result</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">retry_in_seconds</span></code> or <code class="docutils literal notranslate"><span class="pre">ref</span></code> when the service gave them.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 72.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">reason</span></code></p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rate_limited_card</span></code></p></td>
+<td><p>The service’s limit of operations for this card is reached.
+<code class="docutils literal notranslate"><span class="pre">retry_in_seconds</span></code> says when the next one is accepted. Every operation
+on a card counts, <code class="docutils literal notranslate"><span class="pre">inspect</span></code> and <code class="docutils literal notranslate"><span class="pre">authenticate</span></code> included; <code class="docutils literal notranslate"><span class="pre">ping</span></code>
+does not.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rate_limited_source</span></code></p></td>
+<td><p>Too many connections from this network address.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">busy</span></code></p></td>
+<td><p>The service is running as many operations as it accepts at once.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
+<td><p>The service stopped waiting for the card or the connection. The
+operation may be half done: inspect, then repeat.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">internal_error</span></code></p></td>
+<td><p>A fault on the service’s side. <code class="docutils literal notranslate"><span class="pre">ref</span></code> is the reference to quote to
+Cryptnox support.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">legacy_channel</span></code></p></td>
+<td><p>The card’s PIV security domain speaks a secure channel that cannot
+authenticate the card’s answers. Key attestation is not issued on it,
+and other operations are reserved to Cryptnox.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">contactless</span></code></p></td>
+<td><p>The card answered over the contactless interface; the service
+administers the PIV function over the contact interface only.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">piv_build_unavailable</span></code></p></td>
+<td><p>The service does not offer the requested PIV applet build.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">factory_token_required</span></code></p></td>
+<td><p>This form of the operation is reserved to Cryptnox.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">card_not_genuine</span></code></p></td>
+<td><p>The card did not prove it is genuine with its own keys.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">applet_finalized</span></code></p></td>
+<td><p>The PIV applet is finalized and the operation could not go on: the
+slot has no key object for the algorithm (nothing can be added to a
+finalized applet), or the overwriting of the key in the slot was not
+confirmed. Nothing was changed.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">answer_altered</span></code></p></td>
+<td><p>An answer from the card was altered between the service and the card
+(the service reports an R-MAC mismatch). Check the relay path and
+report it; do not retry in a loop.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">unsupported_operation</span></code> / <code class="docutils literal notranslate"><span class="pre">unsupported_request</span></code></p></td>
+<td><p>The service does not offer the operation, or does not accept the slot
+or algorithm asked for.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">proof_of_work</span></code></p></td>
+<td><p>The service rejected the proof-of-work answer.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">refused</span></code></p></td>
+<td><p>Anything else; the message carries the service’s own sentence.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="when-a-local-check-fails">
+<h2>When a local check fails<a class="headerlink" href="#when-a-local-check-fails" title="Link to this heading"></a></h2>
+<p>Every command compares what the service asserts with what <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> reads from
+the card itself, under “Verified locally”: the card’s identity, the applet
+build after a rewrite, the attestation after <code class="docutils literal notranslate"><span class="pre">attest</span></code>. A check that does not
+hold is printed as <code class="docutils literal notranslate"><span class="pre">MISMATCH</span></code> and the command exits with code 17 after
+printing its result; with <code class="docutils literal notranslate"><span class="pre">--json</span></code> the result object carries the <code class="docutils literal notranslate"><span class="pre">false</span></code>
+and no error object follows it. A check with nothing to compare against is
+<code class="docutils literal notranslate"><span class="pre">null</span></code>, printed as unchecked, and not a failure.</p>
 </section>
 <section id="endpoint">
 <h2>Endpoint<a class="headerlink" href="#endpoint" title="Link to this heading"></a></h2>
 <p>The service endpoint is fixed to <code class="docutils literal notranslate"><span class="pre">wss://piv.cryptnox.com</span></code>. For development
-against a local stand-in, <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_REMOTE_URL</span></code> redirects the identification
-and inspection commands only; it must be a <code class="docutils literal notranslate"><span class="pre">wss://</span></code> URL, or <code class="docutils literal notranslate"><span class="pre">ws://</span></code> to
-loopback. <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> refuse to run while it is set.</p>
+against a local stand-in, <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_REMOTE_URL</span></code> redirects <code class="docutils literal notranslate"><span class="pre">ping</span></code> and the
+identification and inspection commands only; it must be a <code class="docutils literal notranslate"><span class="pre">wss://</span></code> URL, or
+<code class="docutils literal notranslate"><span class="pre">ws://</span></code> to loopback. <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> refuse to run while it is
+set.</p>
 </section>
 </section>
 

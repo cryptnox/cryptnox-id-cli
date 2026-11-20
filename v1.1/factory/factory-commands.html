@@ -190,7 +190,9 @@ use), <code class="docutils literal notranslate"><span class="pre">ssh</span></c
 <a class="reference internal" href="../piv/ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>), and <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> (Windows smart-card logon /
 Remote Desktop: 9A keys are SIGN-capable and an importable RSA-2048 object
 coexists on 9A — see the
-<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>).</p>
+<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>), and <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> (the same
+for a card presented over NFC: the PIN is accepted over contactless, which only
+the applet build with FIPS mode off allows).</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p><code class="docutils literal notranslate"><span class="pre">finalize</span></code> is <strong>irreversible</strong> — it locks the applet’s structure for the

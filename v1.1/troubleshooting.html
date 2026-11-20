@@ -162,7 +162,13 @@ says what to fix.</p>
 <li><p><strong>FIDO commands fail on Windows</strong> — run from an Administrator terminal.</p></li>
 <li><p><strong>DESFire not answering</strong> — use a DESFire-capable <em>contactless</em> reader.</p></li>
 <li><p><strong>A PIN step fails over NFC</strong> — the PIN, the PUK and the PIN-protected keys are
-contact-only; administration works over both interfaces.</p></li>
+contact-only (the <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> profile opens the PIN and the 9A keys to
+NFC); administration works over both interfaces unless the applet’s
+contactless-administration lock is set, as it is on a card the remote
+service reinstalled.</p></li>
+<li><p><strong>A new certificate does not show in</strong> <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code> — Windows keeps
+the certificate it first enumerated from a card until the machine restarts;
+the import does not change the CHUID the cache is keyed to.</p></li>
 <li><p><strong>yubico-piv-tool sees nothing</strong> — pass your reader: <code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">&lt;substring&gt;</span></code>.</p></li>
 <li><p><strong>Two readers hold a card</strong> — the CLI refuses to guess; pass <code class="docutils literal notranslate"><span class="pre">--reader</span></code>.</p></li>
 </ul>
@@ -215,7 +221,8 @@ not hit this in normal use — only when scripting raw <code class="docutils lit
 PIN, and ``piv status`` / ``piv pin status`` say the PIN is not usable over this
 interface, right after ``set-pin`` succeeded.</strong>
 You are on a contactless (NFC/PICC) reader. The PIN and PUK verifiers are
-<strong>contact-only</strong> on every built-in profile, and so are the 9A/9C/9D keys;
+<strong>contact-only</strong> on every built-in profile but <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code>, and so are
+the 9A/9C/9D keys;
 only the admin channel (<code class="docutils literal notranslate"><span class="pre">load-config</span></code>, <code class="docutils literal notranslate"><span class="pre">set-pin</span></code>, <code class="docutils literal notranslate"><span class="pre">set-puk</span></code>,
 <code class="docutils literal notranslate"><span class="pre">generate-key</span></code>, <code class="docutils literal notranslate"><span class="pre">import-cert</span></code>, <code class="docutils literal notranslate"><span class="pre">write-standard-objects</span></code>) works over
 both interfaces, which is why pre-personalization and personalization got

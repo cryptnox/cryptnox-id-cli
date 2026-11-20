@@ -117,8 +117,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#how-a-relayed-operation-works">How a relayed operation works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-relay-policy">The relay policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#operations">Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-admin-channel-the-service-opens">The admin channel the service opens</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-a-failed-authentication-costs">What a failed authentication costs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-default-keys-flag">The <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> flag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-piv-applet-build">The PIV applet build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-limit-of-operations-per-card">The limit of operations per card</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-is-sent-to-the-service">What is sent to the service</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#transcripts">Transcripts</a></li>
 </ul>
@@ -190,6 +193,10 @@ it; it cannot see what an encrypted command carries.</p>
 <section id="operations">
 <h2>Operations<a class="headerlink" href="#operations" title="Link to this heading"></a></h2>
 <dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ping</span></code></dt><dd><p>Asks the service about itself: its build, the operations it serves, the PIV
+applet builds it can install and its secure-channel policy. No card is
+involved; the service answers before any proof-of-work or card exchange.</p>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">authenticate</span></code></dt><dd><p>Reads the ATR and CPLC serial. Key-free. Allows only card-manager reads.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">inspect</span></code></dt><dd><p>Probes whether the PIV applet and its security domain are present and which
@@ -236,6 +243,52 @@ it genuine again.</p>
 </dd>
 </dl>
 </section>
+<section id="the-admin-channel-the-service-opens">
+<h2>The admin channel the service opens<a class="headerlink" href="#the-admin-channel-the-service-opens" title="Link to this heading"></a></h2>
+<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> the service opens the PIV
+applet’s admin channel with the card’s own key. On an SCP03 card it asks for
+security level <code class="docutils literal notranslate"><span class="pre">0x33</span></code>: commands and answers are both authenticated and
+encrypted, so nothing between the service and the card, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> included, can
+alter what the card says. That is the hardened channel. SCP02 cards have no
+answer protection, so on them the service drives the card at the legacy level
+<code class="docutils literal notranslate"><span class="pre">0x03</span></code>, where only the commands are protected. Every result names the
+channel used (<code class="docutils literal notranslate"><span class="pre">channel</span></code>: protocol, level, <code class="docutils literal notranslate"><span class="pre">hardened</span></code> or <code class="docutils literal notranslate"><span class="pre">legacy</span></code>) and
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows it. A legacy channel on an SCP03 card is warned about, and the
+service’s log says why. A result without the field comes from a service
+without the hardened channel; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows the channel as not reported and
+treats it as legacy. The relay policy stops at the first failed
+authentication, so an SCP03 security domain that refused the hardened level
+ends the operation rather than being driven at the legacy level.</p>
+<p>Three rules follow from the channel:</p>
+<ul class="simple">
+<li><p>The relay stays a plain relay. On the hardened channel the card signs each
+answer together with its status word, so a client that reassembled chained
+answers or rewrote status words would break the channel. The service then
+reports <code class="docutils literal notranslate"><span class="pre">R-MAC</span> <span class="pre">mismatch</span></code>, and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says to check the relay path rather
+than retry.</p></li>
+<li><p>Administration is contact-only. Through the channel the applet reports
+which interface it is being driven over, and the service refuses <code class="docutils literal notranslate"><span class="pre">attest</span></code>
+over contactless. <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> work through the card manager,
+which the applet does not govern; there the card’s own configuration keeps
+administration on the contact interface. After a <code class="docutils literal notranslate"><span class="pre">reset</span></code> the service also
+sets the applet’s own lock, so the applet refuses its admin channel over
+contactless by itself (<code class="docutils literal notranslate"><span class="pre">nfc_admin_lock</span></code> in the result); ordinary PIV use
+over contactless is unaffected. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns before connecting when the
+selected reader looks contactless; the service’s decision rests on the
+card’s report, not on the reader’s name.</p></li>
+<li><p>A card whose channel cannot authenticate its answers (SCP02, or an SCP03
+card driven at the legacy level) gets no key attestation, and the other
+operations only with a Cryptnox access token, which <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> has no option
+for. The service refuses with <code class="docutils literal notranslate"><span class="pre">legacy_channel</span></code> set and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says so.
+<code class="docutils literal notranslate"><span class="pre">authenticate</span></code> and <code class="docutils literal notranslate"><span class="pre">inspect</span></code> open no channel and need no token.</p></li>
+</ul>
+<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">public_key_authenticated</span></code> says whether the public key the
+service certified reached it through the hardened channel. When it did not,
+or the service does not say, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns that something between the service
+and the card could have substituted the key: the certificate is still bound
+to the card, the slot and the certificate stored on the card, but the key’s
+origin rests on the service’s claim alone.</p>
+</section>
 <section id="what-a-failed-authentication-costs">
 <h2>What a failed authentication costs<a class="headerlink" href="#what-a-failed-authentication-costs" title="Link to this heading"></a></h2>
 <p>A security domain counts every INITIALIZE UPDATE that is not followed by a
@@ -270,11 +323,55 @@ version 2 of its PIV security domain. A card that can prove neither is refused
 untouched; Cryptnox support re-provisions it. The service’s refusal may suggest
 <code class="docutils literal notranslate"><span class="pre">reset</span> <span class="pre">--default-keys</span></code>, which it refuses without a factory token.</p>
 </section>
+<section id="the-piv-applet-build">
+<h2>The PIV applet build<a class="headerlink" href="#the-piv-applet-build" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> reinstall the PIV applet, and the service holds two
+builds of it, made from the same source with one switch apart:</p>
+<ul class="simple">
+<li><p>the <strong>FIPS-mode build</strong>, the default and the build cards ship with;</p></li>
+<li><p>the <strong>build with FIPS mode off</strong>, asked for with <code class="docutils literal notranslate"><span class="pre">--fips-off</span></code> or
+<code class="docutils literal notranslate"><span class="pre">--piv-variant</span> <span class="pre">fipsoff</span></code>.</p></li>
+</ul>
+<p>With FIPS mode off the applet lifts three limits it enforces when a
+pre-personalization profile is loaded: the PIN may be as short as 4 digits
+instead of 6, the retry counter may exceed 15 (<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> still caps a profile at
+15, the most the card reports back), and the PIN may be made usable
+over the contactless interface without secure messaging. It also skips the
+FIPS power-up self-tests and does not zeroise an object before discarding it.
+Slots, algorithms, key generation, key import, certificates and the admin
+channel behave the same in both builds; a card personalized with a profile
+that asks for none of the three behaves the same whichever build it carries.</p>
+<p>A profile asks for them with <code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code>
+(<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>). The built-in <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code>
+profile, for Windows logon with the card on an NFC reader, is the one that
+does (<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>).</p>
+<p>The two builds share the applet and package identifiers, so nothing outside
+the applet tells them apart. The applet reports its build in its status, read
+without authentication: <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> shows it as “FIPS-mode build”, and
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">inspect</span></code>, <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code> read it and
+report it. After a reset the build read from the card is compared with the
+one asked for, so a service that installed something else is noticed.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">reset</span></code> without the option installs the FIPS-mode build again. Whether the
+service offers the build with FIPS mode off is its own setting; <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">ping</span></code>
+lists the builds it offers, and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> asks before a reset that needs it.</p>
+</section>
+<section id="the-limit-of-operations-per-card">
+<h2>The limit of operations per card<a class="headerlink" href="#the-limit-of-operations-per-card" title="Link to this heading"></a></h2>
+<p>The service accepts a fixed number of operations per card in a period, five an
+hour at the time of writing, and every operation that reaches a card counts,
+<code class="docutils literal notranslate"><span class="pre">inspect</span></code> and <code class="docutils literal notranslate"><span class="pre">authenticate</span></code> included. <code class="docutils literal notranslate"><span class="pre">ping</span></code> does not: it involves no
+card. When the limit is reached the service refuses before anything is sent to
+the card and says when it accepts the next operation; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> reports that
+waiting time, and <code class="docutils literal notranslate"><span class="pre">retry_in_seconds</span></code> with <code class="docutils literal notranslate"><span class="pre">--json</span></code>. The counter is kept by
+the service, per card, and survives a restart of the service.</p>
+</section>
 <section id="what-is-sent-to-the-service">
 <h2>What is sent to the service<a class="headerlink" href="#what-is-sent-to-the-service" title="Link to this heading"></a></h2>
 <p>The card’s ATR and CPLC serial identify the card to the service. They are the
 same values any reader can obtain from the card without a key. Nothing else
-about the card holder is sent.</p>
+about the card holder is sent. An operation sends its own parameters with
+them: the slot and algorithm for <code class="docutils literal notranslate"><span class="pre">attest</span></code>, the applet build and the key tier
+for <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>. <code class="docutils literal notranslate"><span class="pre">ping</span></code> sends nothing about a card.</p>
 </section>
 <section id="transcripts">
 <h2>Transcripts<a class="headerlink" href="#transcripts" title="Link to this heading"></a></h2>

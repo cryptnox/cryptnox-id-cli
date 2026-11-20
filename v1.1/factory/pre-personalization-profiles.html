@@ -208,6 +208,25 @@ import via <a class="reference internal" href="../piv/piv-personalization.html">
 available; that attribute permits import, it does not prevent on-card
 generation.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code></dt><dd><p>Windows smart-card logon with the card on an NFC reader. It is <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>
+with what the logon needs opened to the contactless interface:</p>
+<ul class="simple">
+<li><p>the PIN is accepted over contactless <strong>in clear</strong>, with 3 of its 6 tries;</p></li>
+<li><p>the 9A keys can be used over contactless after the PIN;</p></li>
+<li><p>the 9A certificate and the CCC can be read over contactless (the CHUID
+already can).</p></li>
+</ul>
+<p>The PUK, the other keys and the other certificates stay as in <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code>.</p>
+<p>This profile is for the <strong>PIV applet build with FIPS mode off</strong> only
+(<code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code>, see below). The FIPS-mode build, which cards ship
+with, accepts a PIN over contactless only inside secure messaging, and the
+driver Windows ships has none; it refuses this profile’s PIN verifier.
+Install the other build first with <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span> <span class="pre">--fips-off</span></code>
+(<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>), then load the profile over a <strong>contact</strong>
+reader. A card set up this way is not a FIPS-validated configuration, and
+its PIN crosses the radio link unprotected: see
+<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>.</p>
+</dd>
 </dl>
 </section>
 <section id="inspecting-profiles">
@@ -258,6 +277,25 @@ profile to an editable YAML file. To capture what a <em>card</em> currently expo
 <span class="w">    </span><span class="nt">attributes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">IMPORTABLE</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
+<p><strong>Applet build</strong> (optional top-level key): <code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code> says the profile
+is written for the PIV applet build with FIPS mode off, which the remote
+service installs on request (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>). It widens the PIN
+and PUK bounds listed below and allows a PIN or PUK over the contactless
+interface. <code class="docutils literal notranslate"><span class="pre">load-config</span></code> then asks the card which build it
+carries and refuses the FIPS-mode build before anything is written, in a dry
+run too when a card is in the reader, because that build would refuse the PIN
+verifier after the containers were created, and what was created cannot be
+removed. Leave the key out for the FIPS-mode
+build, the build cards ship with; the built-in profiles do.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">short-pin</span>
+<span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">production</span>
+<span class="nt">fips_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="nt">pin</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<span class="w">  </span><span class="nt">max</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+</pre></div>
+</div>
 <p><strong>Mechanisms</strong>: <code class="docutils literal notranslate"><span class="pre">AES128</span></code>, <code class="docutils literal notranslate"><span class="pre">AES192</span></code>, <code class="docutils literal notranslate"><span class="pre">AES256</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA2048</span></code>, <code class="docutils literal notranslate"><span class="pre">RSA3072</span></code>,
 <code class="docutils literal notranslate"><span class="pre">RSA4096</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP256</span></code>, <code class="docutils literal notranslate"><span class="pre">ECCP384</span></code>, <code class="docutils literal notranslate"><span class="pre">CS2</span></code>, <code class="docutils literal notranslate"><span class="pre">CS7</span></code>.</p>
 <p><strong>Access modes</strong> (used for <code class="docutils literal notranslate"><span class="pre">contact</span></code>/<code class="docutils literal notranslate"><span class="pre">contactless</span></code> on both containers and
@@ -278,9 +316,35 @@ condition (SP 800-73-4).</p></li>
 <p>Neither this tool nor the Windows inbox minidriver opens PIV secure-messaging
 sessions, so anything marked <code class="docutils literal notranslate"><span class="pre">SM</span></code>, <code class="docutils literal notranslate"><span class="pre">SM_PIN</span></code>, <code class="docutils literal notranslate"><span class="pre">VCI</span></code> or <code class="docutils literal notranslate"><span class="pre">VCI_PIN</span></code> on an
 interface cannot be used there with them. In the built-in profiles that is the
-contactless side of most containers. The PIN and PUK are created for contact
-use only: the applet’s FIPS-mode build accepts a PIN over contactless only
-inside secure messaging.</p>
+contactless side of most containers.</p>
+<p><strong>PIN and PUK over the contactless interface</strong> (optional keys of <code class="docutils literal notranslate"><span class="pre">pin</span></code> and
+<code class="docutils literal notranslate"><span class="pre">puk</span></code>): by default both are created for contact use only, because the
+applet’s FIPS-mode build accepts a PIN over contactless only inside secure
+messaging. The build with FIPS mode off accepts one without it:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">fips_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="nt">pin</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">min</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">  </span><span class="nt">max</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">  </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">  </span><span class="nt">contactless</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ALWAYS</span>
+<span class="w">  </span><span class="nt">contactless_retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contactless</span></code>: <code class="docutils literal notranslate"><span class="pre">NEVER</span></code> (the default) or <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code>. <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code> means the
+value is accepted over contactless <strong>in clear</strong>; anyone who can listen to
+the exchange between the card and the reader learns it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contactless_retries</span></code>: how many of <code class="docutils literal notranslate"><span class="pre">retries</span></code> the contactless interface
+may use, from 1 to <code class="docutils literal notranslate"><span class="pre">retries</span></code>. After that many wrong values over
+contactless the applet answers <code class="docutils literal notranslate"><span class="pre">6983</span></code> there and keeps the remaining tries
+for the contact interface, so the PIN cannot be blocked over the air. A
+correct value on the contact interface restores the full count.</p></li>
+</ul>
+<p>Both keys are written to a file only when the value is usable over
+contactless. <code class="docutils literal notranslate"><span class="pre">load-config</span></code> and <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--include-preperso</span></code> warn
+before they write such a profile, and <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> reads the setting back
+(<code class="docutils literal notranslate"><span class="pre">mode_contactless</span></code>, <code class="docutils literal notranslate"><span class="pre">retries_contactless</span></code> of each verifier). The built-in
+<code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> profile sets them for the PIN only.</p>
 <p><strong>Key roles</strong> (a bitmask — combine with <code class="docutils literal notranslate"><span class="pre">+</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE+SIGN</span></code>, or
 give a YAML list): <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>, <code class="docutils literal notranslate"><span class="pre">KEY_ESTABLISH</span></code>, <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>.</p>
 <p><strong>Key attributes</strong> (a YAML list): <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code>, <code class="docutils literal notranslate"><span class="pre">PERMIT_EXTERNAL</span></code>,
@@ -309,8 +373,13 @@ whole profile before anything is sent to a card:</p>
 <ul class="simple">
 <li><p>the admin key mechanism must be AES-128/192/256 (this applet’s 9B is
 AES-only);</p></li>
-<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">min</span></code> must be at least 6 and <code class="docutils literal notranslate"><span class="pre">max</span></code> must be at least <code class="docutils literal notranslate"><span class="pre">min</span></code>;</p></li>
-<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">retries</span></code> must be 0–10;</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">min</span></code> must be at least 6 (at least 4 with <code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code>),
+and <code class="docutils literal notranslate"><span class="pre">max</span></code> must be at least <code class="docutils literal notranslate"><span class="pre">min</span></code> and at most 16;</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">retries</span></code> must be 0–10 (0–15 with <code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code>: the
+applet takes up to 127 there, but it reports at most 15 back);</p></li>
+<li><p>PIN and PUK <code class="docutils literal notranslate"><span class="pre">contactless</span></code> must be <code class="docutils literal notranslate"><span class="pre">NEVER</span></code> or <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code>; <code class="docutils literal notranslate"><span class="pre">ALWAYS</span></code> needs
+<code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code> and <code class="docutils literal notranslate"><span class="pre">contactless_retries</span></code> from 1 to <code class="docutils literal notranslate"><span class="pre">retries</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fips_mode</span></code>, when present, must be <code class="docutils literal notranslate"><span class="pre">true</span></code> or <code class="docutils literal notranslate"><span class="pre">false</span></code>;</p></li>
 <li><p>every key’s mechanism must be one this applet actually supports (see
 <code class="docutils literal notranslate"><span class="pre">inspect-defaults</span></code>);</p></li>
 <li><p>the profile must define at least one container or key.</p></li>

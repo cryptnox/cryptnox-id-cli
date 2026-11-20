@@ -154,7 +154,9 @@
 <h1>PIV commands<a class="headerlink" href="#piv-commands" title="Link to this heading"></a></h1>
 <p>Operator and personalization commands for the PIV function (SP 800-73).
 Administration runs over an SCP03 secure channel and works over both
-interfaces (the PIN, the PUK and the PIN-protected keys are <strong>contact-only</strong>);
+interfaces (the PIN, the PUK and the PIN-protected keys are <strong>contact-only</strong>,
+except the PIN and the 9A keys of a card set up with the <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code>
+profile);
 admin keys come from <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> (the test keys every card ships with)
 or, once replaced (<a class="reference internal" href="piv-personalization.html#piv-admin-key-rotation"><span class="std std-ref">Rotating the PIV admin keys</span></a>), the <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code> /
 <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> / <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> environment variables. PIN values come
@@ -355,9 +357,9 @@ return the full template take the admin channel as before.</p></li>
 one generated over the plain path, whose public half is the one reported; RSA
 generation therefore runs twice on such a card.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> defaults to ECC P-256, except with <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code>
-on slot 9A, the one built-in shape with an RSA key object and the Windows
-one, where it defaults to RSA-2048 because Windows does not enumerate EC
-keys. Elsewhere <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code> is accepted only when the card already
+or <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> on slot 9A, the built-in shapes with an RSA key object
+and the Windows ones, where it defaults to RSA-2048 because Windows does not
+enumerate EC keys. Elsewhere <code class="docutils literal notranslate"><span class="pre">--algorithm</span> <span class="pre">RSA*</span></code> is accepted only when the card already
 has that RSA key object for the slot.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> reads the applet’s key-object listing before planning. A
 card with no structure at all needs <code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code> (or a

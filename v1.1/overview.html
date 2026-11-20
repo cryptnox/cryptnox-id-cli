@@ -182,7 +182,10 @@ provisioned — see <a class="reference internal" href="genuine/genuineness-guid
 Windows logon needs a contact reader; administration works over both
 interfaces. Over contactless the built-in profiles expose the CHUID,
 the card-authentication certificate and the card-authentication key
-(9E), which needs no PIN: the data physical access control uses.</p></td>
+(9E), which needs no PIN: the data physical access control uses. The
+exception is a card set up for Windows logon over NFC: the
+<code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> profile on the applet build with FIPS mode off, where
+the PIN and the 9A key also work over contactless.</p></td>
 </tr>
 <tr class="row-odd"><td><p>FIDO2</p></td>
 <td><p>contactless (NFC)</p></td>
