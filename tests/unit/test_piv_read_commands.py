@@ -13,6 +13,8 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
 from cryptnox_id_cli.applets.piv.objects import wrap_certificate
+from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.util import tlv
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
@@ -153,3 +155,39 @@ def test_info_prints_the_applet_label_and_url_as_written(card, label, url):
     assert result.exit_code == 0, result.output
     assert f"Label: {label.decode()}" in result.output
     assert f"URL:   {url.decode()}" in result.output
+
+
+def test_dry_run_refuses_a_pin_protected_object_before_the_pin(monkeypatch, mock_connection):
+    """A wrong PIN spends a try, so --dry-run must not verify it to read the object."""
+    exchanges = {
+        SELECT_PIV: "|9000",
+        "0020008008313233343536FFFF": "|9000",
+        _get("5FC109"): _ok(tlv.build(0x53, b"printed")),
+    }
+    wire_session(monkeypatch, mock_connection("3B00", exchanges, []))
+    calls: list[str] = []
+    open_session = AppContext.open_session
+    monkeypatch.setattr(
+        AppContext,
+        "open_session",
+        lambda self: calls.append("open_session") or open_session(self),
+    )
+    resolve = piv_cmd.resolve_secret
+    monkeypatch.setattr(
+        piv_cmd,
+        "resolve_secret",
+        lambda **kw: calls.append("resolve_secret") or resolve(**kw),
+    )
+    args = ["--dry-run", "piv", "objects", "read", "--object", "printed"]
+    result = run(args, env={"CRYPTNOX_PIV_PIN": "123456"})
+    assert calls == []
+    assert result.exit_code == 1, result.output
+    assert "--dry-run: reading 'printed' verifies the PIV PIN" in result.output
+    assert "nothing was sent to the card" in result.output
+
+
+def test_dry_run_still_reads_a_public_object(card):
+    card()
+    result = run(["--dry-run", "piv", "objects", "read", "--object", "chuid"])
+    assert result.exit_code == 0, result.output
+    assert CHUID.hex().upper() in result.output

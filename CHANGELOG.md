@@ -158,6 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `piv perso generate-key` refuses a slot that cannot hold an asymmetric key,
   such as 9B or 04, with exit code 2 before it opens the card. With
   `--create-key-object` it used to add a permanent key object there.
+- `--dry-run piv objects read` refuses a PIN-protected object instead of
+  verifying the PIN; public objects still read.
 
 ## [1.1.0] - 2026-10-16
 
