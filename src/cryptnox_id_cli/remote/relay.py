@@ -33,6 +33,7 @@ from ..transport.errors import (
 from ..transport.pcsc import RawConnection
 from . import pow as rpow
 from . import protocol as proto
+from . import refusal as rrefusal
 from .channel import RECV_TIMEOUT, FrameChannel
 from .policy import (
     INS_GET_DATA_GP,
@@ -59,6 +60,10 @@ TRANSCRIPT_CLEAR_INS: frozenset[int] = frozenset(
 
 #: Proof-of-work challenges answered per operation. The service issues one.
 MAX_POW_CHALLENGES = 1
+
+#: Seconds to wait for the answer to a ping. The service answers at once: it
+#: touches neither a card nor a key.
+PING_TIMEOUT = 20.0
 
 
 @dataclass
@@ -201,17 +206,57 @@ def run_operation(
                 if started is not None:
                     report.seconds = clock() - started
                 if not frame.ok:
-                    raise RemoteOperationError(
-                        _failure_message(op, frame.payload), result=frame.payload
-                    )
+                    raise _operation_error(op, frame.payload)
                 return report
 
             raise RemoteProtocolError(f"unhandled frame {type(frame).__name__}")
 
 
-def _failure_message(op: str, payload: Mapping[str, object]) -> str:
-    for key in ("error", "message", "reason", "detail"):
-        value = payload.get(key)
-        if isinstance(value, str) and value.strip():
-            return f"the service reported {op} as failed: {proto.sanitize_server_text(value)}"
-    return f"the service reported {op} as failed"
+def ping(channel: FrameChannel, *, recv_timeout: float = PING_TIMEOUT) -> dict[str, object]:
+    """Ask the service what it runs and what it offers. No card is involved.
+
+    Returns the service's answer: its build, the operations it serves, the PIV
+    applet builds it can install, its secure-channel policy. The service answers
+    before any card exchange, so a frame that asks for the card is a protocol
+    violation here rather than something to relay.
+    """
+    channel.send(proto.encode_frame(proto.hello_frame("ping")))
+    pow_answered = 0
+    while True:
+        raw = channel.recv(timeout=recv_timeout)
+        for obj in proto.decode_frames(raw):
+            frame = proto.parse_server_frame(obj)
+
+            if isinstance(frame, proto.LogMessage):
+                continue
+
+            if isinstance(frame, proto.PowChallenge):
+                if pow_answered >= MAX_POW_CHALLENGES:
+                    raise RemoteProtocolError(
+                        "the service issued a second proof-of-work challenge in one operation"
+                    )
+                pow_answered += 1
+                nonce = rpow.solve(frame.challenge, frame.bits)
+                channel.send(proto.encode_frame(proto.pow_frame(nonce)))
+                continue
+
+            if isinstance(frame, proto.OpResult):
+                if not frame.ok:
+                    raise _operation_error("ping", frame.payload)
+                return frame.payload
+
+            raise RemoteProtocolError(
+                "the service asked for the card during a ping, which involves none"
+            )
+
+
+def _operation_error(op: str, payload: dict[str, object]) -> RemoteOperationError:
+    """The error for a result frame with ``ok`` false, classified."""
+    found = rrefusal.classify(op, payload)
+    return RemoteOperationError(
+        found.message,
+        result=payload,
+        reason=found.reason,
+        retry_in_seconds=found.retry_in_seconds,
+        ref=found.ref,
+    )

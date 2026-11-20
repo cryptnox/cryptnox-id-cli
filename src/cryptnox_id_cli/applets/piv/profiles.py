@@ -20,6 +20,17 @@ from cryptnox_id_cli.applets.piv import constants as c
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.transport.errors import CryptnoxError
 
+# PIN and PUK bounds a profile may ask for. The FIPS-mode build refuses a minimum
+# length under 6 and more than 15 retries; this tool caps a profile for it at 10.
+# With FIPS mode off the applet accepts a minimum length of 4 and up to 127 retries,
+# but a 63Cx status word reports at most 15 back, so the cap stays at 15.
+# The longest PIN the applet stores is 16 in both builds.
+PIN_MIN_LENGTH_FIPS = 6
+PIN_RETRY_CAP_FIPS = 10
+PIN_MIN_LENGTH = 4
+PIN_RETRY_CAP = 15
+PIN_MAX_LENGTH = 16
+
 # Name <-> byte maps (user-friendly YAML).
 MECHANISMS = {
     "AES128": 0x08,
@@ -66,12 +77,28 @@ class ProfileError(CryptnoxError):
     exit_code = 8
 
 
+# How many of a PIN's tries the contactless interface may use in the built-in
+# profile for logon over NFC: wrong PINs over the air stop there, and the rest
+# stay for the contact interface.
+CONTACTLESS_RETRIES_NFC = 3
+
+
 @dataclass
 class PinPolicy:
     min_length: int
     max_length: int
     retries: int
     charset: int = 0x00
+    #: NEVER: the value is accepted on the contact interface only. ALWAYS: also over
+    #: the contactless interface, in clear; only the build with FIPS mode off takes it.
+    contactless: int = pp.MODE_NEVER
+    #: how many of ``retries`` the contactless interface may use. At 0 the applet
+    #: answers 6983 to every value presented over contactless.
+    contactless_retries: int = 0
+
+    @property
+    def over_contactless(self) -> bool:
+        return self.contactless != pp.MODE_NEVER
 
 
 @dataclass
@@ -107,6 +134,39 @@ class PivProfile:
     keys: list[KeyDef] = field(default_factory=list)
     #: the source file named a mode VCI or VCI_PIN, whose bytes changed after 1.1
     names_vci: bool = False
+    #: False for a profile written for the applet build with FIPS mode off: the PIN
+    #: and PUK bounds are then that build's, and the FIPS-mode build refuses it.
+    fips_mode: bool = True
+
+    def pin_bounds(self) -> tuple[int, int]:
+        """(minimum length, most retries) a PIN or PUK policy of this profile may ask for."""
+        if self.fips_mode:
+            return PIN_MIN_LENGTH_FIPS, PIN_RETRY_CAP_FIPS
+        return PIN_MIN_LENGTH, PIN_RETRY_CAP
+
+    def fips_mode_note(self) -> str | None:
+        """What a profile for the build with FIPS mode off asks of the card, else ``None``."""
+        if self.fips_mode:
+            return None
+        return (
+            f"profile '{self.name}' is written for the PIV applet build with FIPS mode off "
+            "(fips_mode: false). The FIPS-mode build refuses what goes beyond its bounds: a "
+            "PIN or PUK shorter than 6, more than 15 retries, a PIN or PUK over the "
+            "contactless interface without secure messaging."
+        )
+
+    def contactless_pin_warning(self) -> str | None:
+        """The warning for a profile whose PIN or PUK is usable over contactless, else ``None``."""
+        names = [
+            label for label, pol in (("PIN", self.pin), ("PUK", self.puk)) if pol.over_contactless
+        ]
+        if not names:
+            return None
+        return (
+            f"profile '{self.name}' makes the {' and the '.join(names)} usable over the "
+            "contactless interface without secure messaging: the value crosses the radio "
+            "link in clear. The setting is permanent once written."
+        )
 
     def vci_warning(self) -> str | None:
         """The warning for a profile file that uses the VCI mode names, else ``None``."""
@@ -152,11 +212,11 @@ class PivProfile:
                 pp.create_verifier(
                     c.REF_PIV_PIN,
                     pp.MODE_ALWAYS,
-                    pp.MODE_NEVER,
+                    self.pin.contactless,
                     self.pin.min_length,
                     self.pin.max_length,
                     self.pin.retries,
-                    0,
+                    self.pin.contactless_retries,
                     charset=self.pin.charset,
                 ),
             )
@@ -167,11 +227,11 @@ class PivProfile:
                 pp.create_verifier(
                     c.REF_PUK,
                     pp.MODE_ALWAYS,
-                    pp.MODE_NEVER,
+                    self.puk.contactless,
                     self.puk.min_length,
                     self.puk.max_length,
                     self.puk.retries,
-                    0,
+                    self.puk.contactless_retries,
                     charset=self.puk.charset,
                 ),
             )
@@ -204,13 +264,30 @@ class PivProfile:
             errors.append(
                 "admin key mechanism must be AES-128/192/256 (this applet: 9B is AES-only)"
             )
-        for label, pol, floor in (("PIN", self.pin, 6), ("PUK", self.puk, 6)):
+        floor, cap = self.pin_bounds()
+        # What the build with FIPS mode off would accept, said once where it helps.
+        hint = (
+            " (the PIV applet build with FIPS mode off accepts it: set fips_mode: false in "
+            "the profile and install that build)"
+        )
+        for label, pol in (("PIN", self.pin), ("PUK", self.puk)):
             if pol.min_length < floor:
-                errors.append(f"{label} min_length {pol.min_length} < minimum {floor}")
+                wider = self.fips_mode and pol.min_length >= PIN_MIN_LENGTH
+                errors.append(
+                    f"{label} min_length {pol.min_length} < minimum {floor}"
+                    + (hint if wider else "")
+                )
             if pol.max_length < pol.min_length:
                 errors.append(f"{label} max_length < min_length")
-            if not (0 <= pol.retries <= 10):
-                errors.append(f"{label} retries {pol.retries} out of range (max 10)")
+            if pol.max_length > PIN_MAX_LENGTH:
+                errors.append(f"{label} max_length {pol.max_length} > maximum {PIN_MAX_LENGTH}")
+            if not (0 <= pol.retries <= cap):
+                wider = self.fips_mode and 0 <= pol.retries <= PIN_RETRY_CAP
+                errors.append(
+                    f"{label} retries {pol.retries} out of range (max {cap})"
+                    + (hint if wider else "")
+                )
+            errors.extend(self._contactless_errors(label, pol, hint))
         for k in self.keys:
             if k.ref == c.KEYREF_ADMIN:
                 continue  # admin key checked above
@@ -219,6 +296,32 @@ class PivProfile:
                 errors.append(f"key {k.ref:02X} mechanism {name} not supported by this applet")
         if not self.containers and not self.keys:
             errors.append("profile defines no containers or keys")
+        return errors
+
+    def _contactless_errors(self, label: str, pol: PinPolicy, hint: str) -> list[str]:
+        """What is wrong with the contactless side of a PIN or PUK policy."""
+        if pol.contactless not in (pp.MODE_NEVER, pp.MODE_ALWAYS):
+            # The applet also knows "inside secure messaging only"; this tool has no
+            # secure-messaging client and does not write a verifier it cannot use.
+            return [f"{label} contactless must be NEVER or ALWAYS"]
+        if not 0 <= pol.contactless_retries <= pol.retries:
+            return [
+                f"{label} contactless_retries {pol.contactless_retries} out of range "
+                f"(0 to retries, {pol.retries})"
+            ]
+        if not pol.over_contactless:
+            return []
+        errors = []
+        if self.fips_mode:
+            errors.append(
+                f"{label} contactless ALWAYS lets the {label} cross the contactless interface "
+                "without secure messaging, which the FIPS-mode build refuses" + hint
+            )
+        if pol.contactless_retries == 0:
+            errors.append(
+                f"{label} contactless ALWAYS needs contactless_retries of at least 1: at 0 "
+                f"the applet refuses every {label} presented over contactless (6983)"
+            )
         return errors
 
     def ensure_valid(self) -> None:
@@ -231,29 +334,32 @@ class PivProfile:
         def mode_name(v: int) -> str:
             return next((n for n, x in MODES.items() if x == v), hex(v))
 
+        def policy(pol: PinPolicy) -> dict[str, Any]:
+            out: dict[str, Any] = {
+                "min": pol.min_length,
+                "max": pol.max_length,
+                "retries": pol.retries,
+                "charset": next((n for n, x in CHARSETS.items() if x == pol.charset), pol.charset),
+            }
+            # Written only when the value leaves the contact interface, so files for
+            # contact-only cards read as they always did.
+            if pol.over_contactless or pol.contactless_retries:
+                out["contactless"] = mode_name(pol.contactless)
+                out["contactless_retries"] = pol.contactless_retries
+            return out
+
         return {
             "name": self.name,
             "mode": self.mode,
+            # Written only when it departs from the default, so files for the
+            # FIPS-mode build read as they always did.
+            **({} if self.fips_mode else {"fips_mode": False}),
             "admin": {
                 "key_ref": f"{self.admin_key_ref:02X}",
                 "mechanism": _REV_MECH.get(self.admin_mechanism, hex(self.admin_mechanism)),
             },
-            "pin": {
-                "min": self.pin.min_length,
-                "max": self.pin.max_length,
-                "retries": self.pin.retries,
-                "charset": next(
-                    (n for n, x in CHARSETS.items() if x == self.pin.charset), self.pin.charset
-                ),
-            },
-            "puk": {
-                "min": self.puk.min_length,
-                "max": self.puk.max_length,
-                "retries": self.puk.retries,
-                "charset": next(
-                    (n for n, x in CHARSETS.items() if x == self.puk.charset), self.puk.charset
-                ),
-            },
+            "pin": policy(self.pin),
+            "puk": policy(self.puk),
             "containers": [
                 {
                     "oid": ct.oid.hex().upper(),
@@ -325,7 +431,21 @@ def _attrs(values: Any) -> int:
     return out
 
 
+def _policy(d: dict[str, Any]) -> PinPolicy:
+    return PinPolicy(
+        int(d["min"]),
+        int(d["max"]),
+        int(d["retries"]),
+        CHARSETS.get(str(d.get("charset", "numeric")), 0x00),
+        contactless=parse_mode(d.get("contactless", "NEVER")),
+        contactless_retries=int(d.get("contactless_retries", 0)),
+    )
+
+
 def from_dict(d: dict[str, Any]) -> PivProfile:
+    fips_mode = d.get("fips_mode", True)
+    if not isinstance(fips_mode, bool):
+        raise ProfileError("invalid profile: fips_mode must be true or false")
     try:
         admin = d["admin"]
         pin, puk = d["pin"], d["puk"]
@@ -334,18 +454,8 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
             mode=str(d.get("mode", "production")),
             admin_key_ref=int(str(admin["key_ref"]), 16),
             admin_mechanism=MECHANISMS[str(admin["mechanism"]).upper()],
-            pin=PinPolicy(
-                int(pin["min"]),
-                int(pin["max"]),
-                int(pin["retries"]),
-                CHARSETS.get(str(pin.get("charset", "numeric")), 0x00),
-            ),
-            puk=PinPolicy(
-                int(puk["min"]),
-                int(puk["max"]),
-                int(puk["retries"]),
-                CHARSETS.get(str(puk.get("charset", "numeric")), 0x00),
-            ),
+            pin=_policy(pin),
+            puk=_policy(puk),
             containers=[
                 ContainerDef(
                     bytes.fromhex(str(ct["oid"])),
@@ -377,6 +487,7 @@ def from_dict(d: dict[str, Any]) -> PivProfile:
         for side in ("contact", "contactless")
     ]
     prof.names_vci = any(m in ("VCI", "VCI_PIN") for m in modes)
+    prof.fips_mode = fips_mode
     return prof
 
 
@@ -488,6 +599,30 @@ def _ms_logon() -> PivProfile:
     return prof
 
 
+def _ms_logon_nfc() -> PivProfile:
+    """Windows smart-card logon with the card on an NFC reader. For the applet
+    build with FIPS mode off only: the FIPS-mode build refuses a PIN that crosses
+    the contactless interface without secure messaging, and the driver Windows
+    ships has no secure messaging.
+
+    It is ms-logon with what the logon needs opened to the contactless interface:
+    the PIN (in clear; 3 of its 6 tries), the 9A keys after the PIN, and the 9A
+    certificate and the CCC for anyone to read (the CHUID already is). The PUK,
+    the other keys and the other certificates stay as in ms-logon."""
+    prof = _ms_logon()
+    prof.name = "ms-logon-nfc"
+    prof.fips_mode = False
+    prof.pin.contactless = pp.MODE_ALWAYS
+    prof.pin.contactless_retries = CONTACTLESS_RETRIES_NFC
+    for k in prof.keys:
+        if k.ref == c.KEYREF_PIV_AUTH:
+            k.contactless = pp.MODE_PIN
+    for ct in prof.containers:
+        if ct.name in ("auth-cert", "ccc"):
+            ct.contactless = pp.MODE_ALWAYS
+    return prof
+
+
 def _ssh() -> PivProfile:
     """SSH auth (raw public key or SSH user certificates) via PKCS#11
     (``ssh-agent`` / OpenSC), on either path. 9A (PIV Authentication) gets
@@ -513,6 +648,7 @@ _BUILTINS = {
     "developer": _developer,
     "ssh": _ssh,
     "ms-logon": _ms_logon,
+    "ms-logon-nfc": _ms_logon_nfc,
 }
 
 

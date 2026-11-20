@@ -224,3 +224,12 @@ def test_quickstart_dry_run_refuses_on_a_refused_probe(monkeypatch, mock_connect
     assert "cannot tell whether the PIN and PUK are set" in res.output
     assert PICC_READER in res.output
     assert "set-pin" not in res.output
+
+
+def test_quickstart_names_the_puk_alone_when_only_the_puk_is_refused(monkeypatch, mock_connection):
+    conn = _card(mock_connection, PICC_ATR, "63C3", "6982")
+    _cardfakes.wire_session(monkeypatch, conn, reader_name=PICC_READER)
+    res = _cardfakes.run(["piv", "quickstart", "--dry-run"])
+    assert res.exit_code != 0
+    assert "refuses PUK commands over this interface" in res.output
+    assert "refuses PIN and PUK" not in res.output

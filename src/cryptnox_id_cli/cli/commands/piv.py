@@ -36,7 +36,11 @@ from cryptnox_id_cli.applets.piv.objects import (
     object_by_name,
     wrap_certificate,
 )
-from cryptnox_id_cli.applets.piv.piv import PIN_INTERFACE_REFUSED_HINT, PivApplet
+from cryptnox_id_cli.applets.piv.piv import (
+    PIN_INTERFACE_REFUSED_HINT,
+    PUK_INTERFACE_REFUSED_HINT,
+    PivApplet,
+)
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
 from cryptnox_id_cli.applets.piv.ssd import (
     CRYPTNOX_KEY_VERSION,
@@ -71,7 +75,7 @@ from cryptnox_id_cli.transport.errors import (
     StatusWordError,
     describe_sw,
 )
-from cryptnox_id_cli.transport.pcsc import is_contactless_interface
+from cryptnox_id_cli.transport.pcsc import CardSession, is_contactless_interface
 from cryptnox_id_cli.transport.scp02 import Scp02Session
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 from cryptnox_id_cli.util import tlv
@@ -84,6 +88,10 @@ SLOT_CERT_OBJECT = {
     0x9D: "keymgmt-cert",
     0x9E: "card-auth-cert",
 }
+
+# Built-in profiles whose 9A is made for Windows logon: a signing key, with an RSA-2048
+# object next to the ECC one. ms-logon-nfc is ms-logon for a card presented over NFC.
+WINDOWS_LOGON_PROFILES = ("ms-logon", "ms-logon-nfc")
 
 
 @click.group("piv")
@@ -729,7 +737,7 @@ def pin_status(app: AppContext) -> None:
         pin_st = piv.pin_status(pivc.REF_PIV_PIN)
         puk_st = piv.pin_status(pivc.REF_PUK)
         refused = pin_st.refused or puk_st.refused
-        hint = _interface_hint(session) if refused else None
+        hint = _interface_hint(session, puk_only=not pin_st.refused) if refused else None
 
     def human(c: Console) -> None:
         for label, st in (("PIN (80)", pin_st), ("PUK (81)", puk_st)):
@@ -780,6 +788,41 @@ def pin_verify(app: AppContext, pin_value: str | None) -> None:
             c.print(f"[red]PIN not verified:[/red] {message} (SW={info.sw_hex()})")
 
     app.out.result(payload, human)
+    _exit_if_refused(resp.ok)
+
+
+def _refuse_on_fips_mode_build(session: CardSession, profile: prof_mod.PivProfile) -> None:
+    """Stop a profile for the build with FIPS mode off before it reaches the other build.
+
+    The FIPS-mode build would refuse the PIN verifier part-way through, after the
+    containers were created, and what was created cannot be removed. The applet
+    reports its build without authentication, so the question is asked first. A
+    card that does not answer is left to the applet's own judgement.
+    """
+    piv = PivApplet(session)
+    try:
+        piv.select()
+        status = inventory_mod.read_status(piv)
+    except CryptnoxError:
+        return
+    if status is not None and status.fips_mode:
+        raise prof_mod.ProfileError(
+            f"profile '{profile.name}' is written for the PIV applet build with FIPS mode off "
+            "(fips_mode: false), and this card carries the FIPS-mode build, which refuses "
+            "it. `remote reset --fips-off` installs the other build; it wipes the PIV "
+            "function. Nothing was written."
+        )
+
+
+def _exit_if_refused(ok: bool) -> None:
+    """End with the status-word exit code when the card refused the command.
+
+    Called after the result is printed: that payload carries the status word and,
+    for a PIN or PUK, the retries left, which the error object would not. A script
+    that only looks at the exit code must not take a refused PIN for a verified one.
+    """
+    if not ok:
+        sys.exit(6)
 
 
 _PIN_6983 = (
@@ -829,6 +872,7 @@ def _change_secret_result(
                 c.print(f"  [yellow]{hint}[/yellow]")
 
     app.out.result(payload, human)
+    _exit_if_refused(resp.ok)
 
 
 @pin.command("change")
@@ -1709,9 +1753,14 @@ def _with_reader_note(text: str, session=None) -> str:
     return f"{text} {where} advertises a contactless interface." if where else text
 
 
-def _interface_hint(session=None) -> str:
-    """The 6982-on-PIN explanation, naming the reader when it advertises contactless."""
-    return _with_reader_note(PIN_INTERFACE_REFUSED_HINT, session)
+def _interface_hint(session=None, *, puk_only: bool = False) -> str:
+    """The 6982-on-PIN explanation, naming the reader when it advertises contactless.
+
+    ``puk_only``: the PIN answered and only the PUK was refused, which is what a card
+    set up for the PIN over contactless shows there.
+    """
+    hint = PUK_INTERFACE_REFUSED_HINT if puk_only else PIN_INTERFACE_REFUSED_HINT
+    return _with_reader_note(hint, session)
 
 
 def _check_pin_verify(resp, session=None) -> None:
@@ -2614,6 +2663,7 @@ def _set_verifier_value(
             else f"[red]{label} not set:[/red] {info.message} (SW={info.sw_hex()})"
         ),
     )
+    _exit_if_refused(resp.ok)
 
 
 @perso.command("set-pin")
@@ -2953,6 +3003,7 @@ def perso_import_cert(
     app.out.result(
         {"slot": slot, "imported": resp.ok, "sw": info.sw_hex(), "checked": checked}, human
     )
+    _exit_if_refused(resp.ok)
 
 
 def _emit_object(app: AppContext, name: str, data: bytes, out_: str | None) -> None:
@@ -3029,6 +3080,7 @@ def perso_write_object(app: AppContext, object_name: str, file_: str, default_ke
             else f"[red]Write failed:[/red] {info.message} (SW={info.sw_hex()})"
         ),
     )
+    _exit_if_refused(resp.ok)
 
 
 @perso.command("write-standard-objects")
@@ -3054,6 +3106,7 @@ def perso_write_standard_objects(app: AppContext, default_keys: bool) -> None:
             c.print(f"  {mark}  {r['object']}")
 
     app.out.result({"objects": results}, human)
+    _exit_if_refused(all(r["ok"] for r in results))
 
 
 @perso.command("smoke-test")
@@ -3389,9 +3442,11 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     and the applet's own key-object listing (the non-destructive (slot, mechanism)
     probe stands in when the listing is withheld)."""
     st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
-    if (st.piv_pin and st.piv_pin.refused) or (st.piv_puk and st.piv_puk.refused):
+    pin_refused = bool(st.piv_pin and st.piv_pin.refused)
+    if pin_refused or (st.piv_puk and st.piv_puk.refused):
         raise CryptnoxError(
-            "quickstart cannot tell whether the PIN and PUK are set: " + _interface_hint(session)
+            "quickstart cannot tell whether the PIN and PUK are set: "
+            + _interface_hint(session, puk_only=not pin_refused)
         )
     piv = _select(session)
     key_objects = None
@@ -3471,9 +3526,9 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     default="ECCP256",
     show_default=True,
     help="ECCP256, ECCP384, RSA2048, RSA3072 or RSA4096. Default ECCP256, except RSA2048 "
-    "for --profile ms-logon --slot 9A, the Windows shape (Windows does not enumerate EC "
-    "keys). The slot must have a key object for it: RSA only on ms-logon's 9A among the "
-    "built-in profiles.",
+    "for --profile ms-logon or ms-logon-nfc with --slot 9A, the Windows shape (Windows "
+    "does not enumerate EC keys). The slot must have a key object for it: among the "
+    "built-in profiles, RSA only on the 9A of those two.",
 )
 @click.option("--subject", default="CN=Cryptnox Dev Card", show_default=True)
 @click.option("--days", default=365, show_default=True, type=int)
@@ -3510,7 +3565,8 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     default="cryptnox-default",
     show_default=True,
     help="Built-in pre-perso profile used by --include-preperso (e.g. ms-logon for a "
-    "SIGN-capable 9A / Windows logon card).",
+    "SIGN-capable 9A / Windows logon card; ms-logon-nfc for logon over NFC, on the "
+    "applet build with FIPS mode off).",
 )
 @click.option(
     "--default-keys",
@@ -3559,7 +3615,8 @@ def quickstart(
     # an RSA key object. It matters because the Windows inbox minidriver does not enumerate
     # EC keys at all (confirmed 2026-08-14, reproduced on a YubiKey, so a Windows limit
     # rather than ours) -- an ECC 9A is unusable for the very purpose ms-logon is chosen for.
-    windows_rsa_shape = profile_name == "ms-logon" and ref == pivc.KEYREF_PIV_AUTH
+    # ms-logon-nfc is the same shape, opened to the contactless interface.
+    windows_rsa_shape = profile_name in WINDOWS_LOGON_PROFILES and ref == pivc.KEYREF_PIV_AUTH
 
     algorithm_defaulted = (
         click.get_current_context().get_parameter_source("algorithm")
@@ -3569,8 +3626,8 @@ def quickstart(
         # The one shape whose whole purpose is Windows, and an ECC 9A cannot log on there.
         algorithm = "RSA2048"
         app.out.note(
-            "profile ms-logon on slot 9A: defaulting to RSA2048, which Windows needs (the "
-            "inbox minidriver does not enumerate EC keys); pass --algorithm to override."
+            f"profile {profile_name} on slot 9A: defaulting to RSA2048, which Windows needs "
+            "(the inbox minidriver does not enumerate EC keys); pass --algorithm to override."
         )
 
     alg = algorithm.upper()
@@ -3636,9 +3693,12 @@ def quickstart(
             ),
         )
         if steps[0].run:
-            piv_auth_warning = profile.piv_auth_warning()
-            if piv_auth_warning:
-                app.out.warn(piv_auth_warning)
+            if not profile.fips_mode:
+                # Before the plan is shown: a dry run must not promise what the card refuses.
+                _refuse_on_fips_mode_build(session, profile)
+            for warning in (profile.piv_auth_warning(), profile.contactless_pin_warning()):
+                if warning:
+                    app.out.warn(warning)
         by_step = {s.step: s for s in steps}
         if by_step["certificate"].run and facts.other_cert:
             app.out.warn(
