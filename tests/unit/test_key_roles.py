@@ -260,6 +260,23 @@ def test_create_dry_run_sends_nothing(monkeypatch, created):
     assert json.loads(result.stdout)["created"] is False
 
 
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry-run", "created"])
+def test_create_human_output(monkeypatch, created, dry_run):
+    wire_session(monkeypatch, ProbeCard(0x6A86))
+    args = ["--yes", "piv", "perso", "create-key-object", "--slot", "9A", "--algorithm"]
+    args += ["RSA2048", "--role", "SIGN", "--default-keys", *(["--dry-run"] if dry_run else [])]
+    result = run(args)
+    assert result.exit_code == 0, result.output
+    text = " ".join(result.output.split())
+    verb = "DRY RUN - would create" if dry_run else "Created"
+    assert f"{verb} key object 9A RSA2048: role SIGN" in text
+    assert ("Nothing was sent to the card." in text) is dry_run
+    assert ("Next: cryptnox-id piv perso generate-key --slot 9A --algorithm RSA2048" in text) is (
+        not dry_run
+    )
+    assert len(created) == (0 if dry_run else 1)
+
+
 def test_create_refuses_an_existing_object(monkeypatch, created):
     wire_session(monkeypatch, ProbeCard(0x6982))
     result = _create()

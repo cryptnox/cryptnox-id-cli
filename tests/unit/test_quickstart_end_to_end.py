@@ -237,3 +237,78 @@ def test_declining_the_confirmation_sends_nothing(plain_scp03_card):
     result = run(["piv", "quickstart", "--default-keys"], input="n\n")
     assert result.exit_code == 1
     assert not any(c.startswith("8050") for c in conn.log)
+
+
+NO_VALUE, SET_3 = (0x6A, 0x88), (0x63, 0xC3)
+
+
+@pytest.mark.parametrize(
+    ("setup", "extra", "failed_step", "context"),
+    [
+        (
+            {"probe_sw": (0x6A, 0x86), "secured_sw": {0xDB: (0x6A, 0x80)}},
+            ["--include-preperso"],
+            "preperso-load-config",
+            "preperso [",
+        ),
+        (
+            {"status": {0x80: SET_3, 0x81: NO_VALUE}, "secured_sw": {0x24: (0x69, 0x82)}},
+            [],
+            "set-puk",
+            "SET PUK",
+        ),
+        ({"secured_sw": {0xDB: (0x6A, 0x84)}}, [], "certificate", "IMPORT cert"),
+        (
+            {"secured_sw": {0xDB: (0x6A, 0x84)}},
+            ["--cert-mode", "none"],
+            "write-chuid",
+            "PUT DATA chuid",
+        ),
+        ({"sign_sw": (0x6A, 0x80)}, ["--cert-mode", "none"], "smoke-test", "6A80"),
+    ],
+    ids=["preperso", "set-puk", "cert-import", "chuid", "smoke-test"],
+)
+def test_a_refused_later_step_stops_the_run(card, setup, extra, failed_step, context):
+    piv, _ = card
+    for name, value in setup.items():
+        setattr(piv, name, value)
+    result = run(["--json", *_qs(*extra)])
+    assert result.exit_code == 6, result.output
+    last = json.loads(result.stdout)["steps"][-1]
+    assert (last["step"], last["status"]) == (failed_step, "failed")
+    assert context in last["reason"]
+
+
+def test_include_preperso_adds_only_the_missing_key_object(card):
+    piv, scp = card
+    piv.status, piv.probe_sw = {0x80: SET_3, 0x81: SET_3}, (0x6A, 0x86)
+    result = run(["--json", *_qs("--include-preperso", "--cert-mode", "none")])
+    assert result.exit_code == 0, result.output
+    steps = _steps(result.stdout)
+    assert steps["preperso-load-config"]["status"] == "skipped"
+    assert steps["create-key-object"] == {
+        "step": "create-key-object",
+        "status": "ok",
+        "detail": {"slot": "9C", "algorithm": "ECCP256"},
+    }
+    assert scp.secured[0][:2] == (0xDB, 0x3F) and scp.secured[0][2] != 0xFF
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        (["--algorithm", "ED25519"], "not supported by this applet"),
+        (["--slot", "9D"], "certificate modes sign on-card and need a SIGN-capable slot"),
+        (
+            ["--cert-mode", "none", "--cert-out", "c.pem"],
+            "--cert-out applies to --cert-mode self-signed",
+        ),
+    ],
+    ids=["algorithm", "slot", "cert-out"],
+)
+def test_bad_options_are_refused_before_the_card(plain_scp03_card, extra, message):
+    conn = plain_scp03_card()
+    result = run(_qs(*extra))
+    assert result.exit_code == 2
+    assert message in " ".join(result.output.split())
+    assert conn.log == []

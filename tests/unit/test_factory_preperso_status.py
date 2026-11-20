@@ -171,3 +171,13 @@ def test_load_config_dry_run_previews_without_a_reader(monkeypatch, profile):
     payload = json.loads(result.stdout)
     assert payload["dry_run"] is True and payload["profile"] == profile
     assert payload["bulk_hex"] == profiles.builtin(profile).build_payload().hex().upper()
+
+
+def test_load_config_dry_run_previews_when_the_piv_applet_does_not_answer(monkeypatch):
+    conn = ResponseAdapter(StatusCard(present=False))
+    wire_session(monkeypatch, conn)
+    args = ["--json", "factory", "piv", "preperso", "load-config", "--dry-run"]
+    result = run([*args, "--profile", "ms-logon-nfc"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["dry_run"] is True
+    assert conn.log[0].startswith("00A40400")

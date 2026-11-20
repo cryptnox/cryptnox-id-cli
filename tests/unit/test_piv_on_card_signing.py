@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""``piv perso generate-csr`` and ``self-sign-cert``, signed by the responder's slot key,
-and the ``generate-chuid``, ``generate-ccc`` and ``generate-discovery`` outputs."""
+"""``piv perso generate-csr``, ``self-sign-cert`` and ``smoke-test``, signed by the
+responder's slot key, and the ``generate-chuid``, ``generate-ccc`` and
+``generate-discovery`` outputs."""
 
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from cryptnox_id_cli.crypto import piv_objects
+from cryptnox_id_cli.util import tlv
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
 
@@ -123,6 +125,23 @@ def test_a_wrong_pin_stops_before_the_signature(signer, monkeypatch):
     result = run(_signing_args("generate-csr", pub))
     assert result.exit_code != 0
     assert not any(c[2:4] == "87" for c in conn.log)
+
+
+@pytest.mark.parametrize(
+    ("curve", "algorithm", "length"),
+    [(ec.SECP256R1(), "ECCP256", 32), (ec.SECP384R1(), "ECCP384", 48)],
+    ids=["p256", "p384"],
+)
+def test_smoke_test_signs_a_digest_of_the_mechanisms_size(signer, curve, algorithm, length):
+    _, conn, _ = signer(curve)
+    args = ["piv", "perso", "smoke-test", "--slot", "9C", "--algorithm", algorithm]
+    as_json, human = run_both_modes(args)
+    assert as_json.exit_code == 0, as_json.output
+    payload = json.loads(as_json.stdout)
+    assert payload["pin_verified"] and payload["signed"] and payload["signature_len"] > 0
+    sign = bytes.fromhex(next(c for c in conn.log if c[2:4] == "87"))
+    assert len(tlv.find(tlv.parse(sign[5 : 5 + sign[4]]), 0x81).value) == length
+    assert "Smoke test OK: PIN verified and slot 9C produced a" in " ".join(human.output.split())
 
 
 @pytest.mark.parametrize(

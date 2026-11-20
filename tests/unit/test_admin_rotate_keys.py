@@ -401,3 +401,13 @@ def test_delete_accepted_but_still_listed_fails_its_check(monkeypatch, fake_admi
     text = " ".join(result.output.split())
     assert "removal not confirmed" in text
     assert "key version 2 is still listed" in text
+
+
+def test_rotate_stops_when_the_domain_is_no_longer_selectable(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    conn = _SeqConn({SELECT_SSD: [(FCI_SSD, *OK), (b"", 0x6A, 0x82)], GET_E0: [(E0_KVN1, *OK)]})
+    wire_session(monkeypatch, conn)
+    result = run(["--yes", "piv", "admin", "rotate-keys", "--default-keys"])
+    assert result.exit_code != 0
+    assert "SELECT A00000015153504101 failed (SW=6A82)." in result.output
+    assert fake_admin.opened == [] and fake_admin.sent == []
