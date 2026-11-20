@@ -78,7 +78,7 @@ def command(app: AppContext) -> None:
         # PIV
         piv_detail = ""
         if state.piv_apt:
-            piv_detail = state.piv_apt.label or ""
+            piv_detail = escape(state.piv_apt.label or "")
             if state.piv_pin and state.piv_pin.configured:
                 tries = state.piv_pin.retries
                 piv_detail += f", PIN {tries} tries" if tries is not None else ", PIN set"

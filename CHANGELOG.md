@@ -95,6 +95,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `info`, `genuine info` and `genuine verify` print certificate names that
+  contain square brackets as written, instead of failing or dropping part of
+  them. So do `report` in human mode, which prints the report's JSON, and
+  the `--out` path it names, `fido ping`, `fido info` and
+  `fido credential list` for the strings the authenticator returns,
+  `mifare sdm read` for the tag's NDEF text, `info`, `piv info` and
+  `piv inventory` for the PIV applet's label, URL and version label, and
+  `piv verify-attestation` and `piv export-attestation` for certificate
+  names and the `--out` path, `piv perso import-key` for the `--public-out`
+  path, and `piv perso import-p12` for the certificate's subject.
 - Text the service supplies is stripped of control sequences and escaped
   before display, in results and in the error line.
 - `info`, `genuine info`, `genuine verify`, `report`, `fido ping`, `fido info`,

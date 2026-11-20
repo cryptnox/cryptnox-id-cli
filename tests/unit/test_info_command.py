@@ -10,6 +10,8 @@ import json
 import pytest
 from _cardfakes import run_both_modes, self_signed_der, wire_session
 
+from cryptnox_id_cli.util import tlv
+
 CONTACT = "ACS ACR39U ICC Reader 0"
 PICC = "ACS ACR1552 1S CL Reader PICC 0"
 WIRED_ATR = "3BD518FF8191FE1FC38073C821100A"
@@ -45,14 +47,16 @@ DESFIRE_VERSION = "9060000000"
 EV2_VERSION = "04010112001A0504010102001A050411223344556601020304052021"
 
 
-def _personalized_contact(pin_answer: str = "63C3", leaf_cn: str = "Device DEV-TEST-01"):
+def _personalized_contact(
+    pin_answer: str = "63C3", leaf_cn: str = "Device DEV-TEST-01", apt: str = APT
+):
     return (
         CONTACT,
         WIRED_ATR,
         {
             SELECT_ISD: "|9000",
             GET_CPLC: f"9F7F2A{CPLC_BODY}|9000",
-            SELECT_PIV: f"{APT}|9000",
+            SELECT_PIV: f"{apt}|9000",
             GET_STATUS: f"{STATUS_SECURED}|9000",
             VERIFY_PIN: f"|{pin_answer}",
             VERIFY_PUK: "|63C5",
@@ -182,3 +186,14 @@ def test_cplc_is_null_when_it_cannot_be_read(mock_connection, monkeypatch, excha
 def test_the_genuineness_subject_is_printed_as_written(mock_connection, monkeypatch, common_name):
     _, text = _invoke(mock_connection, monkeypatch, *_personalized_contact(leaf_cn=common_name))
     assert f"CN={common_name}" in text
+
+
+@pytest.mark.parametrize(
+    "label", [b"Open[/x]FIPS", b"Open[b]FIPS[/b]"], ids=["closing-tag", "bold"]
+)
+def test_the_piv_applet_label_is_printed_as_written(mock_connection, monkeypatch, label):
+    aid = bytes.fromhex("A000000308000010000100")
+    body = tlv.build(0x4F, aid) + tlv.build(0x79, tlv.build(0x4F, aid[:5])) + tlv.build(0x50, label)
+    contact = _personalized_contact(apt=tlv.build(0x61, body).hex())
+    _, text = _invoke(mock_connection, monkeypatch, *contact)
+    assert f"{label.decode()}, PIN 3 tries" in text

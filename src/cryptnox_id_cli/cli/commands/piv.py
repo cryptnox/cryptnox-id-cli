@@ -147,8 +147,8 @@ def info(app: AppContext) -> None:
     def human(c: Console) -> None:
         c.print("[bold]PIV applet[/bold]")
         c.print(f"  AID:   {apt.aid_hex}")
-        c.print(f"  Label: {apt.label}")
-        c.print(f"  URL:   {apt.url}")
+        c.print(f"  Label: {escape(str(apt.label))}")
+        c.print(f"  URL:   {escape(str(apt.url))}")
         c.print(f"\n  Supported algorithms: {', '.join(supported)}")
         c.print(f"  Key slots: {', '.join(s.ref_hex for s in PIV_SLOTS)}")
         c.print(f"\n[dim]{note}[/dim]")
@@ -279,7 +279,8 @@ def inventory(app: AppContext) -> None:
 
     def human(c: Console) -> None:
         ver = inv.version
-        c.print(f"[bold]{ver.label} {ver.version}[/bold]" if ver else "[bold]PIV applet[/bold]")
+        title = f"{escape(ver.label)} {ver.version}" if ver else "PIV applet"
+        c.print(f"[bold]{title}[/bold]")
         if inv.status:
             s = inv.status
             finalized = "finalized (SECURED)" if s.secured else "not finalized"
@@ -547,7 +548,7 @@ def export_attestation(app: AppContext, slot: str, out_: str | None, der: bool) 
     def human(c: Console) -> None:
         if out_:
             extra = f" (+{len(inter_ders)} intermediate)" if inter_ders else ""
-            c.print(f"[green]Wrote {fmt} attestation to {out_}{extra}[/green]")
+            c.print(f"[green]Wrote {fmt} attestation to {escape(out_)}{extra}[/green]")
         else:
             c.print(to_hex(data) if der else data.decode())
 
@@ -588,14 +589,14 @@ def verify_attestation(app: AppContext, slot: str, csr_file: str | None) -> None
     def human(c: Console) -> None:
         verdict = "[green]verified[/green]" if result.verified else "[red]NOT verified[/red]"
         c.print(f"Attestation (slot {slot}): {verdict}")
-        c.print(f"  subject: {leaf_desc['subject']}")
+        c.print(f"  subject: {escape(str(leaf_desc['subject']))}")
         if result.chain:
-            c.print(f"  chain:   {' -> '.join(result.chain)}")
+            c.print(f"  chain:   {escape(' -> '.join(result.chain))}")
         if result.csr_match is not None:
             mark = "[green]yes[/green]" if result.csr_match else "[red]no[/red]"
             c.print(f"  CSR key match: {mark}")
         for reason in result.reasons:
-            c.print(f"  [yellow]-[/yellow] {reason}")
+            c.print(f"  [yellow]-[/yellow] {escape(reason)}")
 
     app.out.result(payload, human)
 
@@ -2412,7 +2413,7 @@ def perso_import_key(
         c.print(f"[green]Imported {alg_name} key into slot {slot}[/green] ({len(plan)} elements).")
         c.print(f"  Public key SHA-256: {fingerprint}")
         if public_out:
-            c.print(f"  Public key PEM -> {public_out}")
+            c.print(f"  Public key PEM -> {escape(public_out)}")
         if smoke is None:
             c.print("  [dim]Smoke test skipped.[/dim]")
         elif smoke.get("signed"):
@@ -2551,7 +2552,8 @@ def perso_import_p12(
             for s in steps:
                 via = "chained" if s["chained"] else "single APDU"
                 c.print(f"    {s['element']}: {s['bytes']} bytes ({via}, own SCP03 session)")
-            c.print(f"    certificate ({cert_desc.get('subject')}): chained PUT DATA")
+            subject = escape(str(cert_desc.get("subject")))
+            c.print(f"    certificate ({subject}): chained PUT DATA")
             if extras:
                 c.print(f"    [dim]{len(extras)} chain certificate(s) ignored[/dim]")
             c.print("\n  [dim]Nothing was sent to the card.[/dim]")
@@ -2594,7 +2596,8 @@ def perso_import_p12(
 
     def human(c: Console) -> None:
         c.print(f"[green]Imported {alg_name} credential into slot {slot}[/green].")
-        c.print(f"  Certificate: {cert_desc.get('subject')} (expires {cert_desc.get('not_after')})")
+        subject = escape(str(cert_desc.get("subject")))
+        c.print(f"  Certificate: {subject} (expires {cert_desc.get('not_after')})")
         if extras:
             c.print(f"  [dim]{len(extras)} chain certificate(s) ignored.[/dim]")
         if smoke is None:

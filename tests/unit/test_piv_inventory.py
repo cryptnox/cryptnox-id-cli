@@ -15,6 +15,7 @@ from cryptnox_id_cli.applets.piv import inventory as inv
 from cryptnox_id_cli.applets.piv.objects import get_data_extended_apdu
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.transport.pcsc import CardSession
+from cryptnox_id_cli.util import tlv
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
 APT = (
@@ -57,11 +58,13 @@ def _ext(ident: int, index: int = 0) -> str:
     return f"00CB3F{index:02X}055C032F{ident:04X}00"
 
 
-def _exchanges(*, secured: bool = False, restricted: bool = False) -> dict[str, str]:
+def _exchanges(
+    *, secured: bool = False, restricted: bool = False, version: str = VERSION
+) -> dict[str, str]:
     """Unknown commands answer 6A82, which is what ends each listing on the card."""
     ex = {
         SELECT_PIV: f"{APT}|9000",
-        _ext(inv.ID_VERSION): f"{VERSION}|9000",
+        _ext(inv.ID_VERSION): f"{version}|9000",
         _ext(inv.ID_STATUS): f"{STATUS_SECURED if secured else STATUS}|9000",
         _ext(inv.ID_CONFIG): f"{CONFIG}|9000",
     }
@@ -222,3 +225,14 @@ def test_inventory_is_read_only_under_dry_run(monkeypatch, mock_connection):
     result = run(["--dry-run", "--json", "piv", "inventory"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["keys"]
+
+
+@pytest.mark.parametrize(
+    "label", [b"Open[/x]FIPS", b"Open[b]FIPS[/b]"], ids=["closing-tag", "bold"]
+)
+def test_inventory_prints_the_version_label_as_written(monkeypatch, mock_connection, label):
+    version = tlv.build(0x53, tlv.build(0x80, label) + bytes.fromhex("810102820100830100840100"))
+    wire_session(monkeypatch, mock_connection("3B00", _exchanges(version=version.hex()), []))
+    result = run(["piv", "inventory"])
+    assert result.exit_code == 0, result.output
+    assert f"{label.decode()} 2.0.0" in result.output
