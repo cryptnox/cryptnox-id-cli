@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 import os
 import stat
-import sys
 from types import SimpleNamespace
 
 import pytest
-from _cardfakes import run, wire_session
+from _cardfakes import fake_tty, run, wire_session
 
 from cryptnox_id_cli.applets import cardmanager as cm
 from cryptnox_id_cli.applets.piv import ssd
@@ -262,22 +261,8 @@ def test_fuse_without_y_refuses_non_interactively_before_any_change(card):
     assert "cannot be undone" in result.stderr
 
 
-class _TtySys:
-    class _Stdin:
-        def isatty(self):
-            return True
-
-        def __getattr__(self, name):
-            return getattr(sys.stdin, name)
-
-    stdin = _Stdin()
-
-    def __getattr__(self, name):
-        return getattr(sys, name)
-
-
 def test_fuse_asks_for_the_phrase_and_a_wrong_answer_changes_nothing(card, monkeypatch):
-    monkeypatch.setattr(factory_cmd, "sys", _TtySys())
+    fake_tty(monkeypatch, factory_cmd)
     result = run(["factory", "card", "fuse", "--default-keys"], input="fuse-card\n")
     assert result.exit_code != 0
     assert "Lifecycle: OP_READY" in result.output
@@ -288,7 +273,7 @@ def test_fuse_asks_for_the_phrase_and_a_wrong_answer_changes_nothing(card, monke
 
 
 def test_fuse_proceeds_on_the_phrase(card, monkeypatch):
-    monkeypatch.setattr(factory_cmd, "sys", _TtySys())
+    fake_tty(monkeypatch, factory_cmd)
     result = run(["factory", "card", "fuse", "--default-keys"], input="FUSE-CARD\n")
     assert result.exit_code == 0, result.output
     assert "Fuse sequence complete" in result.output
