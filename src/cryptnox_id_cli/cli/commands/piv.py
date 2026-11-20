@@ -1472,6 +1472,10 @@ def perso_generate_key(
     mech = perso_mod.ALGORITHMS.get(alg)
     if mech is None or mech not in pivc.SUPPORTED_ALGORITHMS:
         raise click.BadParameter(f"algorithm {algorithm!r} not supported by this applet")
+    try:
+        keyimport.validate_slot_mechanism(ref, mech)
+    except CryptnoxError as exc:
+        raise click.BadParameter(str(exc)) from exc
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
     with app.open_session() as session:
         # Same rule quickstart applies: a certificate marks the slot as in use, so a

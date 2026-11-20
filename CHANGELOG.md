@@ -155,6 +155,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On a contactless reader, `piv status`, `piv pin status`, `piv validate` and
   the commands that present the PIN say the PIN is not usable over this
   interface; JSON gains `refused_on_interface`.
+- `piv perso generate-key` refuses a slot that cannot hold an asymmetric key,
+  such as 9B or 04, with exit code 2 before it opens the card. With
+  `--create-key-object` it used to add a permanent key object there.
 
 ## [1.1.0] - 2026-10-16
 
