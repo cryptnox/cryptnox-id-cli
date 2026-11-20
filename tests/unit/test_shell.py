@@ -101,3 +101,72 @@ def test_shell_survives_an_interrupted_command(raised):
         main.commands.pop("interruptprobe", None)
     assert r.exit_code == 0, r.output
     assert "No such command" in r.output
+
+
+def test_global_args_carries_every_launch_option():
+    app = AppContext(
+        reader="R",
+        json=True,
+        verbose=True,
+        apdu_log_path="t.log",
+        dry_run=True,
+        yes=True,
+        timeout=30,
+        no_color=True,
+    )
+    assert _global_args(app) == [
+        "--reader",
+        "R",
+        "--json",
+        "--verbose",
+        "--apdu-log",
+        "t.log",
+        "--dry-run",
+        "--yes",
+        "--timeout",
+        "30",
+        "--no-color",
+    ]
+
+
+def test_shell_clears_the_screen_and_keeps_going():
+    r = _run("clear\nexit\n")
+    assert r.exit_code == 0, r.output
+
+
+def test_shell_reports_unbalanced_quotes_and_keeps_going():
+    r = _run('piv info "unclosed\nexit\n')
+    assert r.exit_code == 0, r.output
+    assert "error: No closing quotation" in r.output
+
+
+def test_shell_survives_a_command_that_exits():
+    r = _run("fido config min-pin-length --length 3\nexit\n", args=["--yes"])
+    assert r.exit_code == 0, r.output
+    assert "minimum PIN length must be at least 4" in r.output
+
+
+def test_ctrl_c_at_the_prompt_cancels_the_line_not_the_shell(monkeypatch):
+    from cryptnox_id_cli.cli.commands import shell as shell_cmd
+
+    class _Stdin:
+        lines = iter([KeyboardInterrupt, "exit\n"])
+
+        def isatty(self):
+            return False
+
+        def readline(self):
+            line = next(self.lines)
+            if line is KeyboardInterrupt:
+                raise KeyboardInterrupt
+            return line
+
+    class _Sys:
+        stdin = _Stdin()
+
+        def __getattr__(self, name):
+            return getattr(__import__("sys"), name)
+
+    monkeypatch.setattr(shell_cmd, "sys", _Sys())
+    r = _run("")
+    assert r.exit_code == 0, r.output

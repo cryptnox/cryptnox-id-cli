@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 import os
 import stat
-import sys
 from types import SimpleNamespace
 
 import pytest
-from _cardfakes import run, wire_session
+from _cardfakes import fake_tty, run, wire_session
 
 from cryptnox_id_cli.applets import cardmanager as cm
 from cryptnox_id_cli.applets.piv import ssd
@@ -262,22 +261,8 @@ def test_fuse_without_y_refuses_non_interactively_before_any_change(card):
     assert "cannot be undone" in result.stderr
 
 
-class _TtySys:
-    class _Stdin:
-        def isatty(self):
-            return True
-
-        def __getattr__(self, name):
-            return getattr(sys.stdin, name)
-
-    stdin = _Stdin()
-
-    def __getattr__(self, name):
-        return getattr(sys, name)
-
-
 def test_fuse_asks_for_the_phrase_and_a_wrong_answer_changes_nothing(card, monkeypatch):
-    monkeypatch.setattr(factory_cmd, "sys", _TtySys())
+    fake_tty(monkeypatch, factory_cmd)
     result = run(["factory", "card", "fuse", "--default-keys"], input="fuse-card\n")
     assert result.exit_code != 0
     assert "Lifecycle: OP_READY" in result.output
@@ -288,7 +273,7 @@ def test_fuse_asks_for_the_phrase_and_a_wrong_answer_changes_nothing(card, monke
 
 
 def test_fuse_proceeds_on_the_phrase(card, monkeypatch):
-    monkeypatch.setattr(factory_cmd, "sys", _TtySys())
+    fake_tty(monkeypatch, factory_cmd)
     result = run(["factory", "card", "fuse", "--default-keys"], input="FUSE-CARD\n")
     assert result.exit_code == 0, result.output
     assert "Fuse sequence complete" in result.output
@@ -448,3 +433,91 @@ def test_fuse_fails_its_check_when_the_configuration_module_is_still_listed(card
     first, _ = json.JSONDecoder().raw_decode(result.stdout)  # the result, then the error
     assert first["configuration_sealed"] is False
     assert "post-check failed" in result.output
+
+
+# ------------------------------------------------- refusals and failures --- #
+def test_fuse_dry_run_lists_the_plan(card):
+    result = run(["factory", "card", "fuse", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "DRY RUN - would fuse the card (SCP02, key version 1):" in result.output
+    for m in cm.FUSE_MODULES:
+        assert f"delete the {m.label} ({m.aid.hex().upper()}) if present" in result.output
+    assert "Nothing that changes the card was sent." in result.output
+    assert card.sent == []
+
+
+@pytest.mark.parametrize(
+    ("answers", "message"),
+    [
+        ({GET_CPLC: (CPLC, *OK)}, "the card manager (A000000151000000) is not selectable"),
+        (
+            {
+                SELECT_ISD: (FCI_ISD, *OK),
+                GET_E0: (bytes.fromhex("E00CC00401018010C00402018810"), *OK),
+                GET_CPLC: (CPLC, *OK),
+            },
+            "cannot tell SCP02 from SCP03",
+        ),
+    ],
+    ids=["no-card-manager", "mixed-key-types"],
+)
+def test_fuse_refuses_a_card_manager_it_cannot_read(card, monkeypatch, answers, message):
+    wire_session(monkeypatch, _SeqConn(answers))
+    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code != 0
+    assert message in result.output
+    assert card.opened == []
+
+
+def test_fuse_refuses_new_keys_equal_to_the_current_ones(card, monkeypatch):
+    for part in ("ENC", "MAC", "DEK"):
+        monkeypatch.setenv(f"CARD_MANAGER_{part}", TEST_KEY.hex())
+    result = run(["factory", "card", "fuse", "-y"])
+    assert result.exit_code != 0
+    assert "the new keys equal the current ones" in result.output
+    assert card.opened == []
+
+
+def test_fuse_refuses_a_card_that_hides_its_lifecycle(card):
+    card.refuse["80F2"] = 0x6982
+    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code != 0
+    assert "did not report the card's lifecycle" in result.output
+    assert _changes(card) == []
+
+
+@pytest.mark.parametrize(
+    ("refused", "message", "sent"),
+    [
+        ("80F0", "SET STATUS INITIALIZED refused (SW=6985)", ["80E4"] * 4 + ["80F0"]),
+        ("80D8", "PUT KEY refused (SW=6985)", ["80E4"] * 4 + ["80F0", "80F0", "80D8"]),
+    ],
+    ids=["lifecycle", "put-key"],
+)
+def test_fuse_stops_at_a_later_refusal(card, refused, message, sent):
+    card.refuse[refused] = 0x6985
+    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code != 0
+    assert message in " ".join(result.output.split())
+    assert "delete configuration module (deleted)" in " ".join(result.output.split())
+    assert [c[:4] for c in _changes(card)] == sent
+
+
+def test_fuse_reports_new_keys_that_do_not_authenticate(card):
+    card.new_key = bytes(16)
+    result = run(["factory", "card", "fuse", "--default-keys", "-y"])
+    assert result.exit_code != 0
+    text = " ".join(result.output.split())
+    assert "card echoed different values" in text
+    assert "New keys authenticate: no (Card cryptogram mismatch" in text
+    assert "post-check failed" in text
+
+
+def test_fuse_human_output_names_the_key_file(card, tmp_path, monkeypatch):
+    out = tmp_path / "card-keys.json"
+    monkeypatch.setattr(factory_cmd.os, "urandom", lambda n: TEST_KEY[:n])
+    args = ["factory", "card", "fuse", "--default-keys", "--randomize", "--out", str(out), "-y"]
+    result = run(args)
+    assert result.exit_code == 0, result.output
+    assert f"New keys written to {out}; keep that file safe." in " ".join(result.output.split())
+    assert "Configuration sealed: yes" in result.output

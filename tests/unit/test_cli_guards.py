@@ -7,6 +7,7 @@ import contextlib
 
 import click
 import pytest
+from _cardfakes import run
 
 from cryptnox_id_cli.cli.commands.mifare import _resolve_aes_key
 from cryptnox_id_cli.secrets import resolver as resolver_mod
@@ -171,3 +172,9 @@ def test_apdu_transcript_redacts_general_authenticate_response(monkeypatch, tmp_
     assert result.exit_code == 0, result.output
     assert _SHARED_SECRET not in result.output
     assert "REDACTED" in result.output
+
+
+def test_the_old_piv_preperso_path_points_at_factory():
+    result = run(["piv", "preperso", "load-config", "--profile", "ssh"])
+    assert result.exit_code != 0
+    assert "now lives under `cryptnox-id factory piv preperso`" in " ".join(result.output.split())

@@ -45,12 +45,6 @@ class APDU:
             out += (le & 0xFFFF if le != 65536 else 0).to_bytes(2, "big")
         return out
 
-    def to_list(self) -> list[int]:
-        return list(self.to_bytes())
-
-    def header_hex(self) -> str:
-        return bytes((self.cla, self.ins, self.p1, self.p2)).hex().upper()
-
 
 @dataclass(frozen=True)
 class Response:

@@ -216,3 +216,50 @@ def test_mechanism_follows_the_certificate_key():
     )
     with pytest.raises(CryptnoxError):
         piv_cmd._mechanism_for_public_key(ec.generate_private_key(ec.SECP521R1()).public_key())
+
+
+@pytest.mark.parametrize(
+    ("sw", "message"),
+    [
+        (0x6A86, "slot 9A holds no key of the certificate's type"),
+        (0x6982, "6982"),
+    ],
+    ids=["wrong-key-type", "other-refusal"],
+)
+def test_verify_pin_names_a_refused_signature(monkeypatch, files, sw, message):
+    imported: list = []
+    _wire(monkeypatch, _Session(sw=sw), imported=imported)
+    result = _run(["--slot", "9A", "--cert", files["cert"], "--verify-pin", "--default-keys"])
+    assert result.exit_code != 0
+    assert message in result.output
+    assert imported == []
+
+
+def test_a_slot_without_a_certificate_container_is_refused(monkeypatch, files):
+    imported: list = []
+    _wire(monkeypatch, _Session(), imported=imported)
+    result = _run(["--slot", "82", "--cert", files["cert"], "--default-keys"])
+    assert result.exit_code == 2
+    assert "slot 82 has no certificate container" in result.output
+    assert imported == []
+
+
+def test_human_output_lists_the_checks_made(monkeypatch, files):
+    _wire(monkeypatch, _Session(), imported=[])
+    args = ["--slot", "9A", "--cert", files["cert"], "--csr", files["csr_same"], "--default-keys"]
+    result = CliRunner().invoke(root, ["piv", "perso", "import-cert", *args])
+    assert result.exit_code == 0, result.output
+    assert "Certificate imported to slot 9A." in result.output
+    assert "Key match checked: csr" in result.output
+
+
+def test_human_output_for_a_refused_import(monkeypatch, files):
+    _wire(monkeypatch, _Session(), imported=[])
+    monkeypatch.setattr(
+        piv_cmd, "_import_cert_der", lambda adm, keys, ref, der, *, label: Response(b"", 0x6A, 0x84)
+    )
+    args = ["--slot", "9A", "--cert", files["cert"], "--default-keys"]
+    result = CliRunner().invoke(root, ["piv", "perso", "import-cert", *args])
+    assert result.exit_code == 6
+    assert "Import failed:" in result.output and "(SW=6A84)" in result.output
+    assert "Certificate imported" not in result.output

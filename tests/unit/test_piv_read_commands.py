@@ -137,6 +137,9 @@ def test_objects_list_and_read(card, tmp_path):
     )
     assert out.read_bytes() == CHUID and "Wrote 13 bytes" in human.output
     assert run(["piv", "objects", "read", "--object", "nope"]).exit_code == 2
+    as_json, human = run_both_modes(["piv", "objects", "read", "--object", "ccc"])
+    assert json.loads(as_json.stdout) == {"name": "ccc", "present": False}
+    assert "Object ccc: not present" in human.output
 
 
 @pytest.mark.parametrize(

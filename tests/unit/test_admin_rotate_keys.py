@@ -11,7 +11,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from _cardfakes import run, wire_session
+from _cardfakes import fake_tty, run, wire_session
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from cryptnox_id_cli.applets.piv import ssd
@@ -19,6 +19,7 @@ from cryptnox_id_cli.applets.piv.admin import SCP02, SCP03
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
 from cryptnox_id_cli.secrets.resolver import DEFAULT_GP_KEY
 from cryptnox_id_cli.transport.apdu import Response
+from cryptnox_id_cli.transport.errors import Scp02Error
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 
 TEST_KEY = bytes.fromhex("0102030405060708090A0B0C0D0E0F10")
@@ -301,3 +302,112 @@ def test_delete_dry_run_sends_nothing(monkeypatch, fake_admin):
     assert payload["would_delete_version"] == 2
     assert len(payload["keys"]) == 3
     assert fake_admin.sent == [] and fake_admin.opened == []
+
+
+# ---------------------------------------------------------- guards and output --- #
+def test_rotate_refuses_new_keys_equal_to_the_current_ones(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    _set_keys(monkeypatch, "PIV_SCP03", TEST_KEY)
+    conn = _conn(E0_KVN1)
+    wire_session(monkeypatch, conn)
+    result = run(["--yes", "piv", "admin", "rotate-keys"])
+    assert result.exit_code != 0
+    assert "the new keys equal the current ones; nothing to rotate" in result.output
+    assert conn.log == [] and fake_admin.opened == []
+
+
+def test_rotate_refuses_a_mixed_key_table(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    wire_session(monkeypatch, _conn(bytes.fromhex("E00CC00401018010C00402018810")))
+    result = run(["--yes", "piv", "admin", "rotate-keys", "--default-keys"])
+    assert result.exit_code != 0
+    assert "cannot tell SCP02 from SCP03" in result.output
+    assert fake_admin.opened == []
+
+
+def test_rotate_dry_run_human_output(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1_KVN2))
+    result = run(["piv", "admin", "rotate-keys", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    text = " ".join(result.output.split())
+    assert "DRY RUN - would replace key version 1 of A00000015153504101 (SCP02)" in text
+    assert "New key check values: AD17A7 AD17A7 AD17A7 (ENC MAC DEK)" in text
+    assert "Key versions on the card: [1, 2]; only 1 is addressed." in text
+    assert "Nothing was sent to the card." in text
+
+
+def test_rotate_declined_at_the_prompt_sends_nothing(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1))
+    result = run(["piv", "admin", "rotate-keys", "--default-keys"], input="n\n")
+    assert result.exit_code == 1
+    assert "Proceed with the rotation?" in result.output
+    assert fake_admin.opened == [] and fake_admin.sent == []
+
+
+def test_rotate_reports_new_keys_that_do_not_authenticate(monkeypatch, fake_admin):
+    def open_(self, keys, *, key_version=0, security_level=0x03):
+        fake_admin.opened.append((keys.enc, key_version))
+        if keys.enc == TEST_KEY:
+            raise Scp02Error("Card cryptogram mismatch - the SCP02 keys are wrong for this card.")
+
+    monkeypatch.setattr(fake_admin, "open", open_)
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1_KVN2))
+    result = run(["--yes", "piv", "admin", "rotate-keys", "--default-keys"])
+    assert result.exit_code != 0
+    text = " ".join(result.output.split())
+    assert "Replaced key version 1 of A00000015153504101 (SCP02)." in text
+    assert "New keys authenticate: no (Card cryptogram mismatch" in text
+    assert "Key version 2 (Cryptnox): unchanged" in text
+    assert "post-check failed" in text
+
+
+DELETE = ["piv", "admin", "delete-factory-keyset"]
+
+
+@pytest.mark.parametrize(("typed", "deleted"), [("DELETE-FACTORY-KEYSET", True), ("yes", False)])
+def test_delete_on_a_terminal_wants_the_phrase(monkeypatch, fake_admin, typed, deleted):
+    fake_tty(monkeypatch, piv_cmd)
+    _set_keys(monkeypatch, "PIV_SCP03", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1_KVN2, E0_KVN1))
+    result = run(DELETE, input=f"{typed}\n")
+    assert (result.exit_code == 0) is deleted, result.output
+    assert "This is IRREVERSIBLE" in result.output
+    assert fake_admin.sent == (["80E4000003D20102"] if deleted else [])
+    if deleted:
+        text = " ".join(result.output.split())
+        assert "Deleted key version 2 from A00000015153504101 (SW=9000)." in text
+        assert "Key table re-read: versions [1]; removal confirmed." in text
+
+
+def test_delete_refused_by_the_card(monkeypatch, fake_admin):
+    monkeypatch.setattr(
+        fake_admin, "send", lambda self, apdu, context=None: Response(b"", 0x69, 0x85)
+    )
+    _set_keys(monkeypatch, "PIV_SCP03", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1_KVN2))
+    result = run([*DELETE, "--i-understand-this-is-irreversible"])
+    assert result.exit_code == 6
+    assert "DELETE KEY (delete-factory-keyset)" in result.output and "6985" in result.output
+
+
+def test_delete_accepted_but_still_listed_fails_its_check(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03", TEST_KEY)
+    wire_session(monkeypatch, _conn(E0_KVN1_KVN2, E0_KVN1_KVN2))
+    result = run([*DELETE, "--i-understand-this-is-irreversible"])
+    assert result.exit_code != 0
+    text = " ".join(result.output.split())
+    assert "removal not confirmed" in text
+    assert "key version 2 is still listed" in text
+
+
+def test_rotate_stops_when_the_domain_is_no_longer_selectable(monkeypatch, fake_admin):
+    _set_keys(monkeypatch, "PIV_SCP03_NEW", TEST_KEY)
+    conn = _SeqConn({SELECT_SSD: [(FCI_SSD, *OK), (b"", 0x6A, 0x82)], GET_E0: [(E0_KVN1, *OK)]})
+    wire_session(monkeypatch, conn)
+    result = run(["--yes", "piv", "admin", "rotate-keys", "--default-keys"])
+    assert result.exit_code != 0
+    assert "SELECT A00000015153504101 failed (SW=6A82)." in result.output
+    assert fake_admin.opened == [] and fake_admin.sent == []
