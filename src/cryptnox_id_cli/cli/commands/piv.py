@@ -675,6 +675,12 @@ def objects_read(app: AppContext, object_name: str, out_: str | None) -> None:
     if obj is None:
         names = ", ".join(o.name for o in PIV_OBJECTS)
         raise click.BadParameter(f"unknown object {object_name!r}. Known: {names}")
+    if obj.pin_protected and app.dry_run:
+        raise click.ClickException(
+            f"--dry-run: reading '{obj.name}' verifies the PIV PIN first, and a wrong PIN "
+            "spends a try, so it refuses to run (nothing was sent to the card). Run it "
+            "without --dry-run to read it."
+        )
     with app.open_session() as session:
         piv = _select(session)
         if obj.pin_protected:
