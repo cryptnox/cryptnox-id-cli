@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.applets.piv import objects as piv_obj
-from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.commands.remote import attest as remote_attest
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import attest_verify as av
@@ -391,7 +391,7 @@ def test_occupied_container_proceeds_with_yes(occupied, pki):
 
 
 def test_occupied_container_asks_interactively(occupied, pki, monkeypatch):
-    monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
+    monkeypatch.setattr(remote_attest, "sys", _FakeSys())
     occupied["arm"]([ok_result(pki)])
     result = run(["remote", "attest"], input="n\n")
     assert result.exit_code != 0
@@ -460,7 +460,7 @@ def test_finalized_applet_sends_the_confirmation_only_after_yes(finalized, pki):
 
 
 def test_finalized_applet_asks_about_the_key_interactively(finalized, pki, monkeypatch):
-    monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
+    monkeypatch.setattr(remote_attest, "sys", _FakeSys())
     finalized["arm"]([ok_result(pki)])
     result = run(["remote", "attest"], input="n\n")
     assert result.exit_code != 0

@@ -11,7 +11,8 @@ import pytest
 from _cardfakes import wire_session
 from click.testing import CliRunner
 
-from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.commands.remote import card as remote_card
+from cryptnox_id_cli.cli.commands.remote import reset as remote_reset
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import channel as rchannel
@@ -135,7 +136,7 @@ def test_yes_is_not_a_bypass(wired, op):
 
 
 def test_wrong_phrase_aborts(wired, monkeypatch):
-    monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
+    monkeypatch.setattr(remote_reset, "sys", _FakeSys())
     wired["arm"]([OK_RESULT])
     result = run(["remote", "reset"], input="reset-piv\n")
     assert result.exit_code != 0
@@ -144,7 +145,7 @@ def test_wrong_phrase_aborts(wired, monkeypatch):
 
 
 def test_right_phrase_proceeds(wired, monkeypatch):
-    monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
+    monkeypatch.setattr(remote_reset, "sys", _FakeSys())
     wired["arm"]([OK_RESULT])
     result = run(["remote", "reset"], input="RESET-PIV\n")
     assert result.exit_code == 0, result.output
@@ -277,10 +278,10 @@ def test_ssd_key_versions_absent_and_present(wired, mock_connection):
     from cryptnox_id_cli.transport.pcsc import CardSession
 
     absent = mock_connection(ATR, {SELECT_SSD: "|6A82"}, [])
-    assert remote_cmd._ssd_key_versions(CardSession(absent)) is None
-    assert remote_cmd._ssd_key_versions(CardSession(wired["conn"])) == [1]
+    assert remote_card.ssd_key_versions(CardSession(absent)) is None
+    assert remote_card.ssd_key_versions(CardSession(wired["conn"])) == [1]
     two = mock_connection(ATR, {SELECT_SSD: "6F11|9000", KEY_INFO: f"{KEY_INFO_TWO}|9000"}, [])
-    assert remote_cmd._ssd_key_versions(CardSession(two)) == [1, 2]
+    assert remote_card.ssd_key_versions(CardSession(two)) == [1, 2]
 
 
 # --------------------------------------------------------------------------- #

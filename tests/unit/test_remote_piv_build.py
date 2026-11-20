@@ -12,7 +12,7 @@ import pytest
 from _cardfakes import wire_session
 from click.testing import CliRunner
 
-from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.commands.remote import reset as remote_reset
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import channel as rchannel
@@ -208,10 +208,10 @@ def test_an_unknown_build_is_a_usage_error(wired):
 
 
 def test_resolution_of_the_two_options():
-    assert remote_cmd._resolve_piv_build(None, False) == "fips"
-    assert remote_cmd._resolve_piv_build("FIPS", False) == "fips"
-    assert remote_cmd._resolve_piv_build(None, True) == "fipsoff"
-    assert remote_cmd._resolve_piv_build("fipsoff", False) == "fipsoff"
+    assert remote_reset.resolve_piv_build(None, False) == "fips"
+    assert remote_reset.resolve_piv_build("FIPS", False) == "fips"
+    assert remote_reset.resolve_piv_build(None, True) == "fipsoff"
+    assert remote_reset.resolve_piv_build("fipsoff", False) == "fipsoff"
 
 
 # --------------------------------------------------------------------------- #

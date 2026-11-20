@@ -10,7 +10,7 @@ import pytest
 from _cardfakes import wire_session
 from click.testing import CliRunner
 
-from cryptnox_id_cli.cli.commands import remote as remote_cmd
+from cryptnox_id_cli.cli.commands.remote import run as remote_run
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.remote import channel as rchannel
@@ -234,7 +234,7 @@ def test_env_override_to_a_remote_plain_ws_is_refused(wired, monkeypatch):
 def test_endpoint_helper_refuses_override_for_operations_that_change_the_card(monkeypatch):
     monkeypatch.setenv(rchannel.URL_ENV, "ws://localhost:9999")
     with pytest.raises(Exception, match="runs only against the production service"):
-        remote_cmd._endpoint("reset")
+        remote_run.endpoint("reset")
 
 
 # --------------------------------------------------------------------------- #
