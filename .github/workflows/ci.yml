@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 # pyscard is a C extension with no Linux wheel: pip builds it from source, which
 # needs a C toolchain, SWIG and the PC/SC headers. Jobs that install the package
 # provide these. Tests use a mock transport - no daemon or reader is required.
