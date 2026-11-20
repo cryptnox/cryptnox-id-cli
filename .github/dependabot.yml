@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 7
+    groups:
+      python-dependencies:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # cbor2 6.x ships no Intel-macOS wheel
+      - dependency-name: "cbor2"
+        versions: [">=6"]
