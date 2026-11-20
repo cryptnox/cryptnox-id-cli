@@ -137,3 +137,21 @@ def test_human_output_states_the_verdict(monkeypatch, fake_admin):
     wire_session(monkeypatch, _conn())
     result = run(["piv", "admin", "keys"])
     assert "not checked (pass --check-default)" in result.output
+
+
+@pytest.mark.parametrize(
+    ("outcome", "table", "verdict"),
+    [
+        ("rejected", E0_KVN1_DES, "undetermined (INITIALIZE UPDATE rejected (SW=6A88).)"),
+        ("ok", E0_KVN2_ONLY, "not checked (key version 1 is not in the key table)"),
+    ],
+    ids=["undetermined", "not-checked"],
+)
+def test_human_output_for_a_check_without_an_answer(
+    monkeypatch, fake_admin, outcome, table, verdict
+):
+    fake_admin.outcome = outcome
+    wire_session(monkeypatch, _conn(table))
+    result = run(["piv", "admin", "keys", "--check-default"])
+    assert result.exit_code == 0, result.output
+    assert verdict in " ".join(result.output.split())
