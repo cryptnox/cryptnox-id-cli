@@ -181,6 +181,23 @@ def test_a_refused_write_reports_the_cards_own_reason(monkeypatch):
     assert "no 9B key object" in json.loads(result.stdout)["message"]
 
 
+def test_a_write_refused_for_an_unlisted_reason_names_the_status_word(monkeypatch):
+    session = FakeSession(witness_sw=0x6983)
+    adm = FakeAdmin(session, write_sw=0x6F00)
+    result = _run(monkeypatch, session, adm, BASE)
+    assert result.exit_code == 6
+    assert "SET management key" in result.output and "6F00" in result.output
+
+
+def test_a_refused_clear_stops_before_the_set(monkeypatch):
+    session = FakeSession(witness_sw=0x9000)
+    adm = FakeAdmin(session, write_sw=0x6982)
+    result = _run(monkeypatch, session, adm, [*BASE, "--replace"])
+    assert result.exit_code == 6
+    assert "CLEAR management key" in result.output and "6982" in result.output
+    assert adm.writes == ["00240C9B029F00"]
+
+
 def test_no_value_supplied_is_an_input_error_not_a_card_error(monkeypatch):
     session = FakeSession(witness_sw=0x6983)
     adm = FakeAdmin(session)
