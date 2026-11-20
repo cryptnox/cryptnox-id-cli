@@ -17,7 +17,9 @@ _Avoid_: applet (DESFire is not a JavaCard applet), app, mode
 **Contact interface**:
 The wired ISO 7816 interface; the only interface where the PIN, the PUK, the
 PIN-protected keys and the management key (9B) work. The admin channel works over
-both interfaces.
+both interfaces unless the applet's contactless-administration lock is set, which the
+remote service does when it reinstalls the applet. One profile departs from this: `ms-logon-nfc`, for the build with
+FIPS mode off, opens the PIN and the 9A keys to the contactless interface.
 _Avoid_: chip mode
 
 **Contactless interface**:
@@ -67,6 +69,16 @@ _Avoid_: dump, snapshot (export-config is a different, observed-state file)
 A named pre-personalization configuration, such as `cryptnox-default` or `ms-logon`.
 _Avoid_: template, preset
 
+**FIPS-mode build**:
+The PIV applet as cards ship with it, built with the applet's FIPS mode on. That
+mode bounds what a profile may ask for: a PIN of at least 6 digits, at most 15
+retries, no PIN over the contactless interface without secure messaging. Its
+counterpart, the *build with FIPS mode off*, is the same applet without those
+bounds; the remote service installs either on request. The applet reports which
+one it is in its status, read without authentication.
+_Avoid_: FIPS card, FIPS-certified (a build is not a certification claim), variant
+(the service's protocol word, kept for the option `--piv-variant` only)
+
 **Slot**:
 A PIV key reference (9A authentication, 9C signature, 9D key management, 9E card
 authentication) holding at most one private key.
@@ -99,6 +111,13 @@ one exception is reading back a large generated public key, which some cards del
 only after management-key authentication.
 _Avoid_: management key (a different key with a different authentication - see
 Management key)
+
+**Hardened channel**:
+The admin channel at SCP03 security level 0x33, where the card authenticates and
+encrypts its answers as well as the commands, so nothing between the service and the
+card can alter what the card says. The legacy level (0x03, and every SCP02 channel)
+protects the commands only; the remote service issues no key attestation over it.
+_Avoid_: encrypted channel, full channel
 
 **Management key (9B)**:
 The PIV applet's own AES administration key at key reference 9B. It authenticates over

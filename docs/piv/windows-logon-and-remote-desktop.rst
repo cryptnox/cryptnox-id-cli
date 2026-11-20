@@ -17,9 +17,11 @@ pre-personalized with the **ms-logon profile** (its 9A keys are
 
 Logon needs a **contact** reader, or the contact slot of a combo reader. Over
 contactless this applet accepts a PIN only inside PIV secure messaging (the
-SP 800-73-4 virtual contact interface); the built-in profiles create the PIN
-for contact use only, and the inbox minidriver has no documented support for
-secure messaging.
+SP 800-73-4 virtual contact interface); the ``ms-logon`` profile creates the
+PIN for contact use only, and the inbox minidriver has no documented support
+for secure messaging. A card that must log on over NFC needs another applet
+build and the ``ms-logon-nfc`` profile: see `Logon with the card on an NFC
+reader`_.
 
 The certificate itself is dictated by Active Directory, not by the card:
 
@@ -70,6 +72,17 @@ The second form does everything in one shot — PIN, PUK, an on-card **RSA-2048*
 key in 9A (the private key never leaves the card), a CSR for your CA, and the
 CHUID/CCC objects Windows expects. It reports the key type it chose as it runs.
 
+On a card that returns at most 256 bytes of a public key over the admin
+channel, the RSA generation finishes behind the PIV management key (``9B``),
+and a card fresh from pre-personalization holds no value for it
+(:doc:`/piv/piv-personalization`). ``quickstart`` then stops at
+``generate-key`` and names the command that loads one. Run it, then repeat the
+same ``quickstart`` command; it skips the steps already done:
+
+.. code-block:: console
+
+   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+
 Step 1 — get the certificate issued
 -----------------------------------
 
@@ -88,6 +101,11 @@ a smart-card-logon template and import the issued certificate:
 one in the CSR, which is what happens when an enrollment tool generated a key
 of its own instead of signing the card's request. A certificate for another
 key would be written without complaint and fail only at logon.
+
+A Windows machine that has already enumerated the card keeps presenting the
+certificate it found first until it restarts: the minidriver's cache is keyed
+to the card's CHUID, which the import does not change. Restart before
+``certutil -scinfo`` or the first logon with the new certificate.
 
 **Path A2: enroll on behalf of another user (enrollment agent).** An
 administrator provisioning a card for another Active Directory user cannot use
@@ -201,6 +219,69 @@ Step 3 — log on
   Resources -> Smart cards). Connect to the domain host and authenticate with
   the PIN at the remote credential prompt.
 
+Logon with the card on an NFC reader
+------------------------------------
+
+Windows needs three things from the card over the reader it is on: the 9A
+certificate, a key container (RSA only, as above), and a signature after the
+PIN. Over NFC the first two work with any card set up as above once the
+certificate can be read there. The PIN does not: the PIV applet cards ship
+with, the **FIPS-mode build**, accepts a PIN over the contactless interface
+only inside secure messaging, and answers ``6982`` to the plain PIN the inbox
+minidriver sends.
+
+The same applet built with FIPS mode off accepts a plain PIN over contactless,
+when the PIN was created for it. Four commands set a card up that way; all run
+on a **contact** reader, and the first erases the card's PIV keys and
+certificates:
+
+.. code-block:: console
+
+   $ cryptnox-id remote reset --fips-off
+   $ cryptnox-id factory piv preperso load-config --profile ms-logon-nfc --default-keys
+   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+   $ cryptnox-id piv quickstart --profile ms-logon-nfc \
+        --slot 9A --algorithm RSA2048 --cert-mode csr --csr-out 9a.csr.pem --default-keys
+
+``remote reset --fips-off`` has the Cryptnox remote PIV service reinstall the
+applet as the build with FIPS mode off (:doc:`/remote/remote-guide`). The
+``ms-logon-nfc`` profile is ``ms-logon`` with the PIN accepted over
+contactless, the 9A keys usable there after the PIN, and the 9A certificate
+and the CCC readable there (:doc:`/factory/pre-personalization-profiles`).
+``set-mgmt-key`` gives the management key (``9B``) its value, which the
+on-card RSA generation of the last command needs
+(:doc:`/piv/piv-personalization`). Steps 1 to 3 are then the same, with the
+card on the NFC reader for the logon.
+
+With a card set up by these commands on a contactless reader, Windows
+identifies it as a PIV card, its inbox minidriver builds the key container
+for the 9A certificate, and the Smart Card Key Storage Provider signs with the
+9A key after the PIN, all over NFC. With |cli| over the same reader the PIN is
+accepted, 9A signs and 9C is refused. On a client joined to a domain whose
+enterprise CA issued the 9A certificate from a smart-card-logon template, the
+sign-in screen offers the card under the account's name, and the PIN over NFC
+completes the logon by Kerberos PKINIT: the domain controller's event 4768
+shows pre-authentication type 16 and the card's certificate. Locking and
+unlocking the session with the card work the same way.
+
+What this costs:
+
+* **The PIN crosses the radio link in clear.** Anyone who can listen to the
+  exchange between the card and the reader learns it. On the contact
+  interface and inside secure messaging it is not exposed this way.
+* **The card is not a FIPS-validated configuration.** ``piv inventory`` and
+  ``remote inspect`` report the build; never present such a card as FIPS
+  validated.
+* **Three wrong PINs over NFC stop the PIN over NFC**, not the card: the other
+  three tries stay for the contact interface, where a correct PIN restores
+  the count. The PUK is contact only in this profile, so unblocking a PIN
+  needs a contact reader.
+* The 9A certificate, and with it the name of its holder, can be read by any
+  NFC reader the card comes close to.
+
+The settings are permanent once written. Going back to a contact-only PIN
+means another ``remote reset``, which erases the PIV function again.
+
 Scope and limits
 ----------------
 
@@ -212,8 +293,8 @@ Scope and limits
   enrollment, *Enroll on behalf of*) use the Yubico-style management model and
   do not apply; this card administers over SCP03. To enroll for another user,
   use Path A2.
-* The end-to-end logon path (PKINIT against a domain controller) can only be
-  proven in a domain lab; the card-side personalization and minidriver
+* The end-to-end logon path (PKINIT against a domain controller) needs a
+  domain with an enterprise CA; the card-side personalization and minidriver
   recognition are verifiable standalone with ``certutil -scinfo``.
 
 Next steps

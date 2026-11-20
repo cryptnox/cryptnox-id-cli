@@ -116,7 +116,8 @@ block below is for a blank or pre-personalized card; skip it on this path.
 .. warning::
 
    Run the whole block below with the card in a **contact** reader. The PIN,
-   the PUK and the 9A key are contact-only on every built-in profile. Over a
+   the PUK and the 9A key are contact-only on every built-in profile but
+   ``ms-logon-nfc``. Over a
    contactless (NFC/PICC) reader the first four commands still succeed, since
    they run inside the admin channel, and ``self-sign-cert`` is the first one
    to present the PIN. It fails there with ``PIN verification refused (SW=6982)``

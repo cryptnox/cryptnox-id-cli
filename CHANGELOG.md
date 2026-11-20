@@ -9,147 +9,142 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `mifare keys picc-to-aes`: replace a 2K3DES PICC master key (the factory
-  default) with an AES-128 key, confirmed by authenticating with the new key.
+- `mifare keys picc-to-aes`: replace a 2K3DES PICC master key with an AES-128
+  key.
 - `scripts/windows/eobo-wrap.ps1` and a Windows logon guide section on
   enrolling a card for another user through an enrollment agent.
-- `factory card fuse`: the manufacturer's last step. Deletes the JCOP sample
-  modules and then the configuration module, sets the card's lifecycle to
-  SECURED and replaces the card-manager key, from `CARD_MANAGER_NEW_*` or
-  `--randomize --out FILE`. It prints the card's state and a warning, then
-  asks for `FUSE-CARD`; `-y` skips the question.
-- `factory card status`: the card's lifecycle and which JCOP modules the card
-  lists, read over the card-manager channel. A card can leave them out of the
-  listing, so the sealed state is unknown unless the configuration module is
-  listed.
-- Remote operations warn when the service leaves INITIALIZE UPDATEs without a
-  completed authentication, with a count per security domain, also after a
-  failed operation. The JSON `relay` object lists them as
-  `open_initialize_updates`.
+- `factory card fuse`: the manufacturer's last step, which seals the card and
+  replaces the card-manager key.
+- `factory card status`: the card's lifecycle and the JCOP modules it lists.
+- Remote operations report the INITIALIZE UPDATEs the service left without a
+  completed authentication (`relay.open_initialize_updates`).
 - `piv perso create-key-object`: add a key object for one slot and algorithm
-  with the role and access modes given, for example a signing 9A on a card
-  whose 9A key cannot sign. Asks for confirmation; `--dry-run` sends nothing.
-  Refuses a finalized applet, and SIGN together with KEY_ESTABLISH, which the
-  applet refuses.
+  with a given role and access modes.
+- `remote reset` and `remote dev-reset`: `--piv-variant fips|fipsoff` and
+  `--fips-off` choose the PIV applet build the service installs; the build on
+  the card afterwards is reported as `piv_build` and `piv_build_matches`.
+- `remote inspect` reports the PIV applet build read from the card
+  (`piv_build`, `piv_build_matches`).
+- `remote ping`: the service's build, operations, applet builds and
+  secure-channel policy, without a card.
+- A refused or failed remote operation names the reason and what to do next;
+  the JSON error object gains `reason`, `retry_in_seconds` and `ref`.
+- `remote attest` checks the identifiers the service reports against the
+  returned certificate (`certificate_serial_matches`,
+  `certificate_sha256_matches`, `public_key_sha256_matches`).
+- `remote attest` on a finalized applet asks before the key in the slot is
+  overwritten, and prints the certificate when the card cannot store it.
+- Remote operations show the admin channel the service used (`channel`) and,
+  after `reset`, the applet's contactless-administration lock
+  (`nfc_admin_lock`); `attest` shows whether the certified public key reached
+  the service authenticated by the card.
+- Profile YAML: `fips_mode: false` for the PIV applet build with FIPS mode off,
+  with a PIN or PUK of at least 4 and up to 15 retries; `load-config` refuses
+  such a profile on the FIPS-mode build. `inspect-defaults` lists both sets of
+  bounds.
+- Profile YAML: `contactless: ALWAYS` with `contactless_retries` under `pin`
+  or `puk`.
+- Built-in profile `ms-logon-nfc`: Windows logon with the card on an NFC
+  reader, on the PIV applet build with FIPS mode off.
 
 ### Changed
 
+- `piv pin verify`, `pin change`, `pin unblock`, `puk change`, `perso set-pin`,
+  `set-puk`, `import-cert`, `write-object` and `write-standard-objects` exit
+  with code 6 when the card refuses, with the same result object as before.
+- `remote` commands exit with code 17 when a check under `verified_locally` is
+  `false`; `null` is not a failure. `remote attest --out` is checked for a
+  writable directory before anything is sent.
 - The licence is stated as `LGPL-3.0-only OR LicenseRef-Commercial` in the
-  package metadata and in an SPDX header at the top of every source file.
-- The package ships the text of the GNU GPL version 3, which the LGPL
-  incorporates, next to the LGPL and the commercial licence.
-- Profile YAML: `VCI` and `VCI_PIN` now mean the applet's VCI modes (`0x60`,
-  `0x61`), and `SM_PIN` (`0x41`) is new. The built-in profiles write the same
-  bytes as before, now named `SM` and `SM_PIN`. Files written by 1.1
-  (`init-config`, the docs example) use `VCI_PIN` for `0x41` and must say
-  `SM_PIN` instead; `load-config` warns when a file uses `VCI` or `VCI_PIN`.
-- `mifare sdm setup` and `sdm read` refuse a card whose DESFire is EV1 or EV2,
-  and `mifare version` names the generation.
-- `mifare app delete` warns that the card does not return the deleted
-  application's memory; only `mifare format` frees it.
-- `mifare format` works with a 2K3DES PICC master key as well as an AES one
-  (factory cards ship with 2K3DES); `--zero-key` covers both factory defaults.
-- `genuine` says why the applet was not found: a contactless interface, or a
-  card without it (production cards with FIDO2), pointing at FIDO2
-  attestation; JSON gains `reason`. `info` and `doctor` say the same.
+  package metadata and in an SPDX header in every source file.
+- The package ships the text of the GNU GPL version 3 next to the LGPL and the
+  commercial licence.
+- Profile YAML: `VCI` and `VCI_PIN` mean the applet's VCI modes (`0x60`,
+  `0x61`); `SM_PIN` (`0x41`) is new. `load-config` warns when a file uses `VCI`
+  or `VCI_PIN`.
+- `mifare sdm setup` and `sdm read` refuse a card whose DESFire is EV1 or EV2;
+  `mifare version` names the generation.
+- `mifare app delete` warns that only `mifare format` frees the deleted
+  application's memory.
+- `mifare format` and `--zero-key` work with a 2K3DES PICC master key as well
+  as an AES one.
+- `genuine`, `info` and `doctor` say why the genuineness applet was not found;
+  `genuine` JSON gains `reason`.
 - `piv pin unblock` help says it also works on a PIN that is not blocked.
-- The APDU transcript withholds the DESFire authentication tokens and the card's
-  AuthenticateISO challenge.
-- `factory piv preperso inspect-defaults` reports the profile retry cap (10)
-  and the applet's retry limit (15) separately; the JSON key `pin_fips` is
-  now `pin_limits`.
+- The APDU transcript withholds the DESFire authentication tokens and the
+  card's AuthenticateISO challenge.
+- `factory piv preperso inspect-defaults` reports the profile retry cap and the
+  applet's retry limit separately; the JSON key `pin_fips` is now `pin_limits`.
 - `piv inventory` labels the applet's FIPS flag "FIPS-mode build".
-- `remote --default-keys` help and warnings updated for the current service.
+- `remote --default-keys` help and warnings match the current service.
 - A `6985` to `generate-csr`, `self-sign-cert` or `smoke-test` names the key's
-  role and points at a key on the slot that can sign, or at how to add one,
-  instead of suggesting a wrong lifecycle state.
+  role and a key on the slot that can sign.
 - `generate-key`, `import-key` and `import-p12 --create-key-object` name the
-  role they copy, and ask first when it gives 9A or 9C a key that cannot sign.
+  role they copy and ask before giving 9A or 9C a key that cannot sign.
 - `load-config` and `quickstart --include-preperso` warn when the profile's 9A
   key cannot sign.
-- `quickstart` refuses, before writing anything, a certificate step that would
-  fail because the key cannot sign (on cards that list their key objects);
-  creates a missing key object with the profile's role; accepts
-  `--algorithm RSA*` where the card already has that key object; and counts a
-  slot's certificate only for the key it was issued to, refusing to overwrite
-  one it cannot account for.
+- `quickstart` refuses a certificate step the key cannot sign before writing
+  anything, creates a missing key object with the profile's role, accepts
+  `--algorithm RSA*` where the card has that key object, and does not
+  overwrite a certificate it cannot account for.
 
 ### Removed
 
 - `remote dev-reset` no longer asks for a development token.
+- `remote attest --ca-obj`.
 
 ### Fixed
 
-- `info`, `genuine info` and `genuine verify` print certificate names that
-  contain square brackets as written, instead of failing or dropping part of
-  them. So do `report` in human mode, which prints the report's JSON, and
-  the `--out` path it names, `fido ping`, `fido info` and
-  `fido credential list` for the strings the authenticator returns, and
-  `mifare sdm read` for the tag's NDEF text.
+- Text the service supplies is stripped of control sequences and escaped
+  before display, in results and in the error line.
+- `info`, `genuine info`, `genuine verify`, `report`, `fido ping`, `fido info`,
+  `fido credential list` and `mifare sdm read` print names and strings that
+  contain square brackets as written.
 - A command the card answers with a corrected length (`6Cxx`) is resent with
-  its data intact. A command with data and no expected length used to lose
-  its last data byte on the resend.
+  its data intact.
 - A value that is not valid hex, or a `--slot` that is not a key reference,
-  ends in an error with exit code 2 instead of a traceback. Bad hex is
-  reported as `invalid_input` without repeating the value.
+  ends with exit code 2 instead of a traceback.
 - A DESFire answer shorter than expected ends in an error instead of a
   traceback.
 - `piv perso generate-csr` and `self-sign-cert` accept a DER public key as
   well as PEM.
 - `piv quickstart --csr-out` on a slot whose certificate it keeps stops before
-  writing anything and names `piv perso generate-csr`, instead of exiting 0
-  without a CSR. `--public-out` then writes the kept certificate's public key.
+  writing anything; `--public-out` then writes the kept certificate's public
+  key.
 - `info` reads the card serial correctly when the CPLC answer uses a long-form
   length.
 - `piv objects read --out` writes a file only the owner can read.
-- `piv certs list` and `piv certs inspect` print a certificate subject or
-  issuer that contains square brackets as written, instead of failing or
-  dropping part of it.
-- `mifare app delete` selects the application after deleting it and fails
-  with an error if the card still finds it, instead of reporting `deleted` on
-  the card's bare OK.
+- `piv certs list` and `piv certs inspect` print a subject or issuer that
+  contains square brackets as written.
+- `mifare app delete` fails with an error when the card still finds the
+  application afterwards.
 - On Windows, a `fido` command re-run through the UAC prompt reports the
-  elevated run's error message, not only its exit code.
-- `piv pin change`, `piv pin unblock` and `piv puk change` no longer report a
-  blocked PIN or PUK on `6983` alone, which the card also answers when the
-  verifier's contactless limit is reached. They name both causes, point to
-  `piv pin status` on a contact reader, and say when the reader advertises
-  contactless. `63C0` still reports the block.
-- A PIN refused with `6983` while signing or reading a PIN-protected object
-  is reported as blocked or at its contactless limit, instead of pointing to
-  a key slot the profile never populated.
-- An all-zero key is no longer masked as a secret: `mifare read --full` with
-  `--zero-key` prints zero bytes as hex instead of `<REDACTED:16B>`, and the
-  APDU transcript keeps them.
-- `piv certs list` without `--json` marks a certificate it cannot parse as
-  unreadable and prints the parse error under the table, instead of showing
-  it as present with no subject or expiry.
+  elevated run's error message.
+- `piv pin change`, `piv pin unblock` and `piv puk change` name both causes of
+  `6983`, a blocked verifier or its contactless limit; `63C0` still reports
+  the block.
+- A PIN refused with `6983` while signing or reading a PIN-protected object is
+  reported as blocked or at its contactless limit.
+- An all-zero key is no longer masked as a secret in output and transcripts.
+- `piv certs list` marks a certificate it cannot parse as unreadable and
+  prints the parse error.
 - `mifare keys change` without `--auth-key-no` authenticates with the new key
-  after the change and fails with `ev2_error` (exit 11) when it does not,
-  instead of reporting a change the card never confirmed.
+  after the change and fails with `ev2_error` when it does not.
 - `mifare read --full` on a file that is not in FULL mode, and `mifare value
-  get` on a value file that is, fail with an error instead of printing wrong
-  data or a traceback.
+  get` on one that is, fail with an error instead of printing wrong data.
 - In `shell`, Ctrl-C during a command and a declined confirmation return to
-  the prompt instead of ending the shell.
+  the prompt.
 - `mifare read --full`, `mifare write --full`, `mifare sdm setup` and
-  `mifare keys change` with `--auth-key-no` fail with `ev2_error` (exit 11)
-  when the card answers OK without a response MAC, instead of reporting
-  success with nothing verified.
+  `mifare keys change --auth-key-no` fail with `ev2_error` when the card
+  answers OK without a response MAC.
 - `piv perso generate-key` warns that it destroys the slot's key only when the
   slot's certificate is for a key of the same algorithm.
 - A signature refused because the key object holds no key yet (`6983`) says
-  so, instead of suggesting a blocked PIN.
-- Creating a key object on a finalized applet (`--create-key-object`,
-  `create-key-object`) says the applet is finalized; the applet answers `6986`
-  there, which was reported as a bare status word.
-- On a contactless reader, `piv status`, `piv pin status`, `piv validate`
-  and the commands that present the PIN say the PIN is not usable over this
-  interface (the card answers 6982) instead of "not set" or the generic
-  security-status text; `quickstart` stops there instead of planning
-  `set-pin`; JSON gains `refused_on_interface`. Docs: the PIN, the PUK, the
-  PIN-protected keys and the management key (9B) are contact-only; the admin
-  channel works over both interfaces.
+  so.
+- Creating a key object on a finalized applet says the applet is finalized.
+- On a contactless reader, `piv status`, `piv pin status`, `piv validate` and
+  the commands that present the PIN say the PIN is not usable over this
+  interface; JSON gains `refused_on_interface`.
 
 ## [1.1.0] - 2026-10-16
 

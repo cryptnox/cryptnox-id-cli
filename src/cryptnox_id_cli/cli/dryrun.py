@@ -100,6 +100,8 @@ READ_ONLY = frozenset(
         "piv status",
         "piv validate",
         "piv verify-attestation",
+        # Asks the service about itself; the reader is not opened.
+        "remote ping",
         "report card",
         "report fido",
         "report full",

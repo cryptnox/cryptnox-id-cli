@@ -34,7 +34,11 @@ from cryptnox_id_cli.applets.piv.ssd import (
     put_key_apdu,
 )
 from cryptnox_id_cli.cli.commands.info import _read_cplc
-from cryptnox_id_cli.cli.commands.piv import _key_encryption_key, _open_domain_channel
+from cryptnox_id_cli.cli.commands.piv import (
+    _key_encryption_key,
+    _open_domain_channel,
+    _refuse_on_fips_mode_build,
+)
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.secrets.resolver import (
     CARD_MANAGER_KEY_ENVS,
@@ -190,7 +194,16 @@ def inspect_defaults(app: AppContext) -> None:
     payload = {
         "supported_algorithms": supported,
         "slots": [s.ref_hex for s in PIV_SLOTS],
-        "pin_limits": {"min_length": 6, "profile_retry_cap": 10, "applet_retry_limit": 15},
+        "pin_limits": {
+            "min_length": prof_mod.PIN_MIN_LENGTH_FIPS,
+            "profile_retry_cap": prof_mod.PIN_RETRY_CAP_FIPS,
+            "applet_retry_limit": 15,
+            # a profile that says fips_mode: false, for the build with FIPS mode off
+            "fips_mode_off": {
+                "min_length": prof_mod.PIN_MIN_LENGTH,
+                "profile_retry_cap": prof_mod.PIN_RETRY_CAP,
+            },
+        },
         "builtin_profiles": prof_mod.builtin_names(),
     }
 
@@ -200,6 +213,10 @@ def inspect_defaults(app: AppContext) -> None:
         con.print(f"  Key slots: {', '.join(s.ref_hex for s in PIV_SLOTS)}")
         con.print(
             "  PIN/PUK limits: min length 6; retries up to 10 in a profile (the applet allows 15)"
+        )
+        con.print(
+            "    with FIPS mode off (profile key fips_mode: false): min length "
+            f"{prof_mod.PIN_MIN_LENGTH}; retries up to {prof_mod.PIN_RETRY_CAP}"
         )
         con.print(f"  Built-in profiles: {', '.join(prof_mod.builtin_names())}")
 
@@ -271,14 +288,30 @@ def load_config(
     profile = _load_profile(file_, profile_name)
     ops = profile.build_ops()
     payload_bytes = profile.build_payload()
-    for warning in (profile.vci_warning(), profile.piv_auth_warning()):
+    for warning in (
+        profile.vci_warning(),
+        profile.piv_auth_warning(),
+        profile.contactless_pin_warning(),
+    ):
         if warning:
             app.out.warn(warning)
+    note = profile.fips_mode_note()
+    if note:
+        app.out.note(note)
 
     if dry_run or app.dry_run:
+        if not profile.fips_mode:
+            try:
+                with app.open_session() as session:
+                    _refuse_on_fips_mode_build(session, profile)
+            except prof_mod.ProfileError:
+                raise
+            except CryptnoxError:
+                pass  # no reader or card: the preview stands on its own
         result = {
             "dry_run": True,
             "profile": profile.name,
+            "fips_mode": profile.fips_mode,
             "operations": [label for label, _ in ops],
             "bulk_bytes": len(payload_bytes),
             "bulk_hex": payload_bytes.hex().upper(),
@@ -309,6 +342,8 @@ def load_config(
     sent: list[dict[str, object]] = []
     failed: tuple[str, str] | None = None
     with app.open_session() as session:
+        if not profile.fips_mode:
+            _refuse_on_fips_mode_build(session, profile)
         adm = PivAdmin(session)
         for label, op in ops:
             # JCOP 4.5 allows only ONE application APDU per applet-directed SCP03

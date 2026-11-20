@@ -46,7 +46,9 @@ use), ``ssh`` (9A gets SIGN added, nothing else changes — see
 :doc:`/piv/ssh-public-key-authentication`), and ``ms-logon`` (Windows smart-card logon /
 Remote Desktop: 9A keys are SIGN-capable and an importable RSA-2048 object
 coexists on 9A — see the
-:doc:`/piv/windows-logon-and-remote-desktop`).
+:doc:`/piv/windows-logon-and-remote-desktop`), and ``ms-logon-nfc`` (the same
+for a card presented over NFC: the PIN is accepted over contactless, which only
+the applet build with FIPS mode off allows).
 
 .. warning::
 

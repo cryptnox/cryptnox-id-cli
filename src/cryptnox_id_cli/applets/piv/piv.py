@@ -38,10 +38,29 @@ class PinStatus:
 
 PIN_INTERFACE_REFUSED_HINT = (
     "the card refuses PIN and PUK commands over this interface (SW=6982). PIN and PUK "
-    "are contact-only on the built-in profiles, which is what a contactless (NFC/PICC) "
-    "reader gets even when the PIN is set. Use a contact reader for anything that asks "
-    "for the PIN."
+    "are contact-only on every built-in profile but ms-logon-nfc, which is what a "
+    "contactless (NFC/PICC) reader gets even when the PIN is set. Use a contact reader "
+    "for anything that asks for the PIN."
 )
+
+
+#: The same refusal for the PUK alone: the PIN answers, so the card was set up to take
+#: the PIN over this interface (the ms-logon-nfc profile) and keeps the PUK off it.
+PUK_INTERFACE_REFUSED_HINT = (
+    "the card refuses PUK commands over this interface (SW=6982) and accepts the PIN "
+    "there: the PUK is contact-only on this card, which is how the ms-logon-nfc profile "
+    "sets it. A PIN shown blocked here may only have used up its contactless tries: a "
+    "correct PIN on a contact reader restores them, and the PUK is the last resort."
+)
+
+
+def interface_refused_hint(pin_refused: bool, puk_refused: bool) -> str | None:
+    """What a 6982 on the PIN or PUK probe means, worded for the one that was refused."""
+    if pin_refused:
+        return PIN_INTERFACE_REFUSED_HINT
+    if puk_refused:
+        return PUK_INTERFACE_REFUSED_HINT
+    return None
 
 
 def _pin_status_from_sw(ref: int, resp: Response) -> PinStatus:

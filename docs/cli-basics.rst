@@ -40,7 +40,8 @@ Global options
      - Disable coloured output.
 
 Reader requirements per function: PIV works over contact (the PIN, the PUK and
-the PIN-protected keys are contact-only) or contactless (administration and
+the PIN-protected keys are contact-only, except on a card set up with the
+``ms-logon-nfc`` profile) or contactless (administration and
 PIN-less reads). **MIFARE DESFire needs a
 DESFire-capable contactless reader.** **FIDO2 needs an Administrator terminal
 on Windows** (the OS reserves the CTAP AID otherwise).

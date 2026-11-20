@@ -36,6 +36,9 @@ machine token (see :doc:`/json-output`).
    * - 6
      - ``status_word``
      - The card rejected a command (the message carries the ISO status word).
+       A refused PIN, PUK, certificate import or object write also ends with
+       this code, after printing its result object in place of an error
+       object (see :doc:`/json-output`).
    * - 7
      - ``scp03_error`` / ``mgmt_key``
      - SCP03 secure-channel failure (wrong admin keys, cryptogram mismatch), or
@@ -72,3 +75,10 @@ machine token (see :doc:`/json-output`).
      - ``remote_failed``
      - The exchange completed, but the remote PIV service reported the
        operation as failed.
+   * - 17
+     - —
+     - A ``remote`` operation ended, but a check |cli| makes on its own did
+       not hold (a ``false`` under ``verified_locally``): the returned key
+       attestation did not verify, the card does not carry the applet build
+       asked for, the card is not the one the service reports. The result
+       object is printed in place of an error object (see :doc:`/json-output`).

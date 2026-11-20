@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 
 from ..transport.errors import RemoteProtocolError
 
-#: Operations the service exposes.
-OPS: tuple[str, ...] = ("authenticate", "inspect", "attest", "reset", "dev-reset")
+#: Operations of the service this client speaks. ``ping`` involves no card.
+OPS: tuple[str, ...] = ("ping", "authenticate", "inspect", "attest", "reset", "dev-reset")
 
 #: Largest WebSocket message accepted, in bytes. A CAP load block is ~255 bytes
 #: and the largest result carries a certificate, so this is generous.
