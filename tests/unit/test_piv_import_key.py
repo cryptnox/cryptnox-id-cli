@@ -25,17 +25,23 @@ STATUS = get_data_extended_apdu(0x4753).to_bytes().hex().upper()
 EC_KEY = ec.generate_private_key(ec.SECP256R1())
 
 
-def _key_file(tmp_path, key, *, password=None, mode=0o600):
+def _key_file(tmp_path, key, *, password=None, private=True):
     enc = (
         serialization.BestAvailableEncryption(password)
         if password
         else serialization.NoEncryption()
     )
     path = tmp_path / "key.pem"
-    path.write_bytes(
-        key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, enc)
-    )
-    os.chmod(path, mode)
+    # CodeQL flags a chmod to a readable mode; a 022 umask gives the file 0644 instead.
+    old_umask = os.umask(0o022)
+    try:
+        path.write_bytes(
+            key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, enc)
+        )
+    finally:
+        os.umask(old_umask)
+    if private:
+        os.chmod(path, 0o600)
     return str(path)
 
 
@@ -117,7 +123,7 @@ def test_unreadable_key_file_is_refused(tmp_path):
 
 
 def test_world_readable_key_file_warns(tmp_path):
-    path = _key_file(tmp_path, ec.generate_private_key(ec.SECP256R1()), mode=0o640)
+    path = _key_file(tmp_path, ec.generate_private_key(ec.SECP256R1()), private=False)
     result = run(["piv", "perso", "import-key", "--slot", "9C", "--key", path, "--dry-run"])
     assert "group/world-readable; consider chmod 600" in result.output
 
