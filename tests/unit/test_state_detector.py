@@ -50,8 +50,8 @@ def test_detect_real_acs_state(acs_session):
     assert st.presence == CardPresence.PRESENT
     assert st.piv == PivState.PARTIALLY_PERSONALIZED
     assert st.piv_apt is not None and st.piv_apt.label == "OpenFIPS201"
-    assert st.piv_pin is not None and st.piv_pin.configured and st.piv_pin.retries == 5
-    assert st.piv_puk is not None and st.piv_puk.configured and st.piv_puk.retries == 5
+    assert st.piv_pin is not None and st.piv_pin.configured and st.piv_pin.tries == 5
+    assert st.piv_puk is not None and st.piv_puk.configured and st.piv_puk.tries == 5
     assert st.piv_objects["printed"] is True
     assert st.piv_objects["chuid"] is False
     assert st.fido == FidoState.BLOCKED_BY_OS

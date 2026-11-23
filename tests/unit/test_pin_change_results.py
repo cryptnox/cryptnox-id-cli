@@ -13,7 +13,13 @@ from __future__ import annotations
 import json
 
 import pytest
-from _cardfakes import run_both_modes, wire_session
+from _cardfakes import (
+    PICC_READER,
+    PIV_GET_STATUS,
+    PIV_STATUS_CONTACT,
+    run_both_modes,
+    wire_session,
+)
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
 APT = (
@@ -23,7 +29,6 @@ APT = (
     "5F5049687474703A2F2F6E766C707562732E6E6973742E676F762F6E697374707562732F"
     "5370656369616C5075626C69636174696F6E732F4E4953542E53502E3830302D37332D342E706466"
 )
-PICC_READER = "ACS ACR1552 1S CL Reader PICC 0"
 PIN_CHANGE = "002400801031323334FFFFFFFF35363738FFFFFFFF"
 PIN_UNBLOCK = "002C008010313233343536373830303030FFFFFFFF"
 PUK_CHANGE = "002400811031323334353637383837363534333231"
@@ -53,10 +58,6 @@ COMMANDS = [
 ]
 
 
-GET_STATUS = "00CB3F00055C032F475300"
-CONTACT_STATUS = "5306800107860100"
-
-
 def _wire(
     monkeypatch,
     mock_connection,
@@ -67,7 +68,7 @@ def _wire(
 ):
     exchanges = {SELECT_PIV: f"{APT}|9000", apdu: f"|{sw}"}
     if status:
-        exchanges[GET_STATUS] = f"{status}|9000"
+        exchanges[PIV_GET_STATUS] = f"{status}|9000"
     wire_session(monkeypatch, mock_connection("3B00", exchanges, []), reader_name=reader_name)
 
 
@@ -92,7 +93,7 @@ def test_63c0_is_a_verifier_without_a_retry_limit(
 def test_6983_over_contact_is_a_block_with_its_recovery(
     monkeypatch, mock_connection, args, apdu, env, verifier
 ):
-    _wire(monkeypatch, mock_connection, apdu, "6983", status=CONTACT_STATUS)
+    _wire(monkeypatch, mock_connection, apdu, "6983", status=PIV_STATUS_CONTACT)
     payload, human = _both(args, env)
     assert payload["changed"] is False
     assert payload["blocked"] is True and "hint" not in payload

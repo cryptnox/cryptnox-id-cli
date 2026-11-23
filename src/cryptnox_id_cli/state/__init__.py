@@ -3,7 +3,7 @@
 
 """Composite card-state model and the read-only detector (plan §11)."""
 
-from cryptnox_id_cli.state.detector import StateDetector
+from cryptnox_id_cli.state.detector import StateDetector, counts_as_set
 from cryptnox_id_cli.state.model import (
     CardPresence,
     CardState,
@@ -14,6 +14,7 @@ from cryptnox_id_cli.state.model import (
 
 __all__ = [
     "StateDetector",
+    "counts_as_set",
     "CardState",
     "CardPresence",
     "PivState",

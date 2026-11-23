@@ -6,7 +6,7 @@ import os
 import stat
 
 import pytest
-from _cardfakes import run
+from _cardfakes import accept_any_pin, run
 
 from cryptnox_id_cli.cli.commands import info as info_cmd
 from cryptnox_id_cli.transport.errors import CryptnoxError, InputError
@@ -157,7 +157,7 @@ def _wire_quickstart(monkeypatch, cert_der: bytes | None = None):
         piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (_done_slot_facts(), "x")
     )
     monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_pin_truth", lambda piv, pin: ("match", None))
+    accept_any_pin(monkeypatch)
     monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: cert_der)
     monkeypatch.setattr(
         piv_cmd, "_sign_with_session", lambda session, ref, mech, pin, build: b"\x00" * 64

@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from _cardfakes import run, wire_session
+from _cardfakes import accept_any_pin, run, wire_session
 
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles as prof
@@ -522,7 +522,7 @@ def test_quickstart_creates_the_object_with_the_profile_role(monkeypatch):
     facts = _facts(key_object_present=False)
     monkeypatch.setattr(piv_cmd, "_create_key_object", spy)
     monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_pin_truth", lambda piv, pin: ("match", None))
+    accept_any_pin(monkeypatch)
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     result = _quickstart(
         monkeypatch,

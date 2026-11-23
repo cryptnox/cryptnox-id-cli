@@ -3,18 +3,22 @@
 
 """Quickstart planner: which steps run for each starting card state."""
 
+import contextlib
+
 import pytest
 from _cardfakes import QueueConn
+from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.piv.piv import PivApplet
+from cryptnox_id_cli.cli.commands import piv as piv_cmd
 from cryptnox_id_cli.cli.commands.piv import (
     CardFacts,
     PlannedStep,
     QuickstartOptions,
     _apply_pin_truth,
-    _pin_truth,
     _plan_quickstart,
 )
+from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -375,6 +379,37 @@ def test_facts_distinguish_a_missing_object_from_a_missing_structure(mock_connec
     assert facts.key_object_present is True
 
 
+@pytest.mark.parametrize(
+    ("puk", "deny", "reason"),
+    [
+        ("|6F00", [], "the card answered the PUK probe with SW=6F00: Unknown card error"),
+        (None, ["00200081"], "the PUK probe failed."),
+    ],
+    ids=["unknown-answer", "probe-failed"],
+)
+def test_facts_refuse_a_verifier_the_probe_left_unknown(mock_connection, puk, deny, reason):
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    exchanges = {SELECT_PIV: f"{APT}|9000", "00200080": "|63C3"}
+    if puk:
+        exchanges["00200081"] = puk
+    session = CardSession(mock_connection("3B00", exchanges, deny))
+    with pytest.raises(CryptnoxError) as exc:
+        _collect_quickstart_facts(session, 0x9C, 0x11)
+    assert type(exc.value) is CryptnoxError
+    assert str(exc.value).startswith("quickstart cannot tell whether the PIN and PUK are set: ")
+    assert reason in str(exc.value)
+
+
+def test_facts_count_more_than_fifteen_tries_as_unset(mock_connection):
+    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+
+    exchanges = {"00200080": "|63D4", "00200081": "|63D4"}
+    facts, state = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9C, 0x11)
+    assert (facts.pin_configured, facts.puk_configured) == (False, False)
+    assert state == "PivPrePersonalized"
+
+
 def test_facts_without_any_listed_object_mean_no_structure(mock_connection):
     from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
 
@@ -558,42 +593,71 @@ def test_quickstart_unknown_profile_is_an_error():
 
 
 # ------------------------------------------------- pre-flight PIN truth check --- #
-# Found on hardware 2026-08-21: after a manual pre-personalization the PIN verifier
-# exists with no value, the status probe (empty VERIFY) answers 63C6 as if the PIN
-# were set, quickstart skipped set-pin, and the certificate step then failed with
-# 6A88. The pre-flight check does one real VERIFY to establish the truth; it costs
-# no extra retries because every quickstart path verifies the PIN at least once.
+# The probe answers 63CX even for a verifier with no value; only a VERIFY tells them apart.
 
 
-def _verifying_piv(sw1, sw2):
-    return PivApplet(CardSession(QueueConn([(b"", sw1, sw2)])))
+def _pre_flight(monkeypatch, sw: int):
+    """Run quickstart on a card whose PIN looks set, with the pre-flight VERIFY answered ``sw``.
+
+    Returns whether the plan was adjusted for a valueless verifier (None when quickstart
+    stopped first) and the result.
+    """
+    conn = QueueConn([(b"", sw >> 8, sw & 0xFF)])
+    seen: list[bool] = []
+
+    @contextlib.contextmanager
+    def open_session(self):
+        yield CardSession(conn)
+
+    def stop(steps, empty):
+        seen.append(empty)
+        raise CryptnoxError("stop after the pre-flight")
+
+    monkeypatch.setattr(AppContext, "open_session", open_session)
+    monkeypatch.setattr(
+        piv_cmd,
+        "_collect_quickstart_facts",
+        lambda session, ref, mech: (_facts(pin_configured=True), "PivPartiallyPersonalized"),
+    )
+    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
+    monkeypatch.setattr(piv_cmd, "_apply_pin_truth", stop)
+    monkeypatch.setattr(
+        piv_cmd,
+        "_set_verifier",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
+    )
+    monkeypatch.setenv("CRYPTNOX_PIV_PIN", "999999")
+    result = CliRunner().invoke(
+        piv_cmd.command, ["quickstart", "--default-keys"], obj=AppContext(json=True, yes=True)
+    )
+    assert len(conn.sent) == 1 and conn.sent[0][:4] == bytes.fromhex("00200080")
+    return (seen[0] if seen else None), result
 
 
-def test_pin_truth_match():
-    assert _pin_truth(_verifying_piv(0x90, 0x00), b"123456") == ("match", None)
+def test_pin_truth_match(monkeypatch):
+    assert _pre_flight(monkeypatch, 0x9000)[0] is False
 
 
-def test_pin_truth_empty_verifier():
-    assert _pin_truth(_verifying_piv(0x6A, 0x88), b"123456") == ("empty", None)
+def test_pin_truth_empty_verifier(monkeypatch):
+    assert _pre_flight(monkeypatch, 0x6A88)[0] is True
 
 
-def test_pin_truth_mismatch_reports_remaining_tries():
-    assert _pin_truth(_verifying_piv(0x63, 0xC5), b"999999") == ("mismatch", 5)
+@pytest.mark.parametrize(
+    ("sw", "left"),
+    [(0x63C4, "4 tries left"), (0x63C0, "no retry limit")],
+    ids=["tries-left", "no-retry-limit"],
+)
+def test_quickstart_mismatch_aborts_before_any_write(monkeypatch, sw, left):
+    verdict, result = _pre_flight(monkeypatch, sw)
+    assert verdict is None
+    assert type(result.exception) is CryptnoxError
+    assert f"does not match ({left})" in str(result.exception)
 
 
-def test_pin_truth_no_retry_limit_is_a_mismatch_without_a_count():
-    assert _pin_truth(_verifying_piv(0x63, 0xC0), b"999999") == ("mismatch", None)
-
-
-def test_pin_truth_unexpected_sw_raises():
-    with pytest.raises(StatusWordError):
-        _pin_truth(_verifying_piv(0x69, 0x85), b"123456")
-
-
-def test_pin_truth_over_fifteen_tries_keeps_exit_6():
-    with pytest.raises(StatusWordError) as err:
-        _pin_truth(_verifying_piv(0x63, 0xD0), b"999999")
-    assert err.value.exit_code == 6
+def test_pin_truth_other_answers_keep_exit_6(monkeypatch):
+    verdict, result = _pre_flight(monkeypatch, 0x6985)
+    assert verdict is None
+    assert isinstance(result.exception, StatusWordError) and result.exception.exit_code == 6
 
 
 def _skip_plan():
@@ -607,7 +671,7 @@ def _skip_plan():
 
 
 def test_apply_pin_truth_empty_flips_both_verifier_steps():
-    steps = _apply_pin_truth(_skip_plan(), "empty")
+    steps = _apply_pin_truth(_skip_plan(), True)
     by = {s.step: s for s in steps}
     assert by["set-pin"].run and "no value" in (by["set-pin"].reason or "")
     assert by["set-puk"].run and "valueless" in (by["set-puk"].reason or "")
@@ -616,7 +680,7 @@ def test_apply_pin_truth_empty_flips_both_verifier_steps():
 
 
 def test_apply_pin_truth_match_upgrades_the_reason_only():
-    steps = _apply_pin_truth(_skip_plan(), "match")
+    steps = _apply_pin_truth(_skip_plan(), False)
     by = {s.step: s for s in steps}
     assert not by["set-pin"].run and by["set-pin"].reason == "PIN already set (verified)"
     assert not by["set-puk"].run  # PUK claim left alone when the PIN proved true
@@ -624,46 +688,8 @@ def test_apply_pin_truth_match_upgrades_the_reason_only():
 
 def test_apply_pin_truth_never_unflips_a_planned_step():
     planned = [PlannedStep("set-pin", True), PlannedStep("set-puk", True)]
-    for verdict in ("match", "empty"):
-        assert all(s.run for s in _apply_pin_truth(planned, verdict))
-
-
-def test_quickstart_mismatch_aborts_before_any_write(monkeypatch):
-    from click.testing import CliRunner
-
-    from cryptnox_id_cli.cli.commands import piv as piv_cmd
-    from cryptnox_id_cli.cli.context import AppContext
-
-    class _DummySession:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *exc):
-            pass
-
-    monkeypatch.setattr(AppContext, "open_session", lambda self: _DummySession())
-    monkeypatch.setattr(
-        piv_cmd,
-        "_collect_quickstart_facts",
-        lambda session, ref, mech: (_facts(pin_configured=True), "PivPartiallyPersonalized"),
-    )
-    monkeypatch.setattr(piv_cmd, "_pin_truth", lambda piv, pin: ("mismatch", 4))
-    monkeypatch.setattr(piv_cmd, "_select", lambda session: object())
-    monkeypatch.setattr(
-        piv_cmd,
-        "_set_verifier",
-        lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
-    )
-    monkeypatch.setenv("CRYPTNOX_PIV_PIN", "999999")
-    result = CliRunner().invoke(
-        piv_cmd.command,
-        ["quickstart", "--default-keys"],
-        obj=AppContext(json=True, yes=True),
-    )
-    assert result.exit_code != 0
-    assert isinstance(result.exception, CryptnoxError)
-    assert "does not match" in str(result.exception)
-    assert "4 tries" in str(result.exception)
+    for empty in (False, True):
+        assert all(s.run for s in _apply_pin_truth(planned, empty))
 
 
 def test_facts_with_a_withheld_listing_replace_a_certificate_whose_key_is_absent(mock_connection):

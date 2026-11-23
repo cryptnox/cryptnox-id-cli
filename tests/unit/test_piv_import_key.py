@@ -141,7 +141,7 @@ def test_a_smoke_test_pin_that_does_not_fit_is_refused_before_the_import(tmp_pat
     conn = scp03_card((0x6A, 0x86))
     result = run(_import(tmp_path, "--pin", "12", key=ec.generate_private_key(ec.SECP256R1())))
     assert result.exit_code == 2
-    assert "Nothing was sent to the card." in result.output
+    assert "It was not sent to the card." in result.output
     assert conn.log == []
 
 

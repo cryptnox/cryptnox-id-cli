@@ -243,6 +243,48 @@ def test_pin_pre_flight(plain_scp03_card, verify_sw, code, text):
     assert text in " ".join(result.output.split())
 
 
+def test_more_than_fifteen_tries_plans_the_admin_set_without_a_pre_flight(plain_scp03_card):
+    conn = plain_scp03_card(pin_sw=(0x63, 0xD4))
+    result = run(["--json", "--yes", "piv", "quickstart", "--default-keys", "--cert-mode", "none"])
+    assert result.exit_code == 6
+    steps = json.loads(result.stdout)["steps"]
+    assert steps[-1]["step"] == "set-pin" and steps[-1]["status"] == "failed"
+    assert VERIFY_123456 not in conn.log
+
+
+def test_an_unreadable_puk_stops_the_run_before_any_pin_or_write(plain_scp03_card):
+    conn = plain_scp03_card(pin_sw=(0x63, 0xC3), answers={"00200081": ([], 0x6F, 0x00)})
+    result = run(["--yes", "piv", "quickstart", "--default-keys", "--cert-mode", "none"])
+    assert result.exit_code == 1
+    assert "cannot tell whether the PIN and PUK are set" in " ".join(result.output.split())
+    assert VERIFY_123456 not in conn.log
+    assert not any(c.startswith("8050") for c in conn.log)
+
+
+@pytest.mark.parametrize("dry_run", [[], ["--dry-run"]], ids=["run", "dry-run"])
+@pytest.mark.parametrize("var", ["CRYPTNOX_PIV_NEW_PIN", "CRYPTNOX_PIV_NEW_PUK"])
+def test_a_new_value_that_does_not_fit_is_refused_before_any_write(
+    plain_scp03_card, monkeypatch, var, dry_run
+):
+    conn = plain_scp03_card()
+    monkeypatch.setenv(var, "123456789")
+    result = run(["--json", "--yes", "piv", "quickstart", "--default-keys", *dry_run])
+    assert result.exit_code == 2, result.output
+    error = json.loads(result.stdout)
+    assert error["error"] == "invalid_input" and "4 to 8 bytes; this one is 9" in error["message"]
+    assert not any(c.startswith("8050") for c in conn.log)
+
+
+@pytest.mark.parametrize("var", ["CRYPTNOX_PIV_NEW_PIN", "CRYPTNOX_PIV_NEW_PUK"])
+def test_a_new_value_the_plan_does_not_use_is_not_checked(plain_scp03_card, monkeypatch, var):
+    plain_scp03_card(pin_sw=(0x63, 0xC3))
+    monkeypatch.setenv(var, "123456789")
+    result = run(["--json", "piv", "quickstart", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    planned = {s["step"]: s["status"] for s in json.loads(result.stdout)["steps"]}
+    assert planned["set-pin"] == planned["set-puk"] == "skip"
+
+
 def test_declining_the_confirmation_sends_nothing(plain_scp03_card):
     conn = plain_scp03_card()
     result = run(["piv", "quickstart", "--default-keys"], input="n\n")

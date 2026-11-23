@@ -33,10 +33,18 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.applets.fido.constants import CTAP_CLIENT_PIN
+from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 
 _Reply = tuple[list[int], int, int]
+
+#: GET DATA for the PIV applet's own status object (2F4753), and its answer per interface.
+PIV_GET_STATUS = "00CB3F00055C032F475300"
+PIV_STATUS_CONTACT = "5306800107860100"
+PIV_STATUS_CONTACTLESS = "5306800107860101"
+PICC_READER = "ACS ACR1552 1S CL Reader PICC 0"
+CONTACT_READER = "ACS ACR39U ICC Reader 0"
 
 
 class QueueConn:
@@ -164,6 +172,12 @@ def run_both_modes(args: Sequence[str], **kwargs):
     invocation is usually the cheapest coverage in any wave.
     """
     return run(["--json", *args], **kwargs), run(list(args), **kwargs)
+
+
+def accept_any_pin(monkeypatch) -> None:
+    """Answer every PIV VERIFY with a value 9000, for a command run without a card."""
+    ok = verifier.Outcome(verifier.Op.VERIFY, verifier.PIN, 0x9000, verifier.Verdict.OK)
+    monkeypatch.setattr(verifier, "verify", lambda piv, value, ref=verifier.PIN: ok)
 
 
 def self_signed_der(common_name: str) -> bytes:

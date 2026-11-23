@@ -61,7 +61,6 @@ def test_unblock_pin_wire_format():
 
 
 def test_wrong_current_pin_surfaces_retry_counter():
-    # 63C2 == two retries remain.
     apdu = "002400801031323334ffffffff35363738ffffffff"
     conn = _DictConn({apdu: "|63C2"})
     outcome = verifier.change(PivApplet(CardSession(conn)), verifier.PIN, b"1234", b"5678")
