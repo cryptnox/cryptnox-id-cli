@@ -374,7 +374,10 @@ without the SIGN role (when the card lists its key objects), or a key object
 the profile would create without it. A certificate in the slot counts for
 the key it was issued to. When it belongs to the slot’s other key and that
 key cannot sign, quickstart generates the requested key and replaces the
-certificate, and says so; any other certificate it refuses to overwrite.</p></li>
+certificate, and says so; any other certificate it refuses to overwrite.
+The smoke test is skipped for a key known to lack the SIGN role, and a
+signature the card refuses with <code class="docutils literal notranslate"><span class="pre">6985</span></code> fails the run. When nothing is left
+to run, quickstart says so and does not ask to proceed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-cert</span></code> writes the certificate it is given. <code class="docutils literal notranslate"><span class="pre">--csr</span> <span class="pre">FILE</span></code>
 refuses one whose public key is not the CSR’s, with no PIN; <code class="docutils literal notranslate"><span class="pre">--verify-pin</span></code>
 has the slot sign a challenge and refuses unless the certificate’s key
