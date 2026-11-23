@@ -1,0 +1,437 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remote service guide &mdash; Cryptnox ID CLI</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=44fa084b" />
+
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/remote/remote-guide.html" />
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=84a24d03"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/custom.js?v=7a631626"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Remote service commands" href="remote-commands.html" />
+    <link rel="prev" title="Genuineness commands" href="../genuine/genuineness-commands.html" />
+ 
+<!-- Open Graph / social preview -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/remote/remote-guide.html" />
+<meta property="og:title" content="Remote service guide | Cryptnox Docs" />
+<meta property="og:description" content="Cryptnox ID CLI — command reference for Cryptnox PIV and identity smart cards: provisioning, certificates, PIN management and card verification." />
+<meta property="og:site_name" content="Cryptnox Docs" />
+<meta property="og:image" content="https://cryptnox.com/wp-content/uploads/2026/09/cryptnox-documentation-social.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:alt" content="Cryptnox Technical Documentation" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content="@CryptnoxTech" />
+<meta name="twitter:title" content="Remote service guide | Cryptnox Docs" />
+<meta name="twitter:description" content="Cryptnox ID CLI — command reference for Cryptnox PIV and identity smart cards: provisioning, certificates, PIN management and card verification." />
+<meta name="twitter:image" content="https://cryptnox.com/wp-content/uploads/2026/09/cryptnox-documentation-social.jpg" />
+<meta name="twitter:image:alt" content="Cryptnox Technical Documentation" />
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #101f2e" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Cryptnox ID CLI
+              <img src="../_static/cryptnox-logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">General</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interactive-shell.html">Interactive shell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-basics.html">Command syntax &amp; conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PIV</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/quick-start-a-passkey-on-the-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fido2/fido2-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">MIFARE DESFire</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/quick-start-a-tamper-evident-nfc-tag-sdm-sun.html">Quick start (EV3)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mifare/mifare-desfire-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Genuineness</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/quick-start-prove-a-card-is-genuine.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-guide.html">Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../genuine/genuineness-commands.html">Commands</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Remote service</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-a-relayed-operation-works">How a relayed operation works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-relay-policy">The relay policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operations">Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-admin-channel-the-service-opens">The admin channel the service opens</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-a-failed-authentication-costs">What a failed authentication costs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-default-keys-flag">The <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> flag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-piv-applet-build">The PIV applet build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-limit-of-operations-per-card">The limit of operations per card</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-is-sent-to-the-service">What is sent to the service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#transcripts">Transcripts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="remote-commands.html">Commands</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #101f2e" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Cryptnox ID CLI</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Remote service guide</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="remote-service-guide">
+<h1>Remote service guide<a class="headerlink" href="#remote-service-guide" title="Link to this heading"></a></h1>
+<p>Some PIV lifecycle operations need keys that never leave Cryptnox: the key
+that makes a card genuine, and the certificate authority that attests keys
+generated on it. The remote PIV service holds those keys in a hardware
+security module and performs the operation over a relayed command channel,
+with the card in the holder’s own reader.</p>
+<section id="how-a-relayed-operation-works">
+<h2>How a relayed operation works<a class="headerlink" href="#how-a-relayed-operation-works" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> opens the local reader and reads the card’s ATR and CPLC serial.</p></li>
+<li><p>It connects to the service over TLS and names the operation.</p></li>
+<li><p>The service issues a small proof-of-work; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> answers it. This is an
+anti-abuse throttle, not a credential.</p></li>
+<li><p>The service sends card commands one at a time. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> checks each one
+against the relay policy, transmits it, and returns the card’s answer
+verbatim, status word included. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> never sends a command of its own and
+never reassembles a chained response; the service sees the card exactly as
+a local reader would.</p></li>
+<li><p>The service returns a result. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows it as the service’s assertion and
+adds what it verified locally.</p></li>
+</ol>
+</section>
+<section id="the-relay-policy">
+<h2>The relay policy<a class="headerlink" href="#the-relay-policy" title="Link to this heading"></a></h2>
+<p>The card carries more than the PIV function. A relay that executed whatever
+it was sent would expose the wallet, the FIDO2 passkeys and the genuineness
+key to the service. The relay policy is an allow-list, per operation, over
+what a command header reveals: the selected applet, the class byte, the
+instruction, and for a SELECT the target application. Anything not listed is
+refused, the operation stops, and the refusal names the command header.</p>
+<p>The policy also caps the number of commands and the time an operation may
+take, limits secure-channel authentication attempts per security domain, and
+never relays a card-holder PIN or PUK command. Inside a secure channel only
+the class and instruction bytes stay in the clear, so the policy fences which
+security domain the channel was opened to and which instructions pass through
+it; it cannot see what an encrypted command carries.</p>
+</section>
+<section id="operations">
+<h2>Operations<a class="headerlink" href="#operations" title="Link to this heading"></a></h2>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ping</span></code></dt><dd><p>Asks the service about itself: its build, the operations it serves, the PIV
+applet builds it can install and its secure-channel policy. No card is
+involved; the service answers before any proof-of-work or card exchange.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">authenticate</span></code></dt><dd><p>Reads the ATR and CPLC serial. Key-free. Allows only card-manager reads.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">inspect</span></code></dt><dd><p>Probes whether the PIV applet and its security domain are present and which
+key versions they carry. Key-free: the service reads each security domain’s
+key information without authenticating, and the relay refuses every
+EXTERNAL AUTHENTICATE. A run leaves no failed authentication on the card.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">attest</span></code></dt><dd><p>Generates a key in one slot and returns a key-attestation certificate for
+it, signed by the Cryptnox key-attestation CA and stored in the card’s
+attestation container as well. The relay policy admits the applet’s admin
+channel for the key-object setup, the management-key handshake (never a
+slot key), key generation for the requested slot only, and the certificate
+write. The tool then verifies the certificate against the pinned anchors and
+binds it to the card, the slot and the certificate stored on the card. The
+certificate write itself is not bound to the slot: PUT DATA names its object
+inside the data, so the service could write any PIV data object during the
+operation, and only the certificate read back is checked. The generation
+itself happening on the card is the service’s claim; nothing the relay sees
+authenticates it.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">reset</span></code></dt><dd><p>Wipes and reinstalls the PIV function. The service authenticates to the
+card manager, deletes the PIV applet, its package and its security domain,
+loads the applet again, recreates the security domain and loads the card’s
+keys, then verifies the result. Every PIV key and certificate is destroyed;
+the keys were never exportable, so nothing can bring them back. Interactive
+use requires typing <code class="docutils literal notranslate"><span class="pre">RESET-PIV</span></code>; non-interactive use requires
+<code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code>. <code class="docutils literal notranslate"><span class="pre">--yes</span></code> is not accepted.</p>
+<p>The relay policy for this operation admits card content management through
+the card manager only, lets a DELETE name nothing but the PIV instance, its
+package and its security domain, refuses a DELETE it cannot read unless the
+channel encrypts commands, caps authentication attempts per security
+domain, and stops at the first failed authentication so no further attempt
+adds to the card’s count. Inside an encrypted channel the policy
+sees instructions, not targets; that limit is real and is why the FIDO2 and
+genuineness state is read before and after.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dev-reset</span></code></dt><dd><p>As <code class="docutils literal notranslate"><span class="pre">reset</span></code>, for development cards, leaving the card manager and the PIV
+security domain on the publicly documented GlobalPlatform key so the PIV
+function can be pre-personalized and personalized locally. Before anything
+is deleted, the card must prove it is genuine with one of its own keys (see
+below); a card that cannot is refused untouched. Afterwards anyone with a
+reader can install or delete applets on the card, and only Cryptnox can make
+it genuine again.</p>
+</dd>
+</dl>
+</section>
+<section id="the-admin-channel-the-service-opens">
+<h2>The admin channel the service opens<a class="headerlink" href="#the-admin-channel-the-service-opens" title="Link to this heading"></a></h2>
+<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> the service opens the PIV
+applet’s admin channel with the card’s own key. On an SCP03 card it asks for
+security level <code class="docutils literal notranslate"><span class="pre">0x33</span></code>: commands and answers are both authenticated and
+encrypted, so nothing between the service and the card, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> included, can
+alter what the card says. That is the hardened channel. SCP02 cards have no
+answer protection, so on them the service drives the card at the legacy level
+<code class="docutils literal notranslate"><span class="pre">0x03</span></code>, where only the commands are protected. Every result names the
+channel used (<code class="docutils literal notranslate"><span class="pre">channel</span></code>: protocol, level, <code class="docutils literal notranslate"><span class="pre">hardened</span></code> or <code class="docutils literal notranslate"><span class="pre">legacy</span></code>) and
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows it. A legacy channel on an SCP03 card is warned about, and the
+service’s log says why. A result without the field comes from a service
+without the hardened channel; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows the channel as not reported and
+treats it as legacy. The relay policy stops at the first failed
+authentication, so an SCP03 security domain that refused the hardened level
+ends the operation rather than being driven at the legacy level.</p>
+<p>Three rules follow from the channel:</p>
+<ul class="simple">
+<li><p>The relay stays a plain relay. On the hardened channel the card signs each
+answer together with its status word, so a client that reassembled chained
+answers or rewrote status words would break the channel. The service then
+reports <code class="docutils literal notranslate"><span class="pre">R-MAC</span> <span class="pre">mismatch</span></code>, and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says to check the relay path rather
+than retry.</p></li>
+<li><p>Administration is contact-only. Through the channel the applet reports
+which interface it is being driven over, and the service refuses <code class="docutils literal notranslate"><span class="pre">attest</span></code>
+over contactless. <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> work through the card manager,
+which the applet does not govern; there the card’s own configuration keeps
+administration on the contact interface. After a <code class="docutils literal notranslate"><span class="pre">reset</span></code> the service also
+sets the applet’s own lock, so the applet refuses its admin channel over
+contactless by itself (<code class="docutils literal notranslate"><span class="pre">nfc_admin_lock</span></code> in the result); ordinary PIV use
+over contactless is unaffected. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns before connecting when the
+selected reader looks contactless; the service’s decision rests on the
+card’s report, not on the reader’s name.</p></li>
+<li><p>A card whose channel cannot authenticate its answers (SCP02, or an SCP03
+card driven at the legacy level) gets no key attestation, and the other
+operations only with a Cryptnox access token, which <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> has no option
+for. The service refuses with <code class="docutils literal notranslate"><span class="pre">legacy_channel</span></code> set and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says so.
+<code class="docutils literal notranslate"><span class="pre">authenticate</span></code> and <code class="docutils literal notranslate"><span class="pre">inspect</span></code> open no channel and need no token.</p></li>
+</ul>
+<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">public_key_authenticated</span></code> says whether the public key the
+service certified reached it through the hardened channel. When it did not,
+or the service does not say, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns that something between the service
+and the card could have substituted the key: the certificate is still bound
+to the card, the slot and the certificate stored on the card, but the key’s
+origin rests on the service’s claim alone.</p>
+</section>
+<section id="what-a-failed-authentication-costs">
+<h2>What a failed authentication costs<a class="headerlink" href="#what-a-failed-authentication-costs" title="Link to this heading"></a></h2>
+<p>A security domain counts every INITIALIZE UPDATE that is not followed by a
+successful EXTERNAL AUTHENTICATE, including one for a key version it does not
+hold. After five, it answers each further INITIALIZE UPDATE about 24 seconds
+late, until a successful authentication to it clears the count. There is no
+lockout, only the delay. Which security domains keep this count depends on the
+chip: on some only the card manager does, on others the PIV security domain
+does as well. This is why the relay caps authentication attempts per
+operation. For the PIV security domain, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">admin</span> <span class="pre">authenticate</span></code> with the
+card’s own keys clears the count; the card manager’s clears only with an
+authentication to the card manager.</p>
+<p>When an operation leaves INITIALIZE UPDATEs without a completed
+authentication, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says so afterwards with a count per security domain,
+also when the operation failed. With <code class="docutils literal notranslate"><span class="pre">--json</span></code> the counts are in
+<code class="docutils literal notranslate"><span class="pre">relay.open_initialize_updates</span></code>.</p>
+</section>
+<section id="the-default-keys-flag">
+<h2>The <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> flag<a class="headerlink" href="#the-default-keys-flag" title="Link to this heading"></a></h2>
+<p>By default the service authenticates to the card manager with the card’s own
+key, derived per card from its identity. That is the state a card leaves the
+factory in, and a <code class="docutils literal notranslate"><span class="pre">reset</span></code> keeps it.</p>
+<p>On <code class="docutils literal notranslate"><span class="pre">reset</span></code>, <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> asks the service to authenticate with the
+published GlobalPlatform default key instead and make the card genuine. That
+is a Cryptnox operation: the service refuses it without a Cryptnox factory
+token, and the refusal leaves the card untouched. A card that ended up on the
+default key, for example after a <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>, is re-provisioned by Cryptnox
+support.</p>
+<p>On <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>, the flag selects how the card proves it is genuine before
+anything is deleted: without it, with its card-manager key; with it, with key
+version 2 of its PIV security domain. A card that can prove neither is refused
+untouched; Cryptnox support re-provisions it. The service’s refusal may suggest
+<code class="docutils literal notranslate"><span class="pre">reset</span> <span class="pre">--default-keys</span></code>, which it refuses without a factory token.</p>
+</section>
+<section id="the-piv-applet-build">
+<h2>The PIV applet build<a class="headerlink" href="#the-piv-applet-build" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> reinstall the PIV applet, and the service holds two
+builds of it, made from the same source with one switch apart:</p>
+<ul class="simple">
+<li><p>the <strong>FIPS-mode build</strong>, the default and the build cards ship with;</p></li>
+<li><p>the <strong>build with FIPS mode off</strong>, asked for with <code class="docutils literal notranslate"><span class="pre">--fips-off</span></code> or
+<code class="docutils literal notranslate"><span class="pre">--piv-variant</span> <span class="pre">fipsoff</span></code>.</p></li>
+</ul>
+<p>With FIPS mode off the applet lifts three limits it enforces when a
+pre-personalization profile is loaded: the PIN may be as short as 4 digits
+instead of 6, the retry counter may exceed 15 (<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> still caps a profile at
+15, the most the card reports back), and the PIN may be made usable
+over the contactless interface without secure messaging. It also skips the
+FIPS power-up self-tests and does not zeroise an object before discarding it.
+Slots, algorithms, key generation, key import, certificates and the admin
+channel behave the same in both builds; a card personalized with a profile
+that asks for none of the three behaves the same whichever build it carries.</p>
+<p>A profile asks for them with <code class="docutils literal notranslate"><span class="pre">fips_mode:</span> <span class="pre">false</span></code>
+(<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>). The built-in <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code>
+profile, for Windows logon with the card on an NFC reader, is the one that
+does (<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>).</p>
+<p>The two builds share the applet and package identifiers, so nothing outside
+the applet tells them apart. The applet reports its build in its status, read
+without authentication: <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> shows it as “FIPS-mode build”, and
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">inspect</span></code>, <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code> read it and
+report it. After a reset the build read from the card is compared with the
+one asked for, so a service that installed something else is noticed.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">reset</span></code> without the option installs the FIPS-mode build again. Whether the
+service offers the build with FIPS mode off is its own setting; <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">ping</span></code>
+lists the builds it offers, and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> asks before a reset that needs it.</p>
+</section>
+<section id="the-limit-of-operations-per-card">
+<h2>The limit of operations per card<a class="headerlink" href="#the-limit-of-operations-per-card" title="Link to this heading"></a></h2>
+<p>The service accepts a fixed number of operations per card in a period, five an
+hour at the time of writing, and every operation that reaches a card counts,
+<code class="docutils literal notranslate"><span class="pre">inspect</span></code> and <code class="docutils literal notranslate"><span class="pre">authenticate</span></code> included. <code class="docutils literal notranslate"><span class="pre">ping</span></code> does not: it involves no
+card. When the limit is reached the service refuses before anything is sent to
+the card and says when it accepts the next operation; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> reports that
+waiting time, and <code class="docutils literal notranslate"><span class="pre">retry_in_seconds</span></code> with <code class="docutils literal notranslate"><span class="pre">--json</span></code>. The counter is kept by
+the service, per card, and survives a restart of the service.</p>
+</section>
+<section id="what-is-sent-to-the-service">
+<h2>What is sent to the service<a class="headerlink" href="#what-is-sent-to-the-service" title="Link to this heading"></a></h2>
+<p>The card’s ATR and CPLC serial identify the card to the service. They are the
+same values any reader can obtain from the card without a key. Nothing else
+about the card holder is sent. An operation sends its own parameters with
+them: the slot and algorithm for <code class="docutils literal notranslate"><span class="pre">attest</span></code>, the applet build and the key tier
+for <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>. <code class="docutils literal notranslate"><span class="pre">ping</span></code> sends nothing about a card.</p>
+</section>
+<section id="transcripts">
+<h2>Transcripts<a class="headerlink" href="#transcripts" title="Link to this heading"></a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">--apdu-log</span></code> or <code class="docutils literal notranslate"><span class="pre">--verbose</span></code>, relayed commands are written with their
+data masked unless the instruction is a known-harmless read, because the
+service chose the command and <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> cannot vouch for what it carries.
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">--full-transcript</span></code> lifts that extra masking for troubleshooting; the
+standard masking of secret-bearing commands still applies.</p>
+<p>Relayed lines start with <code class="docutils literal notranslate"><span class="pre">relay</span></code>, so they read apart from the commands <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>
+sends on its own before and after the operation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="mi">00</span><span class="n">A4040008A00000015100000000</span>
+<span class="o">&lt;</span> <span class="mi">6</span><span class="n">F108408A000000151000000A5049F6501FF9000</span>
+<span class="n">relay</span> <span class="o">&gt;</span> <span class="mi">80</span><span class="n">CA9F7F00</span>
+<span class="n">relay</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="n">F7F2A</span><span class="o">..</span><span class="mf">.9000</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../genuine/genuineness-commands.html" class="btn btn-neutral float-left" title="Genuineness commands" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="remote-commands.html" class="btn btn-neutral float-right" title="Remote service commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Cryptnox SA.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+ 
+<div id="version-selector-container">
+  <div class="version-dropdown">
+    <button class="version-dropdown-btn" id="version-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+      <span>CLI version v1.2</span>
+      <span class="version-caret">&#9660;</span>
+    </button>
+    <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
+      <li role="option" class="version-option" data-url="../../v1.0/remote/remote-guide.html">CLI version v1.0</li>
+      <li role="option" class="version-option" data-url="../../v1.1/remote/remote-guide.html">CLI version v1.1</li>
+      <li role="option" class="version-option selected" data-url="../remote/remote-guide.html">CLI version v1.2</li>
+    </ul>
+  </div>
+</div>
+
+
+</body>
+</html>
