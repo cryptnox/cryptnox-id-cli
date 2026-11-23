@@ -53,7 +53,7 @@ def test_status_shows_tries_left_and_a_blocked_puk(monkeypatch):
     payload, text = _status(monkeypatch, pin_sw={0x80: (0x63, 0xC3), 0x81: (0x69, 0x83)})
     assert payload["pin"]["retries_remaining"] == 3 and payload["puk"]["blocked"] is True
     assert "PIN (80): set, 3 tries left" in text
-    assert "PUK (81): set, 0 tries left (blocked)" in text
+    assert "PUK (81): set, blocked" in text
 
 
 def test_status_without_a_piv_applet_prints_no_pin_lines(monkeypatch):

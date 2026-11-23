@@ -111,7 +111,7 @@ def test_personalized_card_shows_every_applet_detail(mock_connection, monkeypatc
     assert f"ATR: {WIRED_ATR}" in text
     assert "Serial: 01234567 (CPLC)" in text
     assert "UID: 4301012345670042 (CPLC)" in text
-    assert "OpenFIPS201, PIN 3 tries, finalized" in text
+    assert "OpenFIPS201, PIN 3 tries left, finalized" in text
     assert "FIDO_2_0, U2F_V2" in text
     assert "CN=Device DEV-TEST-01" in text
     assert "PIV objects present: chuid, ccc, printed" in text

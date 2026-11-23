@@ -56,14 +56,14 @@ def _refusal(sw: int) -> Response:
     return Response(b"", sw >> 8, sw & 0xFF)
 
 
-GET_STATUS = "00CB3F00055C032F475300"
-CONTACT_STATUS = "5306800107860100|9000"
-
-
 def _wire(monkeypatch, mock_connection, command: str, sw: str) -> None:
-    exchanges = {SELECT_PIV: f"{APT}|9000", command: f"|{sw}", GET_STATUS: CONTACT_STATUS}
+    exchanges = {
+        SELECT_PIV: f"{APT}|9000",
+        command: f"|{sw}",
+        _cardfakes.PIV_GET_STATUS: f"{_cardfakes.PIV_STATUS_CONTACT}|9000",
+    }
     conn = mock_connection(ATR, exchanges, [])
-    _cardfakes.wire_session(monkeypatch, conn, reader_name="ACS ACR39U ICC Reader 0")
+    _cardfakes.wire_session(monkeypatch, conn, reader_name=_cardfakes.CONTACT_READER)
 
 
 # ------------------------------------------------------------- cardholder commands #
@@ -136,10 +136,10 @@ def test_pin_status_never_exits_6(monkeypatch, mock_connection):
         SELECT_PIV: f"{APT}|9000",
         "00200080": "|6983",
         "00200081": "|63C6",
-        GET_STATUS: CONTACT_STATUS,
+        _cardfakes.PIV_GET_STATUS: f"{_cardfakes.PIV_STATUS_CONTACT}|9000",
     }
     conn = mock_connection(ATR, exchanges, [])
-    _cardfakes.wire_session(monkeypatch, conn, reader_name="ACS ACR39U ICC Reader 0")
+    _cardfakes.wire_session(monkeypatch, conn, reader_name=_cardfakes.CONTACT_READER)
     res = _cardfakes.run(["--json", "piv", "pin", "status"])
     assert res.exit_code == 0, res.output
     assert json.loads(res.stdout)["pin"]["blocked"] is True

@@ -7,7 +7,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from cryptnox_id_cli.applets.piv import perso
+from cryptnox_id_cli.applets.piv import perso, verifier
 from cryptnox_id_cli.util import tlv
 
 
@@ -18,14 +18,14 @@ def test_generate_request_apdu():
     )
 
 
-def test_pad_pin():
-    assert perso.pad_pin(b"123456") == bytes.fromhex("313233343536FFFF")
+def test_pin_padding():
+    assert verifier.pad(b"123456") == bytes.fromhex("313233343536FFFF")
     with pytest.raises(ValueError):
-        perso.pad_pin(b"123456789")
+        verifier.pad(b"123456789")
 
 
 def test_set_verifier_value_apdu():
-    apdu = perso.set_verifier_value_apdu(0x80, perso.pad_pin(b"123456"))
+    apdu = perso.set_verifier_value_apdu(0x80, verifier.pad(b"123456"))
     assert apdu.to_bytes().hex().upper() == "0024FF8008313233343536FFFF"
 
 

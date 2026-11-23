@@ -150,7 +150,7 @@ class AppletStatus:
     vci_established: bool
     contactless: bool
     fips_mode: bool
-    #: Whether the answer carried tag 86; without it ``contactless`` is a default, not a report.
+    #: Without tag 86, ``contactless`` is a default, not a report.
     reports_interface: bool = True
 
     @property

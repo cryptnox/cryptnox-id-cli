@@ -11,7 +11,13 @@ limit.
 from __future__ import annotations
 
 import pytest
-from _cardfakes import run_both_modes, wire_session
+from _cardfakes import (
+    PICC_READER,
+    PIV_GET_STATUS,
+    PIV_STATUS_CONTACT,
+    run_both_modes,
+    wire_session,
+)
 
 from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.applets.piv.piv import PivApplet
@@ -20,15 +26,13 @@ from cryptnox_id_cli.transport.pcsc import CardSession
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
 VERIFY_123456 = "0020008008313233343536FFFF"
-GET_STATUS = "00CB3F00055C032F475300"
 PICC_ATR = "3B8180018080"  # PC/SC-composed contactless ATR
-PICC_READER = "ACS ACR1552 1S CL Reader PICC 0"
 
 
 def _require(mock_connection, sw: str, *, atr: str = "3B00", reader=None, status=None):
     exchanges = {VERIFY_123456: f"|{sw}"}
     if status:
-        exchanges[GET_STATUS] = f"{status}|9000"
+        exchanges[PIV_GET_STATUS] = f"{status}|9000"
     conn = mock_connection(atr, exchanges, [])
     verifier.require_pin(PivApplet(CardSession(conn, reader_name=reader)), b"123456")
 
@@ -47,7 +51,7 @@ def test_no_retry_limit_is_not_called_blocked(mock_connection):
 
 def test_6983_over_contact_states_blocked_and_names_the_puk_path(mock_connection):
     with pytest.raises(CryptnoxError) as exc:
-        _require(mock_connection, "6983", status="5306800107860100")
+        _require(mock_connection, "6983", status=PIV_STATUS_CONTACT)
     msg = str(exc.value)
     assert "The PIN is blocked." in msg and "pin unblock" in msg
     assert exc.value.exit_code == 1

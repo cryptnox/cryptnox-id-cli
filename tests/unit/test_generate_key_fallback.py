@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 
 import pytest
+from _cardfakes import accept_any_pin
 from click.testing import CliRunner
 from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -422,7 +423,7 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
     monkeypatch.setattr(PivAdmin, "open", open_channel)
     monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x"))
     monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_pin_truth", lambda piv, pin: ("match", None))
+    accept_any_pin(monkeypatch)
     monkeypatch.setattr(piv_cmd, "_sign_with_session", sign_off_card)
     monkeypatch.setenv("PIV_MGMT_KEY", KEY256.hex())
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")

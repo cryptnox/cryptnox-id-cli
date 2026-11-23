@@ -15,7 +15,6 @@ from __future__ import annotations
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
-from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.transport.apdu import APDU, Response
 from cryptnox_id_cli.util import tlv
 
@@ -49,11 +48,6 @@ GENERATE_LE = 256
 #: Mechanisms whose 7F49 template exceeds one 256-byte response. RSA only: the ECC
 #: templates are 70 (P-256) and 102 (P-384) bytes and can never be cut.
 RSA_MECHANISMS = frozenset({0x07, 0x05, 0x16})
-
-
-def pad_pin(value: bytes, what: str = "PIN or PUK") -> bytes:
-    """A PIN or PUK value for the admin set, under the cardholder commands' length rule."""
-    return verifier.pad(value, what)
 
 
 def set_verifier_value_apdu(ref: int, padded_value: bytes) -> APDU:

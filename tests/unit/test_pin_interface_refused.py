@@ -70,7 +70,7 @@ def _probe(mock_connection, sw: str, atr: str = CONTACT_ATR, reader: str = CONTA
 def test_probe_6982_is_refused_and_unknown_not_unset(mock_connection):
     st = _probe(mock_connection, "6982").pin
     assert st.refused is True
-    assert st.configured is None and st.blocked is None and st.retries is None
+    assert st.configured is None and st.blocked is None and st.tries is None
     assert st.to_dict()["refused_on_interface"] is True
 
 
@@ -207,11 +207,12 @@ def test_validate_cli_marks_pin_unknown(monkeypatch, mock_connection):
     _cardfakes.wire_session(monkeypatch, _refusing_card(mock_connection), reader_name=PICC_READER)
     res = _cardfakes.run(["piv", "validate"])
     assert res.exit_code == 0, res.output
-    assert "unknown" in res.output and REFUSED in res.output
+    assert "unknown" in res.output
     payload = json.loads(_cardfakes.run(["--json", "piv", "validate"]).stdout)
     pin_check = next(c for c in payload["checks"] if c["check"] == "PIN configured")
     assert pin_check["ok"] is False and pin_check["unknown"] is True
-    assert REFUSED in pin_check["detail"]
+    assert "refuses PIN and PUK commands over this interface" in pin_check["detail"]
+    assert PICC_READER in pin_check["detail"]
 
 
 def test_quickstart_dry_run_refuses_on_a_refused_probe(monkeypatch, mock_connection):

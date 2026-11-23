@@ -62,14 +62,75 @@ class Verdict(str, Enum):
     NO_RETRY_LIMIT = "no_retry_limit"
     BLOCKED = "blocked"
     NO_TRIES_ON_INTERFACE = "no_tries_on_interface"
-    REFUSED = "refused_on_interface"
+    REFUSED_ON_INTERFACE = "refused_on_interface"
     NOT_CONFIGURED = "not_configured"
     NO_VALUE = "no_value"
     BAD_VALUE = "bad_value"
     OTHER = "other"
 
 
+@dataclass(frozen=True)
+class OpRules:
+    """What reading a verifier command's answer depends on."""
+
+    key: str
+    probe: bool = False
+    verb: str = "changed"
+    counts_puk: bool = False
+    sets_value: bool = False
+    #: What 6A88 and 6A80 mean for this command, ``{label}`` being its verifier.
+    no_value: str = ""
+    bad_value: str = ""
+
+
+class Op(Enum):
+    """A verifier command; its value holds the rules for reading the answer."""
+
+    STATUS = OpRules("status", probe=True, verb="verified")
+    VERIFY = OpRules(
+        "verify",
+        verb="verified",
+        no_value="The {label} holds no value yet, or this card has no such verifier; no try "
+        "was used.",
+        bad_value="The card refused the length of the value; no try was used. This tool sends "
+        f"{VALUE_LENGTH}-byte values.",
+    )
+    CHANGE = OpRules(
+        "change",
+        sets_value=True,
+        no_value="The {label} holds no value yet, or this card does not let it be changed; no "
+        "try was used.",
+        bad_value="The card refused the values: a length it does not take, or a new {label} its "
+        "rules do not allow (digits, minimum length).",
+    )
+    UNBLOCK = OpRules(
+        "unblock",
+        counts_puk=True,
+        sets_value=True,
+        no_value="The PUK holds no value, or the PIN is missing or cannot be updated on this "
+        "card; no try was used.",
+        bad_value="The card refused the values: a length it does not take, or a new PIN its "
+        "rules do not allow (digits, minimum length).",
+    )
+
+    def counter(self, ref: int) -> int:
+        """The verifier whose tries and block the answer reports."""
+        return PUK if self.value.counts_puk else ref
+
+
 _LABEL = {PIN: "PIN", PUK: "PUK"}
+
+#: How a status line words each verdict.
+_STATUS_TEXT = {
+    Verdict.OK: "configured",
+    Verdict.TRIES_LEFT: "{tries} tries left",
+    Verdict.WRONG: "{tries} tries left",
+    Verdict.NO_RETRY_LIMIT: "no retry limit",
+    Verdict.BLOCKED: "blocked",
+    Verdict.NO_TRIES_ON_INTERFACE: "no tries left over this interface (contact tries may remain)",
+    Verdict.REFUSED_ON_INTERFACE: "not usable over this interface (SW={sw})",
+    Verdict.NOT_CONFIGURED: "not configured",
+}
 
 _PIN_REFUSED = (
     "the card refuses PIN and PUK commands over this interface (SW={sw}). PIN and PUK "
@@ -93,6 +154,10 @@ _FIPS_REFUSED = (
     "this tool does not use. Use a contact reader for anything that asks for the PIN "
     "or PUK."
 )
+_CONTACT_REFUSED = (
+    "the card's access rule refuses the {label} over the contact interface too (SW={sw}): "
+    "it requires an access mode, secure messaging or VCI that this session does not have."
+)
 _NO_TRIES_HINT = {
     PIN: (
         "The PIN is blocked, or the card's contactless limit for it is reached (contact "
@@ -115,16 +180,14 @@ _RECOVERY = {
 class Outcome:
     """What the card answered to one verifier command, already interpreted."""
 
-    op: str  # "status" | "verify" | "change" | "unblock"
+    op: Op
     ref: int
     sw: int
     verdict: Verdict
     #: Tries left on this interface; for ``unblock``, the PUK's.
     tries: int | None = None
     interface: Interface = Interface.UNKNOWN
-    #: ``Reader '<name>'`` when the reader advertises contactless, read while connected.
-    reader: str | None = None
-    fips_mode: bool | None = None
+    #: The sentence a command result carries (``message`` in ``payload()``).
     message: str = ""
     hint: str | None = None
     recovery: str | None = None
@@ -137,7 +200,7 @@ class Outcome:
     def configured(self) -> bool | None:
         if self.verdict is Verdict.NOT_CONFIGURED:
             return False
-        if self.verdict in (Verdict.REFUSED, Verdict.OTHER):
+        if self.verdict in (Verdict.REFUSED_ON_INTERFACE, Verdict.OTHER):
             return None
         return True
 
@@ -145,30 +208,48 @@ class Outcome:
     def blocked(self) -> bool | None:
         if self.verdict is Verdict.BLOCKED:
             return True
-        if self.verdict in (Verdict.NO_TRIES_ON_INTERFACE, Verdict.REFUSED, Verdict.OTHER):
+        if self.verdict in (
+            Verdict.NO_TRIES_ON_INTERFACE,
+            Verdict.REFUSED_ON_INTERFACE,
+            Verdict.OTHER,
+        ):
             return None
         return False
 
     @property
     def verified(self) -> bool:
-        return self.op == "status" and self.ok
+        return self.op.value.probe and self.ok
 
     @property
     def refused(self) -> bool:
-        return self.verdict is Verdict.REFUSED
+        return self.verdict is Verdict.REFUSED_ON_INTERFACE
 
     @property
-    def retries(self) -> int | None:
-        return self.tries
+    def over_fifteen_tries(self) -> bool:
+        """More tries left than a profile of this tool allows (a 63D0 to 63FF answer)."""
+        return self.tries is not None and self.tries > 15
 
     @property
-    def label(self) -> str:
-        """The verifier the tries and the block are about."""
-        return "PUK" if self.op == "unblock" else _LABEL.get(self.ref, f"{self.ref:02X}")
+    def status_text(self) -> str:
+        """The short verdict a status line prints; a command result carries ``message``."""
+        text = _STATUS_TEXT.get(self.verdict)
+        if text:
+            return text.format(tries=self.tries, sw=self.sw_hex)
+        described = self.message.rstrip(".")
+        # describe_sw already names the SW for one it has no text for.
+        return described if f"SW={self.sw_hex}" in described else f"{described} (SW={self.sw_hex})"
 
     @property
     def sw_hex(self) -> str:
         return f"{self.sw:04X}"
+
+    def detail(self) -> str:
+        """The message with its hint and recovery, as one text."""
+        return " ".join(t for t in (self.message, self.hint, self.recovery) if t)
+
+    def error(self, context: str) -> StatusWordError:
+        """The status-word error for a command this answer stops."""
+        return StatusWordError(self.sw >> 8, self.sw & 0xFF, context=context, hint=self.detail())
 
     def to_dict(self) -> dict[str, object]:
         """The status shape (``pin`` / ``puk`` in status, info, report, export-config)."""
@@ -186,7 +267,7 @@ class Outcome:
     def payload(self) -> dict[str, object]:
         """The result object of ``pin verify``, ``pin change``, ``pin unblock``, ``puk change``."""
         out: dict[str, object] = {
-            "verified" if self.op == "verify" else "changed": self.ok,
+            self.op.value.verb: self.ok,
             "sw": self.sw_hex,
             "message": self.message,
         }
@@ -235,14 +316,29 @@ def refused_note(pin: Outcome | None, puk: Outcome | None) -> str | None:
     return None
 
 
-def pad(value: bytes, what: str = "PIN or PUK") -> bytes:
-    """The wire form of a PIN or PUK value; refuses one the card can never take."""
+def unread_note(pin: Outcome | None, puk: Outcome | None) -> str | None:
+    """Why the probe left the PIN or PUK state unknown, when it did."""
+    for label, outcome in (("PIN", pin), ("PUK", puk)):
+        if outcome is None:
+            return f"the {label} probe failed."
+        if outcome.configured is None:
+            sw = outcome.sw_hex
+            return f"the card answered the {label} probe with SW={sw}: {outcome.message}"
+    return None
+
+
+def check_length(value: bytes, what: str = "PIN or PUK") -> None:
+    """Refuse a PIN or PUK value the card can never take."""
     if not MIN_VALUE_LENGTH <= len(value) <= VALUE_LENGTH:
-        size = "empty" if not value else f"{len(value)} bytes"
         raise InputError(
-            f"the {what} must be {MIN_VALUE_LENGTH} to {VALUE_LENGTH} characters; this one "
-            f"is {size}. Nothing was sent to the card."
+            f"the {what} must be {MIN_VALUE_LENGTH} to {VALUE_LENGTH} bytes; this one is "
+            f"{len(value)}. It was not sent to the card."
         )
+
+
+def pad(value: bytes, what: str = "PIN or PUK") -> bytes:
+    """The wire form of a PIN or PUK value."""
+    check_length(value, what)
     return bytes(value) + _PAD * (VALUE_LENGTH - len(value))
 
 
@@ -255,7 +351,7 @@ def status(
     ``applet_status`` is the applet's own status when the caller already read it.
     With ``partial``, a PUK probe that raises leaves ``puk`` None and keeps the PIN.
     """
-    sense = _Senser(piv, applet_status)
+    lookup = _InterfaceLookup(piv, applet_status)
 
     def probe(ref: int) -> int:
         apdu = APDU(0x00, c.INS_VERIFY, 0x00, ref)
@@ -269,12 +365,12 @@ def status(
         if not partial:
             raise
     if {0x6983, 0x6982} & {pin_sw, puk_sw}:
-        sense()
-    pin = _judge("status", PIN, pin_sw, sense)
+        lookup()
+    pin = _judge(Op.STATUS, PIN, pin_sw, lookup)
     if puk_sw is None:
         return Probe(pin, None)
     usable = pin.verdict in _PIN_ANSWERED
-    return Probe(pin, _judge("status", PUK, puk_sw, sense, pin_usable=usable))
+    return Probe(pin, _judge(Op.STATUS, PUK, puk_sw, lookup, pin_usable=usable))
 
 
 def verify(piv: PivApplet, value: bytes, ref: int = PIN) -> Outcome:
@@ -284,7 +380,7 @@ def verify(piv: PivApplet, value: bytes, ref: int = PIN) -> Outcome:
     resp = piv.session.transmit(
         APDU(0x00, c.INS_VERIFY, 0x00, ref, data=padded), context="VERIFY PIN"
     )
-    return _judge("verify", ref, resp.sw, _Senser(piv))
+    return _judge(Op.VERIFY, ref, resp.sw, _InterfaceLookup(piv))
 
 
 def require_pin(piv: PivApplet, pin: bytes, *, context: str = "VERIFY PIN") -> None:
@@ -292,15 +388,15 @@ def require_pin(piv: PivApplet, pin: bytes, *, context: str = "VERIFY PIN") -> N
     outcome = verify(piv, pin)
     if outcome.ok:
         return
+    if outcome.verdict is Verdict.NO_RETRY_LIMIT:
+        raise CryptnoxError(f"PIN verification failed (SW={outcome.sw_hex}): {outcome.detail()}")
     if outcome.verdict in (
-        Verdict.NO_RETRY_LIMIT,
         Verdict.BLOCKED,
         Verdict.NO_TRIES_ON_INTERFACE,
-        Verdict.REFUSED,
+        Verdict.REFUSED_ON_INTERFACE,
     ):
-        detail = " ".join(t for t in (outcome.message, outcome.hint, outcome.recovery) if t)
-        raise CryptnoxError(f"PIN verification refused (SW={outcome.sw_hex}): {detail}")
-    raise StatusWordError(outcome.sw >> 8, outcome.sw & 0xFF, context=context, hint=outcome.message)
+        raise CryptnoxError(f"PIN verification refused (SW={outcome.sw_hex}): {outcome.detail()}")
+    raise outcome.error(context)
 
 
 def change(piv: PivApplet, ref: int, old: bytes, new: bytes) -> Outcome:
@@ -312,7 +408,7 @@ def change(piv: PivApplet, ref: int, old: bytes, new: bytes) -> Outcome:
         APDU(0x00, c.INS_CHANGE_REFERENCE_DATA, 0x00, ref, data=body),
         context="CHANGE REFERENCE DATA",
     )
-    return _judge("change", ref, resp.sw, _Senser(piv))
+    return _judge(Op.CHANGE, ref, resp.sw, _InterfaceLookup(piv))
 
 
 def unblock(piv: PivApplet, puk: bytes, new_pin: bytes) -> Outcome:
@@ -322,7 +418,7 @@ def unblock(piv: PivApplet, puk: bytes, new_pin: bytes) -> Outcome:
     resp = piv.session.transmit(
         APDU(0x00, c.INS_RESET_RETRY, 0x00, PIN, data=body), context="RESET RETRY COUNTER"
     )
-    return _judge("unblock", PIN, resp.sw, _Senser(piv))
+    return _judge(Op.UNBLOCK, PIN, resp.sw, _InterfaceLookup(piv))
 
 
 def _register(piv: PivApplet, *secrets: bytes) -> None:
@@ -332,30 +428,34 @@ def _register(piv: PivApplet, *secrets: bytes) -> None:
 
 # -------------------------------------------------------------------- interface #
 @dataclass(frozen=True)
-class _Seen:
+class _InterfaceFacts:
     interface: Interface
     fips_mode: bool | None
+    #: ``Reader '<name>'`` when the reader advertises contactless, read while connected.
     reader: str | None
 
 
-class _Senser:
-    """Reads the interface at most once, and only when asked."""
+_NO_FACTS = _InterfaceFacts(Interface.UNKNOWN, None, None)
+
+
+class _InterfaceLookup:
+    """Reads the interface facts at most once, and only when asked."""
 
     def __init__(self, piv: PivApplet, applet_status: AppletStatus | None = None) -> None:
         self._piv = piv
-        self.seen: _Seen | None = None
+        self.facts: _InterfaceFacts | None = None
         if applet_status is not None:
-            self.seen = self._from(applet_status)
+            self.facts = self._from(applet_status)
 
-    def __call__(self) -> _Seen:
-        if self.seen is None:
+    def __call__(self) -> _InterfaceFacts:
+        if self.facts is None:
             status = None
             with contextlib.suppress(CryptnoxError, ValueError):
                 status = inventory.read_status(self._piv)
-            self.seen = self._from(status)
-        return self.seen
+            self.facts = self._from(status)
+        return self.facts
 
-    def _from(self, status: AppletStatus | None) -> _Seen:
+    def _from(self, status: AppletStatus | None) -> _InterfaceFacts:
         session = self._piv.session
         name = getattr(session, "reader_name", None)
         atr = None
@@ -365,14 +465,14 @@ class _Senser:
         reader = (f"Reader '{name}'" if name else "This reader") if evidence else None
         if status is not None and status.reports_interface:
             interface = Interface.CONTACTLESS if status.contactless else Interface.CONTACT
-            return _Seen(interface, status.fips_mode, reader)
+            return _InterfaceFacts(interface, status.fips_mode, reader)
         # No evidence is not proof of contact.
         interface = Interface.CONTACTLESS if evidence else Interface.UNKNOWN
-        return _Seen(interface, status.fips_mode if status else None, reader)
+        return _InterfaceFacts(interface, status.fips_mode if status else None, reader)
 
 
-def _with_reader(text: str, seen: _Seen) -> str:
-    return f"{text} {seen.reader} advertises a contactless interface." if seen.reader else text
+def _with_reader(text: str, facts: _InterfaceFacts) -> str:
+    return f"{text} {facts.reader} advertises a contactless interface." if facts.reader else text
 
 
 # ------------------------------------------------------------------- rule table #
@@ -381,6 +481,10 @@ def _tries(sw: int) -> int | None:
     if sw >> 8 == 0x63 and sw & 0xFF >= 0xC0:
         return (sw & 0xFF) - 0xC0
     return None
+
+
+def _describe(sw: int) -> str:
+    return describe_sw(sw >> 8, sw & 0xFF).message
 
 
 #: PIN probe answers that show the card takes the PIN over this interface.
@@ -392,49 +496,48 @@ _PIN_ANSWERED = (
 )
 
 
-def _refused_text(op: str, ref: int, sw: int, seen: _Seen, *, pin_usable: bool) -> str:
-    if seen.interface is Interface.CONTACTLESS and seen.fips_mode:
+def _refused_text(refused_ref: int, sw: int, facts: _InterfaceFacts, *, puk_alone: bool) -> str:
+    if facts.interface is Interface.CONTACT:
+        return _CONTACT_REFUSED.format(label=_LABEL.get(refused_ref, "verifier"), sw=f"{sw:04X}")
+    if facts.interface is Interface.CONTACTLESS and facts.fips_mode:
         text = _FIPS_REFUSED
-    elif ref == PIN and not (op == "unblock" and sw == 0x6A81):
+    elif refused_ref == PIN:
         text = _PIN_REFUSED
-    elif op == "status" and pin_usable:
+    elif puk_alone:
         text = _PUK_ALONE_REFUSED
     else:
         text = _PUK_REFUSED
-    return _with_reader(text.format(sw=f"{sw:04X}"), seen)
+    return _with_reader(text.format(sw=f"{sw:04X}"), facts)
 
 
 def _judge(
-    op: str,
+    op: Op,
     ref: int,
     sw: int,
-    sense: _Senser,
+    lookup: _InterfaceLookup,
     *,
     pin_usable: bool = False,
 ) -> Outcome:
     """The one table from a status word (and, where it matters, the interface)."""
-    counter = PUK if op == "unblock" else ref
+    rules = op.value
+    counter = op.counter(ref)
     label = _LABEL.get(counter, f"{counter:02X}")
-    probe = op == "status"
 
     def outcome(
         verdict: Verdict,
-        message: str,
+        message: str = "",
         *,
         tries: int | None = None,
         hint: str | None = None,
         recovery: str | None = None,
     ) -> Outcome:
-        seen = sense.seen or _Seen(Interface.UNKNOWN, None, None)
         return Outcome(
             op,
             ref,
             sw,
             verdict,
             tries=tries,
-            interface=seen.interface,
-            reader=seen.reader,
-            fips_mode=seen.fips_mode,
+            interface=(lookup.facts or _NO_FACTS).interface,
             message=message,
             hint=hint,
             recovery=recovery,
@@ -442,75 +545,52 @@ def _judge(
 
     tries = _tries(sw)
     if sw == 0x9000:
-        return outcome(Verdict.OK, "configured" if probe else "Success.")
+        return outcome(Verdict.OK, "Success.")
     if tries == 0:
-        if probe:
-            return outcome(Verdict.NO_RETRY_LIMIT, "no retry limit")
         return outcome(
             Verdict.NO_RETRY_LIMIT, f"Verification failed; this {label} has no retry limit."
         )
     if tries is not None:
-        if probe:
-            return outcome(Verdict.TRIES_LEFT, f"{tries} tries left", tries=tries)
+        if rules.probe:
+            return outcome(Verdict.TRIES_LEFT, tries=tries)
         return outcome(
             Verdict.WRONG, f"Verification failed; {tries} attempt(s) remaining.", tries=tries
         )
     if sw == 0x6983:
-        seen = sense()
-        if seen.interface is Interface.CONTACT:
+        facts = lookup()
+        if facts.interface is Interface.CONTACT:
             return outcome(
-                Verdict.BLOCKED,
-                "blocked" if probe else f"The {label} is blocked.",
-                tries=0,
-                recovery=_RECOVERY[counter],
+                Verdict.BLOCKED, f"The {label} is blocked.", tries=0, recovery=_RECOVERY[counter]
             )
         return outcome(
             Verdict.NO_TRIES_ON_INTERFACE,
-            "no tries left over this interface (contact tries may remain)"
-            if probe
-            else f"No {label} tries left over this interface.",
+            f"No {label} tries left over this interface.",
             tries=0,
-            hint=_with_reader(_NO_TRIES_HINT[counter], seen),
+            hint=_with_reader(_NO_TRIES_HINT[counter], facts),
         )
-    refused_puk = op == "unblock" and sw == 0x6A81
+    # RESET RETRY COUNTER answers 6A81 for any PUK access failure.
+    refused_puk = op is Op.UNBLOCK and sw == 0x6A81
     if sw == 0x6982 or refused_puk:
-        seen = sense()
-        if refused_puk and seen.interface is not Interface.CONTACTLESS:
-            return outcome(Verdict.OTHER, describe_sw(sw >> 8, sw & 0xFF).message)
-        text = _refused_text(op, ref, sw, seen, pin_usable=pin_usable)
-        if probe:
-            return outcome(
-                Verdict.REFUSED, f"not usable over this interface (SW={sw:04X})", hint=text
-            )
-        return outcome(Verdict.REFUSED, text)
-    if probe:
+        facts = lookup()
+        if refused_puk and facts.interface is not Interface.CONTACTLESS:
+            return outcome(Verdict.OTHER, _describe(sw))
+        text = _refused_text(PUK if refused_puk else ref, sw, facts, puk_alone=pin_usable)
+        if rules.probe:
+            return outcome(Verdict.REFUSED_ON_INTERFACE, hint=text)
+        return outcome(Verdict.REFUSED_ON_INTERFACE, text)
+    if rules.probe:
         if sw in (0x6A88, 0x6A82, 0x6A80):
-            return outcome(Verdict.NOT_CONFIGURED, "not configured")
-        return outcome(Verdict.OTHER, f"unknown (SW={sw:04X})")
+            return outcome(Verdict.NOT_CONFIGURED)
+        return outcome(Verdict.OTHER, _describe(sw))
     if sw == 0x6A88:
-        return outcome(Verdict.NO_VALUE, _NO_VALUE[op].format(label=label))
+        return outcome(Verdict.NO_VALUE, rules.no_value.format(label=label))
     if sw == 0x6A80:
-        return outcome(Verdict.BAD_VALUE, _BAD_VALUE[op].format(label=label))
-    if sw == 0x6984 and op in ("change", "unblock"):
-        new = "PIN" if op == "unblock" else label
-        return outcome(Verdict.BAD_VALUE, f"The card refused the new {new}: it was used before.")
-    if sw == 0x6986 and op == "unblock":
+        return outcome(Verdict.BAD_VALUE, rules.bad_value.format(label=label))
+    if sw == 0x6984 and rules.sets_value:
+        return outcome(
+            Verdict.BAD_VALUE,
+            f"The card refused the new {_LABEL.get(ref, label)}: it was used before.",
+        )
+    if sw == 0x6986 and op is Op.UNBLOCK:
         return outcome(Verdict.NOT_CONFIGURED, "This card has no PUK.")
-    return outcome(Verdict.OTHER, describe_sw(sw >> 8, sw & 0xFF).message)
-
-
-_NO_VALUE = {
-    "verify": "The {label} holds no value yet, or this card has no such verifier; no try was used.",
-    "change": "The {label} holds no value yet, or this card does not let it be changed; no try "
-    "was used.",
-    "unblock": "The PUK holds no value, or the PIN is missing or cannot be updated on this "
-    "card; no try was used.",
-}
-_BAD_VALUE = {
-    "verify": "The card refused the length of the value; no try was used. This tool sends "
-    f"{VALUE_LENGTH}-byte values.",
-    "change": "The card refused the values: a length it does not take, or a new {label} its "
-    "rules do not allow (digits, minimum length).",
-    "unblock": "The card refused the values: a length it does not take, or a new PIN its rules "
-    "do not allow (digits, minimum length).",
-}
+    return outcome(Verdict.OTHER, _describe(sw))

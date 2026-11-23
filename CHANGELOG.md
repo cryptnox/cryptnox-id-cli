@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The `pin` and `puk` objects in JSON output gain `state` and `interface`;
+  `configured`, `blocked` and `retries_remaining` are `null` where the card's
+  answer leaves them unknown (see the JSON output reference).
+- Profile validation requires a PIN and PUK `max` of 8, the length this tool
+  sends.
+- The result objects of `piv pin verify`, `pin change`, `pin unblock` and
+  `puk change` add no `retries_remaining`, `blocked` or `recovery` for `63C0`;
+  for `6983` they add `blocked` and `recovery` over contact, `hint` otherwise.
+  Over contact, `pin change`, `pin unblock` and `puk change` no longer add the
+  `hint` they gave for `6983`.
+
+### Fixed
+
+- `63C0` is shown as a PIN or PUK without a retry limit, not as blocked.
+- `6983` over a contactless reader is shown as no tries left on that
+  interface, not as blocked, by every command that reads the PIN or PUK; over
+  contact it is shown as blocked, and the commands that present a PIN or PUK
+  name the way to recover.
+- `piv pin change`, `pin unblock` and `puk change` explain a PIN or PUK refused
+  on this interface (`6982`, and `6A81` from `pin unblock`).
+- The `quickstart` pre-flight PIN check names the cause when the card refuses
+  the PIN.
+- A PIN or PUK that is not 4 to 8 bytes long is refused with exit code 2
+  before it is sent, instead of a traceback.
+- `quickstart` no longer sets a PIN or PUK whose state the card's answer left
+  unknown, and `piv validate` reports that check as unknown.
+
 ## [1.2.0] - 2026-11-23
 
 ### Added
@@ -89,15 +118,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   anything, creates a missing key object with the profile's role, accepts
   `--algorithm RSA*` where the card has that key object, and does not
   overwrite a certificate it cannot account for.
-- The `pin` and `puk` objects in the JSON of `piv pin status`, `piv status`,
-  `info`, `report` and `export-config` gain `state` and `interface`.
-  `configured` and `blocked` are `null` when the card refused the probe or gave
-  an answer this tool does not read; `blocked` is `null` with
-  `retries_remaining` `0` when no tries are left on a contactless or unknown
-  interface; a PIN or PUK without a retry limit has `blocked: false` and
-  `retries_remaining: null`.
-- Profile validation requires a PIN and PUK `max` of 8, the length this tool
-  sends.
 
 ### Removed
 
@@ -139,20 +159,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On Windows, a `fido` command re-run through the UAC prompt reports the
   elevated run's error message.
 - `piv pin change`, `piv pin unblock` and `piv puk change` name both causes of
-  `6983`, a blocked verifier or its contactless limit.
+  `6983`, a blocked verifier or its contactless limit; `63C0` still reports
+  the block.
 - A PIN refused with `6983` while signing or reading a PIN-protected object is
   reported as blocked or at its contactless limit.
 - An all-zero key is no longer masked as a secret in output and transcripts.
-- `63C0` is shown as a PIN or PUK without a retry limit, not as blocked.
-- `6983` over a contactless reader is shown as no tries left on that
-  interface, not as blocked, by every command that reads the PIN or PUK; over
-  contact it is shown as blocked, with the way to recover.
-- `piv pin change`, `pin unblock` and `puk change` explain a PIN or PUK refused
-  on this interface (`6982`, and `6A81` from `pin unblock`).
-- The `quickstart` pre-flight PIN check names the cause when the card refuses
-  the PIN.
-- A PIN or PUK that is empty or not 4 to 8 characters is refused with exit
-  code 2 before anything is sent, instead of a traceback.
 - `piv certs list` marks a certificate it cannot parse as unreadable and
   prints the parse error.
 - `mifare keys change` without `--auth-key-no` authenticates with the new key

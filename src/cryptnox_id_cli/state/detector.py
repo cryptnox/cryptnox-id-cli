@@ -47,12 +47,12 @@ _PROBE_OBJECTS = (
 )
 
 
-def _ladder_set(outcome: Outcome | None) -> bool:
+def counts_as_set(outcome: Outcome | None) -> bool:
     """Whether the personalization ladder counts this verifier as set."""
     # A try count over 15 stays unset here so personalization rungs do not move.
     if outcome is None or not outcome.configured:
         return False
-    return not 0x63D0 <= outcome.sw <= 0x63FF
+    return not outcome.over_fifteen_tries
 
 
 class StateDetector:
@@ -136,14 +136,14 @@ class StateDetector:
                 present[name] = None
         st.piv_objects = present
 
-        any_verifier = _ladder_set(st.piv_pin) or _ladder_set(st.piv_puk)
+        any_verifier = counts_as_set(st.piv_pin) or counts_as_set(st.piv_puk)
         any_object = any(present.values())
         mandatory_present = all(present.get(n) for n in _MANDATORY)
 
         # 6982 means the verifier exists (a missing one answers 6A88).
         if not any_verifier and not any_object and not verifier_refused:
             st.piv = PivState.PRE_PERSONALIZED
-        elif mandatory_present and _ladder_set(st.piv_pin):
+        elif mandatory_present and counts_as_set(st.piv_pin):
             st.piv = PivState.PERSONALIZED
         else:
             st.piv = PivState.PARTIALLY_PERSONALIZED

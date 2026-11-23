@@ -22,6 +22,7 @@ SELECT_GENUINE = "00A4040008A00000100002470100"
 SELECT_DEFAULT = "00A4040000"
 GET_CHUID = "00CB3FFF055C035FC10200"
 GET_PRINTED = "00CB3FFF055C035FC10900"
+GET_CCC = "00CB3FFF055C035FC10700"
 REFUSED = (b"", 0x69, 0x85)
 FIDO_OK = (b"FIDO_2_0", 0x90, 0x00)
 VERSION = bytes.fromhex("04010112001A0504010102011A0504A1B2C3D4E5F6BA1C0B2D3E2324")
@@ -157,5 +158,32 @@ def test_a_failed_puk_probe_keeps_the_pin_and_its_rung(puk, state):
         probe_genuine=False,
     )
     assert st.piv == state
-    assert st.piv_pin is not None and st.piv_pin.retries == 3
+    assert st.piv_pin is not None and st.piv_pin.tries == 3
     assert (st.piv_puk is None) == isinstance(puk, BaseException)
+
+
+@pytest.mark.parametrize(
+    ("objects", "state"),
+    [
+        ({}, PivState.PRE_PERSONALIZED),
+        (
+            {GET_CHUID: (b"", 0x69, 0x82), GET_CCC: (b"", 0x69, 0x82)},
+            PivState.PARTIALLY_PERSONALIZED,
+        ),
+    ],
+    ids=["no-objects", "mandatory-objects"],
+)
+def test_more_than_fifteen_tries_keeps_the_rung_of_an_unset_pin(objects, state):
+    st, _ = detect(
+        {
+            SELECT_PIV: (bytes.fromhex(APT), 0x90, 0x00),
+            "00200080": (b"", 0x63, 0xD4),
+            "00200081": (b"", 0x6A, 0x88),
+            **objects,
+        },
+        probe_fido=False,
+        probe_desfire=False,
+        probe_genuine=False,
+    )
+    assert st.piv_pin is not None and st.piv_pin.tries == 20
+    assert st.piv == state

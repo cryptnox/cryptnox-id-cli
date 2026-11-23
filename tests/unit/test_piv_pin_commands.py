@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 
 import pytest
-from _cardfakes import QueueConn, run_both_modes, wire_session
+from _cardfakes import PICC_READER, PIV_STATUS_CONTACT, QueueConn, run_both_modes, wire_session
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
-#: The applet's status object read back over contact (no tag 86), and a refused read.
-CONTACT_STATUS = (bytes.fromhex("5306800107860100"), 0x90, 0x00)
+CONTACT_STATUS = (bytes.fromhex(PIV_STATUS_CONTACT), 0x90, 0x00)
 NO_STATUS = (b"", 0x6A, 0x82)
 
 
@@ -98,7 +97,7 @@ def test_change_secret(card, args, header, old, new, label, hint, sw, changed, r
     [
         (0x9000, "Fake Reader 00 00", True, "PIN verified."),
         (0x63C1, "Fake Reader 00 00", False, "1 attempt(s) remaining"),
-        (0x6982, "ACS ACR1552 1S CL Reader PICC 0", False, "advertises a contactless interface"),
+        (0x6982, PICC_READER, False, "advertises a contactless interface"),
     ],
     ids=["ok", "wrong", "contactless"],
 )
