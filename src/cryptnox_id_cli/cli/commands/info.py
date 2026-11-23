@@ -11,6 +11,7 @@ import click
 from rich.console import Console
 from rich.markup import escape
 
+from cryptnox_id_cli.applets.piv.verifier import Verdict
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.output.render import state_style
 from cryptnox_id_cli.state import StateDetector
@@ -79,9 +80,14 @@ def command(app: AppContext) -> None:
         piv_detail = ""
         if state.piv_apt:
             piv_detail = escape(state.piv_apt.label or "")
-            if state.piv_pin and state.piv_pin.configured:
-                tries = state.piv_pin.retries
-                piv_detail += f", PIN {tries} tries" if tries is not None else ", PIN set"
+            pin = state.piv_pin
+            if pin and pin.configured:
+                if pin.verdict is Verdict.NO_TRIES_ON_INTERFACE:
+                    piv_detail += ", PIN 0 tries over this interface"
+                elif pin.retries is not None:
+                    piv_detail += f", PIN {pin.retries} tries"
+                else:
+                    piv_detail += ", PIN set"
             if state.piv_secured:
                 piv_detail += ", finalized"
         table.add_row("PIV", state_style(state.piv.label), piv_detail or "-")
@@ -107,6 +113,6 @@ def command(app: AppContext) -> None:
         if state.notes:
             c.print("")
             for note in state.notes:
-                c.print(f"[yellow]*[/yellow] {note}")
+                c.print(f"[yellow]*[/yellow] {escape(note)}")
 
     app.out.result(payload, human)

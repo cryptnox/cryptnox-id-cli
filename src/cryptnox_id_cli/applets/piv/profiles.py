@@ -18,18 +18,15 @@ import yaml
 
 from cryptnox_id_cli.applets.piv import constants as c
 from cryptnox_id_cli.applets.piv import preperso as pp
+from cryptnox_id_cli.applets.piv.verifier import VALUE_LENGTH
 from cryptnox_id_cli.transport.errors import CryptnoxError
 
-# PIN and PUK bounds a profile may ask for. The FIPS-mode build refuses a minimum
-# length under 6 and more than 15 retries; this tool caps a profile for it at 10.
-# With FIPS mode off the applet accepts a minimum length of 4 and up to 127 retries,
-# but a 63Cx status word reports at most 15 back, so the cap stays at 15.
-# The longest PIN the applet stores is 16 in both builds.
+# Retry caps stay at or under 15: a 63Cx answer reports no more.
 PIN_MIN_LENGTH_FIPS = 6
 PIN_RETRY_CAP_FIPS = 10
 PIN_MIN_LENGTH = 4
 PIN_RETRY_CAP = 15
-PIN_MAX_LENGTH = 16
+PIN_MAX_LENGTH = VALUE_LENGTH
 
 # Name <-> byte maps (user-friendly YAML).
 MECHANISMS = {
@@ -279,8 +276,12 @@ class PivProfile:
                 )
             if pol.max_length < pol.min_length:
                 errors.append(f"{label} max_length < min_length")
-            if pol.max_length > PIN_MAX_LENGTH:
-                errors.append(f"{label} max_length {pol.max_length} > maximum {PIN_MAX_LENGTH}")
+            if pol.max_length != PIN_MAX_LENGTH:
+                errors.append(
+                    f"{label} max_length {pol.max_length} must be {PIN_MAX_LENGTH}: this tool "
+                    f"sends every PIN and PUK as {PIN_MAX_LENGTH} bytes, and the card takes "
+                    "only values of exactly max_length"
+                )
             if not (0 <= pol.retries <= cap):
                 wider = self.fips_mode and 0 <= pol.retries <= PIN_RETRY_CAP
                 errors.append(

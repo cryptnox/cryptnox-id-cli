@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from cryptnox_id_cli.applets.piv.apt import APTInfo
-from cryptnox_id_cli.applets.piv.piv import PinStatus
+from cryptnox_id_cli.applets.piv.verifier import Outcome
 
 
 class CardPresence(str, Enum):
@@ -113,8 +113,8 @@ class CardState:
     desfire: DesfireState = DesfireState.UNKNOWN
     genuine: GenuinenessState = GenuinenessState.UNKNOWN
     piv_apt: APTInfo | None = None
-    piv_pin: PinStatus | None = None
-    piv_puk: PinStatus | None = None
+    piv_pin: Outcome | None = None
+    piv_puk: Outcome | None = None
     #: None for an object whose read failed: neither present nor absent.
     piv_objects: dict[str, bool | None] = field(default_factory=dict)
     #: finalized (SECURED) per the applet's own status object; None when not readable.

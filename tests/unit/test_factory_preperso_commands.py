@@ -35,7 +35,7 @@ class PivAdminCard(FakeScp03Card):
             )
         if raw.hex().upper() == GET_STATUS:
             state = "0F" if self.secured else "07"
-            return Response(bytes.fromhex(f"53038001{state}"), 0x90, 0x00)
+            return Response(bytes.fromhex(f"53068001{state}860100"), 0x90, 0x00)
         if raw[0] & 0x04 and raw[1] == 0xDB:
             sw = self.put_sws.pop(0) if self.put_sws else 0x9000
             self.secured = self.secured or (sw == 0x9000 and self.secure_on_put)

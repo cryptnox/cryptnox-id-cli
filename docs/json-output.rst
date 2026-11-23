@@ -88,6 +88,20 @@ object) set to ``false`` and the card's status word in ``sw``. A script can
 test the exit code alone; one that reads the object gets the retries left
 without a second command.
 
+``piv pin verify``, ``pin change``, ``pin unblock`` and ``puk change`` add these
+keys when they apply (for ``pin unblock`` the tries and the block are the PUK's):
+
+- ``retries_remaining``: a wrong value, with that many tries left on this
+  interface.
+- ``blocked`` (``true``) and ``recovery``: ``6983`` over the contact interface,
+  where it means the verifier is blocked.
+- ``hint``: ``6983`` over contactless, or where the interface is not known: no
+  tries are left on this interface, and the contact interface may still have
+  some.
+
+``63C0`` comes from a PIN or PUK without a retry limit: a wrong value, never a
+block, so none of these keys is added.
+
 Snapshot reports
 ------------------
 
@@ -125,9 +139,11 @@ just theirs. The section shapes:
      "state": "PivPersonalized",
      "apt": {"aid": "...", "label": "OpenFIPS201", "url": "..."},
      "pin": {"ref": "80", "configured": true, "blocked": false, "verified": false,
-             "retries_remaining": 6, "refused_on_interface": false},
+             "retries_remaining": 6, "refused_on_interface": false,
+             "state": "tries_left", "interface": "contact"},
      "puk": {"ref": "81", "configured": true, "blocked": false, "verified": false,
-             "retries_remaining": 6, "refused_on_interface": false},
+             "retries_remaining": 6, "refused_on_interface": false,
+             "state": "tries_left", "interface": "contact"},
      "objects_present": {"chuid": true, "ccc": true, "auth-cert": false},
      "notes": []
    }
@@ -136,9 +152,30 @@ just theirs. The section shapes:
 ``objects_present`` is ``null`` when its read failed, so the object may exist.
 ``refused_on_interface`` is ``true`` when the card answered the PIN or PUK probe
 with 6982, which a contactless reader gets because every built-in profile but
-``ms-logon-nfc`` makes both contact-only; ``configured`` and
-``retries_remaining`` are then unknown,
-not false. The same ``pin`` / ``puk`` objects appear in ``info --json`` and
+``ms-logon-nfc`` makes both contact-only; ``configured``, ``blocked`` and
+``retries_remaining`` are then ``null``: unknown, not false.
+
+``state`` names what the card answered, and ``interface`` is ``contact``,
+``contactless`` or ``unknown``. ``contact`` comes only from the applet's own
+status report, so ``interface`` is ``unknown`` whenever the command did not read
+that report. ``piv status``, ``info``, ``report`` and ``export-config`` always
+ask for it; ``piv pin status`` asks only after a 6983 or 6982 answer.
+
+- ``ok``: verified in this session.
+- ``tries_left``: ``retries_remaining`` tries on this interface.
+- ``no_retry_limit``: the verifier has no retry limit; ``blocked`` is
+  ``false`` and ``retries_remaining`` is ``null``.
+- ``blocked``: no tries left over the contact interface; ``blocked`` is
+  ``true``.
+- ``no_tries_on_interface``: no tries left over contactless, or where the
+  interface is not known; ``retries_remaining`` is ``0`` and ``blocked`` is
+  ``null``, because the contact interface may still have tries.
+- ``refused_on_interface``: see above.
+- ``not_configured``: the card has no such verifier.
+- ``other``: an answer this tool does not read; ``configured`` and
+  ``blocked`` are ``null``.
+
+The same ``pin`` / ``puk`` objects appear in ``info --json`` and
 ``piv status --json``; ``piv pin status --json`` adds a top-level ``note``
 string when either is refused. On a card set up with ``ms-logon-nfc`` a
 contactless reader shows the PIN usable (with the tries that interface may

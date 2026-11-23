@@ -56,8 +56,13 @@ def _refusal(sw: int) -> Response:
     return Response(b"", sw >> 8, sw & 0xFF)
 
 
+GET_STATUS = "00CB3F00055C032F475300"
+CONTACT_STATUS = "5306800107860100|9000"
+
+
 def _wire(monkeypatch, mock_connection, command: str, sw: str) -> None:
-    conn = mock_connection(ATR, {SELECT_PIV: f"{APT}|9000", command: f"|{sw}"}, [])
+    exchanges = {SELECT_PIV: f"{APT}|9000", command: f"|{sw}", GET_STATUS: CONTACT_STATUS}
+    conn = mock_connection(ATR, exchanges, [])
     _cardfakes.wire_session(monkeypatch, conn, reader_name="ACS ACR39U ICC Reader 0")
 
 
@@ -116,7 +121,7 @@ def test_a_refused_pin_says_so_in_text_too(monkeypatch, mock_connection):
 
 
 def test_a_blocked_pin_exits_6_with_the_recovery_path(monkeypatch, mock_connection):
-    _wire(monkeypatch, mock_connection, CHANGE_PIN, "63C0")  # 63C0 proves the block; 6983 does not
+    _wire(monkeypatch, mock_connection, CHANGE_PIN, "6983")  # a block over contact
     res = _cardfakes.run(
         ["--json", "piv", "pin", "change", "--old-pin", "123456", "--new-pin", "654321"]
     )
@@ -127,9 +132,13 @@ def test_a_blocked_pin_exits_6_with_the_recovery_path(monkeypatch, mock_connecti
 
 def test_pin_status_never_exits_6(monkeypatch, mock_connection):
     # A status question is answered, whatever the answer: a blocked PIN is not a refusal.
-    conn = mock_connection(
-        ATR, {SELECT_PIV: f"{APT}|9000", "00200080": "|63C0", "00200081": "|63C6"}, []
-    )
+    exchanges = {
+        SELECT_PIV: f"{APT}|9000",
+        "00200080": "|6983",
+        "00200081": "|63C6",
+        GET_STATUS: CONTACT_STATUS,
+    }
+    conn = mock_connection(ATR, exchanges, [])
     _cardfakes.wire_session(monkeypatch, conn, reader_name="ACS ACR39U ICC Reader 0")
     res = _cardfakes.run(["--json", "piv", "pin", "status"])
     assert res.exit_code == 0, res.output

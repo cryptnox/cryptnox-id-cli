@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from cryptnox_id_cli.applets.piv import constants as c
 from cryptnox_id_cli.applets.piv import objects as obj
 from cryptnox_id_cli.applets.piv.apt import APTInfo, parse_apt
@@ -15,82 +13,8 @@ from cryptnox_id_cli.transport.errors import AppletNotFoundError, StatusWordErro
 from cryptnox_id_cli.transport.pcsc import CardSession
 
 
-@dataclass(frozen=True)
-class PinStatus:
-    ref: int
-    configured: bool
-    blocked: bool
-    verified: bool
-    retries: int | None  # remaining tries (None if unknown / not configured)
-    #: 6982: the verifier exists but refuses this interface, so ``configured`` says nothing.
-    refused: bool = False
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "ref": f"{self.ref:02X}",
-            "configured": self.configured,
-            "blocked": self.blocked,
-            "verified": self.verified,
-            "retries_remaining": self.retries,
-            "refused_on_interface": self.refused,
-        }
-
-
-PIN_INTERFACE_REFUSED_HINT = (
-    "the card refuses PIN and PUK commands over this interface (SW=6982). PIN and PUK "
-    "are contact-only on every built-in profile but ms-logon-nfc, which is what a "
-    "contactless (NFC/PICC) reader gets even when the PIN is set. Use a contact reader "
-    "for anything that asks for the PIN."
-)
-
-
-#: The same refusal for the PUK alone: the PIN answers, so the card was set up to take
-#: the PIN over this interface (the ms-logon-nfc profile) and keeps the PUK off it.
-PUK_INTERFACE_REFUSED_HINT = (
-    "the card refuses PUK commands over this interface (SW=6982) and accepts the PIN "
-    "there: the PUK is contact-only on this card, which is how the ms-logon-nfc profile "
-    "sets it. A PIN shown blocked here may only have used up its contactless tries: a "
-    "correct PIN on a contact reader restores them, and the PUK is the last resort."
-)
-
-
-def interface_refused_hint(pin_refused: bool, puk_refused: bool) -> str | None:
-    """What a 6982 on the PIN or PUK probe means, worded for the one that was refused."""
-    if pin_refused:
-        return PIN_INTERFACE_REFUSED_HINT
-    if puk_refused:
-        return PUK_INTERFACE_REFUSED_HINT
-    return None
-
-
-def _pin_status_from_sw(ref: int, resp: Response) -> PinStatus:
-    sw = resp.sw
-    if sw == 0x9000:  # already verified in this session
-        return PinStatus(ref, configured=True, blocked=False, verified=True, retries=None)
-    if resp.sw1 == 0x63 and (resp.sw2 & 0xF0) == 0xC0:
-        tries = resp.sw2 & 0x0F
-        return PinStatus(ref, configured=True, blocked=tries == 0, verified=False, retries=tries)
-    if sw == 0x6983:  # blocked
-        return PinStatus(ref, configured=True, blocked=True, verified=False, retries=0)
-    if sw in (0x6A88, 0x6A80, 0x6A82):  # reference not configured
-        return PinStatus(ref, configured=False, blocked=False, verified=False, retries=None)
-    if sw == 0x6982:  # verifier exists, not usable over this interface (contactless)
-        return PinStatus(
-            ref, configured=False, blocked=False, verified=False, retries=None, refused=True
-        )
-    # Unknown — report not-configured-ish but keep retries None.
-    return PinStatus(ref, configured=False, blocked=False, verified=False, retries=None)
-
-
-def _pad_pin(pin: bytes) -> bytes:
-    """PIV PINs are 8 bytes, padded with 0xFF."""
-    if len(pin) > 8:
-        raise ValueError("PIN must be at most 8 bytes")
-    return bytes(pin) + b"\xff" * (8 - len(pin))
-
-
 class PivApplet:
-    """Thin, read-only PIV client. Mutating commands arrive in later phases."""
+    """Thin, read-only PIV client. PIN and PUK commands live in :mod:`.verifier`."""
 
     def __init__(self, session: CardSession) -> None:
         self.session = session
@@ -171,50 +95,3 @@ class PivApplet:
         if not resp.ok:
             return None
         return bool(obj.unwrap(oid, resp.data))
-
-    # -- PIN / PUK ---------------------------------------------------------- #
-    def pin_status(self, ref: int = c.REF_PIV_PIN) -> PinStatus:
-        """Non-decrementing status query (VERIFY with empty body)."""
-        resp = self.session.transmit(APDU(0x00, c.INS_VERIFY, 0x00, ref), context="VERIFY (status)")
-        return _pin_status_from_sw(ref, resp)
-
-    def verify_pin(self, pin: bytes, ref: int = c.REF_PIV_PIN) -> Response:
-        """Verify a PIN. NOTE: a wrong PIN decrements the retry counter."""
-        self.session.redactor.register(pin)
-        padded = _pad_pin(pin)
-        self.session.redactor.register(padded)
-        return self.session.transmit(
-            APDU(0x00, c.INS_VERIFY, 0x00, ref, data=padded), context="VERIFY PIN"
-        )
-
-    def change_reference(self, old: bytes, new: bytes, ref: int = c.REF_PIV_PIN) -> Response:
-        """Cardholder CHANGE REFERENCE DATA (INS 24, P1=00): swap a PIN or PUK value.
-
-        Body is the current value then the new value, each 0xFF-padded to 8 bytes.
-        A wrong ``old`` decrements the ref's retry counter (same as VERIFY). No admin
-        channel: the cardholder proves knowledge of the current value in-band.
-        """
-        for secret in (old, new):
-            self.session.redactor.register(secret)
-        body = _pad_pin(old) + _pad_pin(new)
-        self.session.redactor.register(body)
-        return self.session.transmit(
-            APDU(0x00, c.INS_CHANGE_REFERENCE_DATA, 0x00, ref, data=body),
-            context="CHANGE REFERENCE DATA",
-        )
-
-    def unblock_pin(self, puk: bytes, new_pin: bytes, ref: int = c.REF_PIV_PIN) -> Response:
-        """RESET RETRY COUNTER (INS 2C): unblock the PIN by proving the PUK.
-
-        Body is the PUK then the new PIN, each 0xFF-padded to 8 bytes. Resets the
-        PIN retry counter to its configured maximum. A wrong PUK decrements the PUK's
-        own counter; if the PUK blocks too, the PIN is unrecoverable.
-        """
-        for secret in (puk, new_pin):
-            self.session.redactor.register(secret)
-        body = _pad_pin(puk) + _pad_pin(new_pin)
-        self.session.redactor.register(body)
-        return self.session.transmit(
-            APDU(0x00, c.INS_RESET_RETRY, 0x00, ref, data=body),
-            context="RESET RETRY COUNTER",
-        )

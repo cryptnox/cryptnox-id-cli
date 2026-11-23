@@ -7,7 +7,7 @@ No admin channel: the cardholder proves the current secret in-band."""
 
 from __future__ import annotations
 
-from cryptnox_id_cli.applets.piv import constants as c
+from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -40,31 +40,30 @@ class _DictConn:
 def test_change_pin_wire_format():
     apdu = "002400801031323334ffffffff35363738ffffffff"
     conn = _DictConn({apdu: "|9000"})
-    resp = PivApplet(CardSession(conn)).change_reference(b"1234", b"5678", c.REF_PIV_PIN)
-    assert resp.ok
+    outcome = verifier.change(PivApplet(CardSession(conn)), verifier.PIN, b"1234", b"5678")
+    assert outcome.ok
     assert conn.sent == [apdu.upper()]
 
 
 def test_change_puk_uses_ref_81():
     apdu = "002400811031323334353637383837363534333231"
     conn = _DictConn({apdu: "|9000"})
-    resp = PivApplet(CardSession(conn)).change_reference(b"12345678", b"87654321", c.REF_PUK)
-    assert resp.ok
+    piv = PivApplet(CardSession(conn))
+    assert verifier.change(piv, verifier.PUK, b"12345678", b"87654321").ok
     assert conn.sent == [apdu.upper()]
 
 
 def test_unblock_pin_wire_format():
     apdu = "002c008010313233343536373830303030ffffffff"
     conn = _DictConn({apdu: "|9000"})
-    resp = PivApplet(CardSession(conn)).unblock_pin(b"12345678", b"0000", c.REF_PIV_PIN)
-    assert resp.ok
+    assert verifier.unblock(PivApplet(CardSession(conn)), b"12345678", b"0000").ok
     assert conn.sent == [apdu.upper()]
 
 
 def test_wrong_current_pin_surfaces_retry_counter():
-    # 63C2 == two retries remain; the applet method just relays it.
+    # 63C2 == two retries remain.
     apdu = "002400801031323334ffffffff35363738ffffffff"
     conn = _DictConn({apdu: "|63C2"})
-    resp = PivApplet(CardSession(conn)).change_reference(b"1234", b"5678", c.REF_PIV_PIN)
-    assert not resp.ok
-    assert resp.sw == 0x63C2
+    outcome = verifier.change(PivApplet(CardSession(conn)), verifier.PIN, b"1234", b"5678")
+    assert not outcome.ok
+    assert outcome.sw == 0x63C2 and outcome.tries == 2

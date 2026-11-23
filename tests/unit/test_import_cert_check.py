@@ -23,6 +23,7 @@ from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
+from cryptnox_id_cli.secrets.redaction import Redactor
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import CryptnoxError
 from cryptnox_id_cli.util import tlv
@@ -99,7 +100,11 @@ class _Session:
         body = tlv.build_constructed(0x7C, tlv.build(0x82, signature))
         return Response(body, 0x90, 0x00)
 
+    redactor = Redactor()
+
     def transmit(self, apdu, context=None) -> Response:
+        if apdu.ins == 0x20:
+            return Response(b"", 0x90, 0x00)
         return self._sign(apdu)
 
     def transmit_chained(self, apdu, context=None) -> Response:
@@ -107,8 +112,8 @@ class _Session:
 
 
 class _Piv:
-    def verify_pin(self, pin: bytes) -> Response:
-        return Response(b"", 0x90, 0x00)
+    def __init__(self, session) -> None:
+        self.session = session
 
 
 def _wire(monkeypatch, session: _Session, *, imported: list) -> None:
@@ -117,7 +122,7 @@ def _wire(monkeypatch, session: _Session, *, imported: list) -> None:
         yield session
 
     monkeypatch.setattr(AppContext, "open_session", open_session)
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: _Piv())
+    monkeypatch.setattr(piv_cmd, "_select", _Piv)
     monkeypatch.setattr(
         piv_cmd,
         "_import_cert_der",

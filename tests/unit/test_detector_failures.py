@@ -135,3 +135,27 @@ def test_the_selection_reset_retries_without_le_when_the_card_wants_case_3():
     i = card.sent.index(SELECT_DEFAULT)
     assert card.sent[i + 1] == "00A40400"
     assert st.genuine == GenuinenessState.NOT_PRESENT
+
+
+@pytest.mark.parametrize(
+    ("puk", "state"),
+    [
+        ((b"", 0x63, 0xC3), PivState.PARTIALLY_PERSONALIZED),
+        (TransportError("gone"), PivState.PARTIALLY_PERSONALIZED),
+    ],
+    ids=["puk-answers", "puk-probe-fails"],
+)
+def test_a_failed_puk_probe_keeps_the_pin_and_its_rung(puk, state):
+    st, _ = detect(
+        {
+            SELECT_PIV: (bytes.fromhex(APT), 0x90, 0x00),
+            "00200080": (b"", 0x63, 0xC3),
+            "00200081": puk,
+        },
+        probe_fido=False,
+        probe_desfire=False,
+        probe_genuine=False,
+    )
+    assert st.piv == state
+    assert st.piv_pin is not None and st.piv_pin.retries == 3
+    assert (st.piv_puk is None) == isinstance(puk, BaseException)

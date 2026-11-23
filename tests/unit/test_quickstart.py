@@ -4,7 +4,9 @@
 """Quickstart planner: which steps run for each starting card state."""
 
 import pytest
+from _cardfakes import QueueConn
 
+from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.cli.commands.piv import (
     CardFacts,
     PlannedStep,
@@ -13,8 +15,8 @@ from cryptnox_id_cli.cli.commands.piv import (
     _pin_truth,
     _plan_quickstart,
 )
-from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError
+from cryptnox_id_cli.transport.pcsc import CardSession
 
 OPTS = QuickstartOptions(slot=0x9C, mechanism=0x11, cert_mode="self-signed", include_preperso=False)
 
@@ -563,29 +565,35 @@ def test_quickstart_unknown_profile_is_an_error():
 # no extra retries because every quickstart path verifies the PIN at least once.
 
 
-class _VerifyingPiv:
-    def __init__(self, sw1, sw2):
-        self._resp = Response(b"", sw1, sw2)
-
-    def verify_pin(self, pin):
-        return self._resp
+def _verifying_piv(sw1, sw2):
+    return PivApplet(CardSession(QueueConn([(b"", sw1, sw2)])))
 
 
 def test_pin_truth_match():
-    assert _pin_truth(_VerifyingPiv(0x90, 0x00), b"123456") == ("match", None)
+    assert _pin_truth(_verifying_piv(0x90, 0x00), b"123456") == ("match", None)
 
 
 def test_pin_truth_empty_verifier():
-    assert _pin_truth(_VerifyingPiv(0x6A, 0x88), b"123456") == ("empty", None)
+    assert _pin_truth(_verifying_piv(0x6A, 0x88), b"123456") == ("empty", None)
 
 
 def test_pin_truth_mismatch_reports_remaining_tries():
-    assert _pin_truth(_VerifyingPiv(0x63, 0xC5), b"999999") == ("mismatch", 5)
+    assert _pin_truth(_verifying_piv(0x63, 0xC5), b"999999") == ("mismatch", 5)
+
+
+def test_pin_truth_no_retry_limit_is_a_mismatch_without_a_count():
+    assert _pin_truth(_verifying_piv(0x63, 0xC0), b"999999") == ("mismatch", None)
 
 
 def test_pin_truth_unexpected_sw_raises():
     with pytest.raises(StatusWordError):
-        _pin_truth(_VerifyingPiv(0x69, 0x85), b"123456")
+        _pin_truth(_verifying_piv(0x69, 0x85), b"123456")
+
+
+def test_pin_truth_over_fifteen_tries_keeps_exit_6():
+    with pytest.raises(StatusWordError) as err:
+        _pin_truth(_verifying_piv(0x63, 0xD0), b"999999")
+    assert err.value.exit_code == 6
 
 
 def _skip_plan():

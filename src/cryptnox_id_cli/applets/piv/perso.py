@@ -15,6 +15,7 @@ from __future__ import annotations
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
+from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.transport.apdu import APDU, Response
 from cryptnox_id_cli.util import tlv
 
@@ -50,11 +51,9 @@ GENERATE_LE = 256
 RSA_MECHANISMS = frozenset({0x07, 0x05, 0x16})
 
 
-def pad_pin(value: bytes, length: int = 8) -> bytes:
-    """PIV PIN/PUK values are padded to 8 bytes with 0xFF."""
-    if len(value) > length:
-        raise ValueError(f"PIN/PUK value exceeds {length} bytes")
-    return bytes(value) + b"\xff" * (length - len(value))
+def pad_pin(value: bytes, what: str = "PIN or PUK") -> bytes:
+    """A PIN or PUK value for the admin set, under the cardholder commands' length rule."""
+    return verifier.pad(value, what)
 
 
 def set_verifier_value_apdu(ref: int, padded_value: bytes) -> APDU:
