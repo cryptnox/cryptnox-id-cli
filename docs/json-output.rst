@@ -266,3 +266,29 @@ failure. ``channel`` and ``nfc_admin_lock`` under ``result`` are the
 service's account of the admin channel it used and of the applet's
 contactless-administration lock; ``public_key_authenticated`` is its claim
 that the certified key reached it authenticated by the card.
+
+``consumer-lock`` adds ``dry_run``, ``modes`` (``ssd_key1`` and ``mgmt_key`` as
+asked for), ``before`` and ``after`` inventories as ``reset`` does, and
+``key_sheet``, the tool's account of the delivered keys.
+``key_sheet.delivered`` says whether the service sent any. When it did,
+``decrypted`` says whether they opened with this run's key, and when they did,
+``keys`` (names only), ``kcv_match``, ``for_this_card``, ``saved_to`` and
+``shown`` follow. ``lost`` is ``true`` when the keys are gone: they did not
+decrypt, they could be neither saved nor shown, or a run that delivers keys
+received none. ``error`` then says why; it also names a sheet file that could
+not be written when the keys were shown on the terminal instead. The service's
+``result.key_sheet`` is replaced by ``"decrypted locally"``, or by
+``"not decrypted"`` when it did not open; no key value ever appears in the
+output. ``verified_locally`` gains ``piv_present_after``,
+``piv_ssd_present_after``, ``key_sheet_kcv_match`` and
+``key_sheet_for_this_card``. A ``consumer-lock`` that ends with a
+``key_sheet`` error (exit code 17) still writes one document: the error object
+carries the whole result envelope (``op``, ``endpoint``, ``dry_run``,
+``modes``, ``card``, ``before``, ``result``, ``after``, ``key_sheet``,
+``verified_locally`` and ``relay``) beside ``error`` and ``message``. A failed ``consumer-lock`` carries
+``key_sheet`` in its error object as well, with the same fields as on
+success. ``remote key-sheet`` returns ``path``, ``op``,
+``created``, ``scp``, ``uid_sha256``, ``kcv_match`` and ``keys``, which maps
+each key's name to its value: that command exists to show them. When |cli|
+stops a ``consumer-lock`` itself and the service still sends its result, the
+error object carries it as ``result``, as a ``remote_failed`` error does.

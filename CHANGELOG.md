@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `remote consumer-lock`: the service replaces the card-manager key and key
+  version 2 of the PIV security domain with random keys nobody keeps, and key
+  version 1 and the management key 9B as `--ssd-key1` and `--mgmt-key` say.
+  Delivered keys arrive encrypted to a key of the run and go to an encrypted
+  key sheet (`--sheet-out`) or the terminal (`--show-once`); `remote key-sheet`
+  reads a sheet back. Asks for `SEAL-CARD`; under `--dry-run` the service
+  returns its plan and the relay admits no write.
+
 ### Changed
 
 - The `pin` and `puk` objects in JSON output gain `state` and `interface`;

@@ -47,6 +47,7 @@ PLANS_OWN = frozenset(
         "piv perso import-key",
         "piv perso import-p12",
         "piv quickstart",
+        "remote consumer-lock",
     }
 )
 
@@ -60,6 +61,7 @@ READ_ONLY = frozenset(
         "doctor",
         "info",
         "readers",
+        "remote key-sheet",
         "shell",
         "factory piv preperso export-config",
         "factory piv preperso init-config",

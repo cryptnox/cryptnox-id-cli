@@ -97,10 +97,147 @@ Operations
    reader can install or delete applets on the card, and only Cryptnox can make
    it genuine again.
 
+``consumer-lock``
+   Takes the card's administration keys away from everyone, Cryptnox included,
+   so the card belongs to its owner alone. See `The consumer lock`_ below. The
+   relay policy admits key replacement in place (PUT KEY) in the card manager
+   and the PIV security domain, and in the PIV applet's admin channel the
+   object and configuration writes, setting the management key and exercising
+   it; it refuses every DELETE, INSTALL and LOAD, key generation, and any key
+   but 9B. Under ``--dry-run`` it admits reads, the authentication of each
+   security domain and of the applet channel, and the 9B handshake; nothing
+   that writes.
+
+The consumer lock
+-----------------
+
+A Cryptnox PIV card ships with keys that Cryptnox controls: the card manager
+key, which installs and deletes applets, and key version 2 of the PIV security
+domain, which the service uses for ``reset``, ``attest`` and the FIPS mode
+switch, and which proves the card genuine. Key version 1 of the security
+domain is the public GlobalPlatform key, for local PIV administration.
+
+``remote consumer-lock`` has the service replace those keys with random keys
+it generates and then discards. Nothing is stored on the service. Afterwards
+nobody can administer the card's GlobalPlatform layer:
+
+* no remote ``reset``, ``attest`` or FIPS mode switch, and no genuineness proof
+  through key version 2;
+* the PIV applet can never be reinstalled, so a PUK that is blocked ends the PIV
+  function for good;
+* the keys and certificates already on the card stay and keep working, and so
+  do key-attestation certificates issued before the lock.
+
+What happens to key version 1 and the management key depends on the options:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Option
+     - Effect
+   * - ``--ssd-key1 seal``
+     - The default. Key version 1 gets a random key nobody keeps; the security
+       domain can never be opened again, and the 9B management key is the only
+       way to manage the PIV keys.
+   * - ``--ssd-key1 keep``
+     - Key version 1 gets a random key delivered to you, so the security domain
+       stays open to you.
+   * - ``--ssd-key1 provided``
+     - Key version 1 gets the value you supply.
+   * - ``--mgmt-key generate``
+     - The default. Every 9B key object gets a random value delivered to you.
+   * - ``--mgmt-key provided``
+     - 9B gets the value you supply.
+   * - ``--mgmt-key skip``
+     - 9B keeps its value. The service refuses when that value is the public
+       default and key version 1 would be sealed, because 9B could then never
+       be changed.
+
+The service changes the card in this order, and verifies each key after
+replacing it: the new key opens the domain, the old one no longer does.
+
+#. If the PIV applet is not finalized, the missing objects of the
+   ``cryptnox-default`` profile are created and the applet's
+   contactless-administration lock is turned on.
+#. The management key 9B is replaced.
+#. Key version 1, then key version 2 of the PIV security domain are replaced.
+#. The card manager key is replaced, last.
+
+Until the last step Cryptnox can still rebuild the card with a ``reset``,
+which reinstalls the PIV function and with it every key. After the last step
+nothing can be undone. A failed run reports how far it got, where the keys
+delivered before the failure went, and the service's note on what can be
+recovered.
+
+Before asking for confirmation, |cli| reads the PIV function, its security
+domain's key versions and the neighbouring functions, and reads them again
+after the run; the output carries both. A PIV function or security domain
+missing afterwards fails a local check and ends with exit code 17.
+
+When |cli| has to stop a run, because the relay policy refused a command, the
+card stopped answering, the run took longer than the relay allows or it was
+interrupted twice, it answers the service with an error, sends nothing more to
+the card, and waits up to 30 seconds for the service's result. Keys delivered before the
+stop are then saved or shown as usual, and the service's recovery note is
+printed. When a run fails after a command that writes had reached the card,
+|cli| warns that the card may be partly changed: it names the keys the
+relayed commands could have replaced, whether you have their new value, and
+whether key version 1 may already be sealed, and says whether a ``reset`` can
+still rebuild the card. The relay's time limit is set above the service's own, so a
+slow run ends at the service's deadline, with its result.
+
+While the lock runs, a first interrupt (Ctrl-C) only prints that the run
+finishes on its own; a second one, or a termination request, stops it before
+the next card command. Closing the terminal does not stop it. Output to
+``--apdu-log`` or ``--verbose`` that fails during the run is switched off, and
+|cli| says so afterwards. Do not remove the card until the command finishes.
+
+The service runs the lock on SCP03 cards over the hardened channel, where the
+card authenticates its answers, including the check values of each new key.
+SCP02 cards are served only with a Cryptnox factory token, which |cli| does
+not send. The service opens each security domain at level ``0x33`` and, if the
+domain refuses it, again at ``0x13``, which still authenticates the card's
+answers. For ``consumer-lock`` the relay policy lets that one refusal through
+each time the service opens the card manager or the PIV security domain; any
+other failed authentication, or a second in a row, ends the operation.
+
+Delivered and supplied keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Keys travel encrypted. |cli| generates a one-time P-256 key for each run and
+sends its public half with the request. The service encrypts the delivered
+keys to it (ECDH, HKDF-SHA256, AES-256-GCM), so a TLS terminator in front of
+the service that passes the traffic through sees ciphertext only. The one-time
+keys are not signed, so a terminator that rewrites the traffic could
+substitute them and read the keys. Values you supply travel the same way in
+the other direction, encrypted to a one-time key the service sends before it
+changes anything. Delivered and supplied values are ordinary strings in
+|cli|'s memory for as long as the process lives; it cannot wipe them.
+
+With ``--sheet-out`` the delivered keys are saved in a key sheet: a file that
+starts with ``CNXKS1``, encrypted with AES-256-GCM under a key scrypt derives
+from your passphrase. On Linux and macOS only you can read it (mode 0600); on
+Windows the file takes its folder's permissions. |cli| flushes the file to
+disk and reads it back before it reports the keys saved. When the write or the
+read-back fails, it shows the keys on the terminal instead, or reports them
+lost when standard error is not a terminal. ``remote key-sheet`` opens the file again
+and names the variable each key goes into: ``PIV_SCP03_ENC``,
+``PIV_SCP03_MAC`` and ``PIV_SCP03_DEK`` all take key version 1, and
+``PIV_MGMT_KEY`` takes 9B. Keep the sheet and its passphrase apart; with
+``--ssd-key1 seal`` the 9B value in it is the only way left to manage the
+card's PIV keys.
+
+Before reporting success, |cli| checks the delivered keys against the check
+values that came with them, and that the sheet names this card. When either
+check fails, when the keys are lost, or when a run that delivers keys receives
+none, it ends with exit code 17. Keys that failed a check are still saved or
+shown as delivered.
+
 The admin channel the service opens
 -----------------------------------
 
-For ``attest``, ``reset`` and ``dev-reset`` the service opens the PIV
+For ``attest``, ``reset``, ``dev-reset`` and ``consumer-lock`` the service opens the PIV
 applet's admin channel with the card's own key. On an SCP03 card it asks for
 security level ``0x33``: commands and answers are both authenticated and
 encrypted, so nothing between the service and the card, |cli| included, can
@@ -109,11 +246,12 @@ answer protection, so on them the service drives the card at the legacy level
 ``0x03``, where only the commands are protected. Every result names the
 channel used (``channel``: protocol, level, ``hardened`` or ``legacy``) and
 |cli| shows it. A legacy channel on an SCP03 card is warned about, and the
-service's log says why. A result without the field comes from a service
-without the hardened channel; |cli| shows the channel as not reported and
-treats it as legacy. The relay policy stops at the first failed
+service's log says why. The relay policy stops at the first failed
 authentication, so an SCP03 security domain that refused the hardened level
-ends the operation rather than being driven at the legacy level.
+ends the operation rather than being driven at the legacy level. The one
+exception is the card manager or the PIV security domain during
+``consumer-lock``: refusing ``0x33``, it may be opened at ``0x13``, which
+still authenticates its answers (see `The consumer lock`_).
 
 Three rules follow from the channel:
 
@@ -236,9 +374,12 @@ What is sent to the service
 
 The card's ATR and CPLC serial identify the card to the service. They are the
 same values any reader can obtain from the card without a key. Nothing else
-about the card holder is sent. An operation sends its own parameters with
+about the card holder is sent, apart from the key values an owner supplies to
+``consumer-lock``, encrypted to a one-time key of the service (see
+`Delivered and supplied keys`_). An operation sends its own parameters with
 them: the slot and algorithm for ``attest``, the applet build and the key tier
-for ``reset`` and ``dev-reset``. ``ping`` sends nothing about a card.
+for ``reset`` and ``dev-reset``, the key modes for ``consumer-lock``. ``ping``
+sends nothing about a card.
 
 Transcripts
 -----------

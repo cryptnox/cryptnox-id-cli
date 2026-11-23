@@ -28,8 +28,8 @@ Global options
    * - ``--dry-run``
      - Write nothing to the card. Planning-capable commands (``piv quickstart``,
        ``apdu send``/``select``/``transcript``, ``factory piv preperso
-       load-config``/``finalize``, ``piv perso import-key``/``import-p12``) show
-       the intended actions; read-only commands run normally; every other
+       load-config``/``finalize``, ``piv perso import-key``/``import-p12``,
+       ``remote consumer-lock``) show the intended actions; read-only commands run normally; every other
        command refuses to run under the flag (fail-closed) instead of silently
        executing.
    * - ``--yes``
@@ -74,9 +74,11 @@ Top-level commands
        ``report genuine`` / ``report full``
      - Secret-safe JSON reports (``--out FILE``).
    * - ``remote authenticate`` / ``remote inspect`` / ``remote attest`` /
-       ``remote reset`` / ``remote dev-reset``
+       ``remote reset`` / ``remote dev-reset`` / ``remote consumer-lock``
      - Operations run through the Cryptnox remote PIV service, with the card
        in the local reader.
+   * - ``remote key-sheet``
+     - Show the keys in a key sheet that ``remote consumer-lock`` saved.
    * - ``shell``
      - Interactive prompt: run subcommands without the ``cryptnox-id`` prefix
        (type ``piv info``); global options passed when launching carry into every

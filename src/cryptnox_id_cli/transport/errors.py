@@ -84,6 +84,20 @@ class RemoteError(CryptnoxError):
 
     code = "remote_error"
     exit_code = 12
+    #: The service's result, when it sent one after the relay stopped the operation.
+    result: dict[str, object] | None = None
+    #: The tool's account of the keys delivered during a consumer lock that failed.
+    key_sheet: dict[str, object] | None = None
+
+    def _extras(self, out: dict[str, object]) -> dict[str, object]:
+        if self.result is not None:
+            out["result"] = self.result
+        if self.key_sheet is not None:
+            out["key_sheet"] = self.key_sheet
+        return out
+
+    def to_dict(self) -> dict[str, object]:
+        return self._extras(super().to_dict())
 
 
 class RemoteConnectError(RemoteError):
@@ -115,7 +129,7 @@ class RemotePolicyError(RemoteError):
         self.header = header
 
     def to_dict(self) -> dict[str, object]:
-        return {"error": self.code, "message": str(self), "apdu_header": self.header}
+        return self._extras({"error": self.code, "message": str(self), "apdu_header": self.header})
 
 
 class RemoteOperationError(RemoteError):
@@ -156,7 +170,7 @@ class RemoteOperationError(RemoteError):
             out["retry_in_seconds"] = self.retry_in_seconds
         if self.ref is not None:
             out["ref"] = self.ref
-        return out
+        return self._extras(out)
 
 
 @dataclass(frozen=True)

@@ -193,6 +193,19 @@ card: which applet may be selected, which instructions may pass, how many
 authentication attempts each security domain may see. A refusal ends the operation.
 _Avoid_: firewall, filter (a filter drops; the policy stops)
 
+**Consumer lock**:
+The remote operation that hands a card to its owner alone: the service replaces the
+card-manager key and the PIV security domain's key version 2 with random keys it
+discards, and key version 1 and the management key as the owner chooses. Nobody,
+Cryptnox included, can administer the card's GlobalPlatform layer afterwards. It
+cannot be undone.
+_Avoid_: hard lock, fuse (the manufacturer's step)
+
+**Key sheet**:
+The keys a consumer lock delivers to the owner, encrypted to a one-time key of the
+run that asked for them; on disk, a passphrase-protected `CNXKS1` file.
+_Avoid_: key file, backup (the card keeps no copy to restore)
+
 ### Tool behavior
 
 **Dry run**:
