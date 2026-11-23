@@ -379,6 +379,31 @@ failure. <code class="docutils literal notranslate"><span class="pre">channel</s
 service’s account of the admin channel it used and of the applet’s
 contactless-administration lock; <code class="docutils literal notranslate"><span class="pre">public_key_authenticated</span></code> is its claim
 that the certified key reached it authenticated by the card.</p>
+<p><code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> adds <code class="docutils literal notranslate"><span class="pre">dry_run</span></code>, <code class="docutils literal notranslate"><span class="pre">modes</span></code> (<code class="docutils literal notranslate"><span class="pre">ssd_key1</span></code> and <code class="docutils literal notranslate"><span class="pre">mgmt_key</span></code> as
+asked for), <code class="docutils literal notranslate"><span class="pre">before</span></code> and <code class="docutils literal notranslate"><span class="pre">after</span></code> inventories as <code class="docutils literal notranslate"><span class="pre">reset</span></code> does, and
+<code class="docutils literal notranslate"><span class="pre">key_sheet</span></code>, the tool’s account of the delivered keys.
+<code class="docutils literal notranslate"><span class="pre">key_sheet.delivered</span></code> says whether the service sent any. When it did,
+<code class="docutils literal notranslate"><span class="pre">decrypted</span></code> says whether they opened with this run’s key, and when they did,
+<code class="docutils literal notranslate"><span class="pre">keys</span></code> (names only), <code class="docutils literal notranslate"><span class="pre">kcv_match</span></code>, <code class="docutils literal notranslate"><span class="pre">for_this_card</span></code>, <code class="docutils literal notranslate"><span class="pre">saved_to</span></code> and
+<code class="docutils literal notranslate"><span class="pre">shown</span></code> follow. <code class="docutils literal notranslate"><span class="pre">lost</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code> when the keys are gone: they did not
+decrypt, they could be neither saved nor shown, or a run that delivers keys
+received none. <code class="docutils literal notranslate"><span class="pre">error</span></code> then says why; it also names a sheet file that could
+not be written when the keys were shown on the terminal instead. The service’s
+<code class="docutils literal notranslate"><span class="pre">result.key_sheet</span></code> is replaced by <code class="docutils literal notranslate"><span class="pre">&quot;decrypted</span> <span class="pre">locally&quot;</span></code>, or by
+<code class="docutils literal notranslate"><span class="pre">&quot;not</span> <span class="pre">decrypted&quot;</span></code> when it did not open; no key value ever appears in the
+output. <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code> gains <code class="docutils literal notranslate"><span class="pre">piv_present_after</span></code>,
+<code class="docutils literal notranslate"><span class="pre">piv_ssd_present_after</span></code>, <code class="docutils literal notranslate"><span class="pre">key_sheet_kcv_match</span></code> and
+<code class="docutils literal notranslate"><span class="pre">key_sheet_for_this_card</span></code>. A <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> that ends with a
+<code class="docutils literal notranslate"><span class="pre">key_sheet</span></code> error (exit code 17) still writes one document: the error object
+carries the whole result envelope (<code class="docutils literal notranslate"><span class="pre">op</span></code>, <code class="docutils literal notranslate"><span class="pre">endpoint</span></code>, <code class="docutils literal notranslate"><span class="pre">dry_run</span></code>,
+<code class="docutils literal notranslate"><span class="pre">modes</span></code>, <code class="docutils literal notranslate"><span class="pre">card</span></code>, <code class="docutils literal notranslate"><span class="pre">before</span></code>, <code class="docutils literal notranslate"><span class="pre">result</span></code>, <code class="docutils literal notranslate"><span class="pre">after</span></code>, <code class="docutils literal notranslate"><span class="pre">key_sheet</span></code>,
+<code class="docutils literal notranslate"><span class="pre">verified_locally</span></code> and <code class="docutils literal notranslate"><span class="pre">relay</span></code>) beside <code class="docutils literal notranslate"><span class="pre">error</span></code> and <code class="docutils literal notranslate"><span class="pre">message</span></code>. A failed <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> carries
+<code class="docutils literal notranslate"><span class="pre">key_sheet</span></code> in its error object as well, with the same fields as on
+success. <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">key-sheet</span></code> returns <code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">op</span></code>,
+<code class="docutils literal notranslate"><span class="pre">created</span></code>, <code class="docutils literal notranslate"><span class="pre">scp</span></code>, <code class="docutils literal notranslate"><span class="pre">uid_sha256</span></code>, <code class="docutils literal notranslate"><span class="pre">kcv_match</span></code> and <code class="docutils literal notranslate"><span class="pre">keys</span></code>, which maps
+each key’s name to its value: that command exists to show them. When <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>
+stops a <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> itself and the service still sends its result, the
+error object carries it as <code class="docutils literal notranslate"><span class="pre">result</span></code>, as a <code class="docutils literal notranslate"><span class="pre">remote_failed</span></code> error does.</p>
 </section>
 </section>
 

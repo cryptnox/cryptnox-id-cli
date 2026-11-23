@@ -117,6 +117,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#how-a-relayed-operation-works">How a relayed operation works</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-relay-policy">The relay policy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#operations">Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-consumer-lock">The consumer lock</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#delivered-and-supplied-keys">Delivered and supplied keys</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#the-admin-channel-the-service-opens">The admin channel the service opens</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#what-a-failed-authentication-costs">What a failed authentication costs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-default-keys-flag">The <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> flag</a></li>
@@ -241,11 +245,149 @@ below); a card that cannot is refused untouched. Afterwards anyone with a
 reader can install or delete applets on the card, and only Cryptnox can make
 it genuine again.</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code></dt><dd><p>Takes the card’s administration keys away from everyone, Cryptnox included,
+so the card belongs to its owner alone. See <a class="reference internal" href="#the-consumer-lock">The consumer lock</a> below. The
+relay policy admits key replacement in place (PUT KEY) in the card manager
+and the PIV security domain, and in the PIV applet’s admin channel the
+object and configuration writes, setting the management key and exercising
+it; it refuses every DELETE, INSTALL and LOAD, key generation, and any key
+but 9B. Under <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> it admits reads, the authentication of each
+security domain and of the applet channel, and the 9B handshake; nothing
+that writes.</p>
+</dd>
 </dl>
+</section>
+<section id="the-consumer-lock">
+<h2>The consumer lock<a class="headerlink" href="#the-consumer-lock" title="Link to this heading"></a></h2>
+<p>A Cryptnox PIV card ships with keys that Cryptnox controls: the card manager
+key, which installs and deletes applets, and key version 2 of the PIV security
+domain, which the service uses for <code class="docutils literal notranslate"><span class="pre">reset</span></code>, <code class="docutils literal notranslate"><span class="pre">attest</span></code> and the FIPS mode
+switch, and which proves the card genuine. Key version 1 of the security
+domain is the public GlobalPlatform key, for local PIV administration.</p>
+<p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">consumer-lock</span></code> has the service replace those keys with random keys
+it generates and then discards. Nothing is stored on the service. Afterwards
+nobody can administer the card’s GlobalPlatform layer:</p>
+<ul class="simple">
+<li><p>no remote <code class="docutils literal notranslate"><span class="pre">reset</span></code>, <code class="docutils literal notranslate"><span class="pre">attest</span></code> or FIPS mode switch, and no genuineness proof
+through key version 2;</p></li>
+<li><p>the PIV applet can never be reinstalled, so a PUK that is blocked ends the PIV
+function for good;</p></li>
+<li><p>the keys and certificates already on the card stay and keep working, and so
+do key-attestation certificates issued before the lock.</p></li>
+</ul>
+<p>What happens to key version 1 and the management key depends on the options:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Effect</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--ssd-key1</span> <span class="pre">seal</span></code></p></td>
+<td><p>The default. Key version 1 gets a random key nobody keeps; the security
+domain can never be opened again, and the 9B management key is the only
+way to manage the PIV keys.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--ssd-key1</span> <span class="pre">keep</span></code></p></td>
+<td><p>Key version 1 gets a random key delivered to you, so the security domain
+stays open to you.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--ssd-key1</span> <span class="pre">provided</span></code></p></td>
+<td><p>Key version 1 gets the value you supply.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--mgmt-key</span> <span class="pre">generate</span></code></p></td>
+<td><p>The default. Every 9B key object gets a random value delivered to you.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--mgmt-key</span> <span class="pre">provided</span></code></p></td>
+<td><p>9B gets the value you supply.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--mgmt-key</span> <span class="pre">skip</span></code></p></td>
+<td><p>9B keeps its value. The service refuses when that value is the public
+default and key version 1 would be sealed, because 9B could then never
+be changed.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The service changes the card in this order, and verifies each key after
+replacing it: the new key opens the domain, the old one no longer does.</p>
+<ol class="arabic simple">
+<li><p>If the PIV applet is not finalized, the missing objects of the
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> profile are created and the applet’s
+contactless-administration lock is turned on.</p></li>
+<li><p>The management key 9B is replaced.</p></li>
+<li><p>Key version 1, then key version 2 of the PIV security domain are replaced.</p></li>
+<li><p>The card manager key is replaced, last.</p></li>
+</ol>
+<p>Until the last step Cryptnox can still rebuild the card with a <code class="docutils literal notranslate"><span class="pre">reset</span></code>,
+which reinstalls the PIV function and with it every key. After the last step
+nothing can be undone. A failed run reports how far it got, where the keys
+delivered before the failure went, and the service’s note on what can be
+recovered.</p>
+<p>Before asking for confirmation, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> reads the PIV function, its security
+domain’s key versions and the neighbouring functions, and reads them again
+after the run; the output carries both. A PIV function or security domain
+missing afterwards fails a local check and ends with exit code 17.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> has to stop a run, because the relay policy refused a command, the
+card stopped answering, the run took longer than the relay allows or it was
+interrupted twice, it answers the service with an error, sends nothing more to
+the card, and waits up to 30 seconds for the service’s result. Keys delivered before the
+stop are then saved or shown as usual, and the service’s recovery note is
+printed. When a run fails after a command that writes had reached the card,
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> warns that the card may be partly changed: it names the keys the
+relayed commands could have replaced, whether you have their new value, and
+whether key version 1 may already be sealed, and says whether a <code class="docutils literal notranslate"><span class="pre">reset</span></code> can
+still rebuild the card. The relay’s time limit is set above the service’s own, so a
+slow run ends at the service’s deadline, with its result.</p>
+<p>While the lock runs, a first interrupt (Ctrl-C) only prints that the run
+finishes on its own; a second one, or a termination request, stops it before
+the next card command. Closing the terminal does not stop it. Output to
+<code class="docutils literal notranslate"><span class="pre">--apdu-log</span></code> or <code class="docutils literal notranslate"><span class="pre">--verbose</span></code> that fails during the run is switched off, and
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> says so afterwards. Do not remove the card until the command finishes.</p>
+<p>The service runs the lock on SCP03 cards over the hardened channel, where the
+card authenticates its answers, including the check values of each new key.
+SCP02 cards are served only with a Cryptnox factory token, which <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> does
+not send. The service opens each security domain at level <code class="docutils literal notranslate"><span class="pre">0x33</span></code> and, if the
+domain refuses it, again at <code class="docutils literal notranslate"><span class="pre">0x13</span></code>, which still authenticates the card’s
+answers. For <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> the relay policy lets that one refusal through
+each time the service opens the card manager or the PIV security domain; any
+other failed authentication, or a second in a row, ends the operation.</p>
+<section id="delivered-and-supplied-keys">
+<h3>Delivered and supplied keys<a class="headerlink" href="#delivered-and-supplied-keys" title="Link to this heading"></a></h3>
+<p>Keys travel encrypted. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> generates a one-time P-256 key for each run and
+sends its public half with the request. The service encrypts the delivered
+keys to it (ECDH, HKDF-SHA256, AES-256-GCM), so a TLS terminator in front of
+the service that passes the traffic through sees ciphertext only. The one-time
+keys are not signed, so a terminator that rewrites the traffic could
+substitute them and read the keys. Values you supply travel the same way in
+the other direction, encrypted to a one-time key the service sends before it
+changes anything. Delivered and supplied values are ordinary strings in
+<code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code>’s memory for as long as the process lives; it cannot wipe them.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">--sheet-out</span></code> the delivered keys are saved in a key sheet: a file that
+starts with <code class="docutils literal notranslate"><span class="pre">CNXKS1</span></code>, encrypted with AES-256-GCM under a key scrypt derives
+from your passphrase. On Linux and macOS only you can read it (mode 0600); on
+Windows the file takes its folder’s permissions. <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> flushes the file to
+disk and reads it back before it reports the keys saved. When the write or the
+read-back fails, it shows the keys on the terminal instead, or reports them
+lost when standard error is not a terminal. <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">key-sheet</span></code> opens the file again
+and names the variable each key goes into: <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_ENC</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PIV_SCP03_MAC</span></code> and <code class="docutils literal notranslate"><span class="pre">PIV_SCP03_DEK</span></code> all take key version 1, and
+<code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code> takes 9B. Keep the sheet and its passphrase apart; with
+<code class="docutils literal notranslate"><span class="pre">--ssd-key1</span> <span class="pre">seal</span></code> the 9B value in it is the only way left to manage the
+card’s PIV keys.</p>
+<p>Before reporting success, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> checks the delivered keys against the check
+values that came with them, and that the sheet names this card. When either
+check fails, when the keys are lost, or when a run that delivers keys receives
+none, it ends with exit code 17. Keys that failed a check are still saved or
+shown as delivered.</p>
+</section>
 </section>
 <section id="the-admin-channel-the-service-opens">
 <h2>The admin channel the service opens<a class="headerlink" href="#the-admin-channel-the-service-opens" title="Link to this heading"></a></h2>
-<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> the service opens the PIV
+<p>For <code class="docutils literal notranslate"><span class="pre">attest</span></code>, <code class="docutils literal notranslate"><span class="pre">reset</span></code>, <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code> and <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code> the service opens the PIV
 applet’s admin channel with the card’s own key. On an SCP03 card it asks for
 security level <code class="docutils literal notranslate"><span class="pre">0x33</span></code>: commands and answers are both authenticated and
 encrypted, so nothing between the service and the card, <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> included, can
@@ -254,11 +396,12 @@ answer protection, so on them the service drives the card at the legacy level
 <code class="docutils literal notranslate"><span class="pre">0x03</span></code>, where only the commands are protected. Every result names the
 channel used (<code class="docutils literal notranslate"><span class="pre">channel</span></code>: protocol, level, <code class="docutils literal notranslate"><span class="pre">hardened</span></code> or <code class="docutils literal notranslate"><span class="pre">legacy</span></code>) and
 <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows it. A legacy channel on an SCP03 card is warned about, and the
-service’s log says why. A result without the field comes from a service
-without the hardened channel; <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> shows the channel as not reported and
-treats it as legacy. The relay policy stops at the first failed
+service’s log says why. The relay policy stops at the first failed
 authentication, so an SCP03 security domain that refused the hardened level
-ends the operation rather than being driven at the legacy level.</p>
+ends the operation rather than being driven at the legacy level. The one
+exception is the card manager or the PIV security domain during
+<code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code>: refusing <code class="docutils literal notranslate"><span class="pre">0x33</span></code>, it may be opened at <code class="docutils literal notranslate"><span class="pre">0x13</span></code>, which
+still authenticates its answers (see <a class="reference internal" href="#the-consumer-lock">The consumer lock</a>).</p>
 <p>Three rules follow from the channel:</p>
 <ul class="simple">
 <li><p>The relay stays a plain relay. On the hardened channel the card signs each
@@ -369,9 +512,12 @@ the service, per card, and survives a restart of the service.</p>
 <h2>What is sent to the service<a class="headerlink" href="#what-is-sent-to-the-service" title="Link to this heading"></a></h2>
 <p>The card’s ATR and CPLC serial identify the card to the service. They are the
 same values any reader can obtain from the card without a key. Nothing else
-about the card holder is sent. An operation sends its own parameters with
+about the card holder is sent, apart from the key values an owner supplies to
+<code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code>, encrypted to a one-time key of the service (see
+<a class="reference internal" href="#delivered-and-supplied-keys">Delivered and supplied keys</a>). An operation sends its own parameters with
 them: the slot and algorithm for <code class="docutils literal notranslate"><span class="pre">attest</span></code>, the applet build and the key tier
-for <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>. <code class="docutils literal notranslate"><span class="pre">ping</span></code> sends nothing about a card.</p>
+for <code class="docutils literal notranslate"><span class="pre">reset</span></code> and <code class="docutils literal notranslate"><span class="pre">dev-reset</span></code>, the key modes for <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code>. <code class="docutils literal notranslate"><span class="pre">ping</span></code>
+sends nothing about a card.</p>
 </section>
 <section id="transcripts">
 <h2>Transcripts<a class="headerlink" href="#transcripts" title="Link to this heading"></a></h2>

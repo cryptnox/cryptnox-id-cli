@@ -180,8 +180,8 @@ guess — pass this explicitly.</p></td>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code></p></td>
 <td><p>Write nothing to the card. Planning-capable commands (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code>,
 <code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">send</span></code>/<code class="docutils literal notranslate"><span class="pre">select</span></code>/<code class="docutils literal notranslate"><span class="pre">transcript</span></code>, <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span>
-<span class="pre">load-config</span></code>/<code class="docutils literal notranslate"><span class="pre">finalize</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-key</span></code>/<code class="docutils literal notranslate"><span class="pre">import-p12</span></code>) show
-the intended actions; read-only commands run normally; every other
+<span class="pre">load-config</span></code>/<code class="docutils literal notranslate"><span class="pre">finalize</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-key</span></code>/<code class="docutils literal notranslate"><span class="pre">import-p12</span></code>,
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">consumer-lock</span></code>) show the intended actions; read-only commands run normally; every other
 command refuses to run under the flag (fail-closed) instead of silently
 executing.</p></td>
 </tr>
@@ -242,11 +242,14 @@ data is never logged).</p></td>
 <td><p>Secret-safe JSON reports (<code class="docutils literal notranslate"><span class="pre">--out</span> <span class="pre">FILE</span></code>).</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">authenticate</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">inspect</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">attest</span></code> /
-<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code></p></td>
+<code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">reset</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">dev-reset</span></code> / <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">consumer-lock</span></code></p></td>
 <td><p>Operations run through the Cryptnox remote PIV service, with the card
 in the local reader.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">shell</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">key-sheet</span></code></p></td>
+<td><p>Show the keys in a key sheet that <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">consumer-lock</span></code> saved.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">shell</span></code></p></td>
 <td><p>Interactive prompt: run subcommands without the <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> prefix
 (type <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">info</span></code>); global options passed when launching carry into every
 command. <code class="docutils literal notranslate"><span class="pre">help</span></code> / <code class="docutils literal notranslate"><span class="pre">clear</span></code> / <code class="docutils literal notranslate"><span class="pre">exit</span></code> — see <a class="reference internal" href="interactive-shell.html"><span class="doc">Interactive shell</span></a>.</p></td>

@@ -240,12 +240,20 @@ refuses to send. The message names the command header.</p></td>
 operation as failed.</p></td>
 </tr>
 <tr class="row-odd"><td><p>17</p></td>
-<td><p>—</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">key_sheet</span></code>, or none</p></td>
 <td><p>A <code class="docutils literal notranslate"><span class="pre">remote</span></code> operation ended, but a check <code class="docutils literal notranslate"><span class="pre">cryptnox-id</span></code> makes on its own did
 not hold (a <code class="docutils literal notranslate"><span class="pre">false</span></code> under <code class="docutils literal notranslate"><span class="pre">verified_locally</span></code>): the returned key
 attestation did not verify, the card does not carry the applet build
 asked for, the card is not the one the service reports. The result
-object is printed in place of an error object (see <a class="reference internal" href="json-output.html"><span class="doc">JSON output</span></a>).</p></td>
+object is printed in place of an error object (see <a class="reference internal" href="json-output.html"><span class="doc">JSON output</span></a>).
+With the token <code class="docutils literal notranslate"><span class="pre">key_sheet</span></code>: a key sheet could not be decrypted or
+read, a wrong passphrase or a damaged file; or, for <code class="docutils literal notranslate"><span class="pre">consumer-lock</span></code>,
+the service reported success but the delivered keys are lost or failed
+a check: keys that do not open with this run’s key; a sheet file that
+could not be written, with no terminal to show the keys on; check
+values that do not match, or a sheet made for another card; no keys in
+a run that delivers them; or keys the run did not ask for, with nowhere
+to put them.</p></td>
 </tr>
 </tbody>
 </table>
