@@ -12,6 +12,9 @@ import pytest
 from _cardfakes import QueueConn, run_both_modes, wire_session
 
 SELECT_PIV = "00A404000BA00000030800001000010000"
+#: The applet's status object read back over contact (no tag 86), and a refused read.
+CONTACT_STATUS = (bytes.fromhex("5306800107860100"), 0x90, 0x00)
+NO_STATUS = (b"", 0x6A, 0x82)
 
 
 def _pad(v: str) -> str:
@@ -65,11 +68,17 @@ CHANGE = [
 @pytest.mark.parametrize(("args", "header", "old", "new", "label", "hint"), CHANGE)
 @pytest.mark.parametrize(
     ("sw", "changed", "retries", "blocked"),
-    [(0x9000, True, None, False), (0x63C2, False, 2, False), (0x63C0, False, 0, True)],
-    ids=["ok", "wrong", "last-try"],
+    [
+        (0x9000, True, None, False),
+        (0x63C2, False, 2, False),
+        (0x63C0, False, None, False),
+        (0x6983, False, None, True),
+    ],
+    ids=["ok", "wrong", "no-retry-limit", "blocked-over-contact"],
 )
 def test_change_secret(card, args, header, old, new, label, hint, sw, changed, retries, blocked):
-    conn = card((b"", sw >> 8, sw & 0xFF))
+    extra = [CONTACT_STATUS] if sw == 0x6983 else []
+    conn = card((b"", sw >> 8, sw & 0xFF), *extra)
     as_json, human = run_both_modes(["piv", *args])
     assert conn.sent[1].hex().upper() == f"{header}10{_pad(old)}{_pad(new)}"
     payload = json.loads(as_json.stdout)
@@ -94,7 +103,8 @@ def test_change_secret(card, args, header, old, new, label, hint, sw, changed, r
     ids=["ok", "wrong", "contactless"],
 )
 def test_pin_verify(card, sw, reader, verified, expect):
-    conn = card((b"", sw >> 8, sw & 0xFF), reader=reader)
+    extra = [NO_STATUS] if sw == 0x6982 else []
+    conn = card((b"", sw >> 8, sw & 0xFF), *extra, reader=reader)
     as_json, human = run_both_modes(["piv", "pin", "verify", "--pin", "1234"])
     assert conn.sent[1].hex().upper() == f"0020008008{_pad('1234')}"
     payload = json.loads(as_json.stdout)
@@ -114,7 +124,8 @@ def test_pin_verify(card, sw, reader, verified, expect):
     ids=["tries-blocked", "unset-verified", "refused"],
 )
 def test_pin_status_human(card, pin_sw, puk_sw, lines):
-    card((b"", pin_sw >> 8, pin_sw & 0xFF), (b"", puk_sw >> 8, puk_sw & 0xFF))
+    status = {0x6983: [CONTACT_STATUS], 0x6982: [NO_STATUS]}.get(puk_sw, [])
+    card((b"", pin_sw >> 8, pin_sw & 0xFF), (b"", puk_sw >> 8, puk_sw & 0xFF), *status)
     as_json, human = run_both_modes(["piv", "pin", "status"])
     assert as_json.exit_code == 0 and human.exit_code == 0
     assert ("note" in json.loads(as_json.stdout)) is (pin_sw == 0x6982)

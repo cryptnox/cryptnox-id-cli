@@ -150,6 +150,8 @@ class AppletStatus:
     vci_established: bool
     contactless: bool
     fips_mode: bool
+    #: Whether the answer carried tag 86; without it ``contactless`` is a default, not a report.
+    reports_interface: bool = True
 
     @property
     def secured(self) -> bool:
@@ -311,6 +313,7 @@ def parse_status(data: bytes) -> AppletStatus:
         vci_established=_flag(f, 0x85),
         contactless=_flag(f, 0x86),
         fips_mode=_flag(f, 0x87),
+        reports_interface=0x86 in f,
     )
 
 

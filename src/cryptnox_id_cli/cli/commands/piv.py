@@ -25,7 +25,7 @@ from rich.markup import escape
 from cryptnox_id_cli import CLI_NAME, trust
 from cryptnox_id_cli.applets.piv import constants as pivc
 from cryptnox_id_cli.applets.piv import inventory as inventory_mod
-from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth
+from cryptnox_id_cli.applets.piv import keyimport, mgmt_auth, verifier
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as preperso_mod
 from cryptnox_id_cli.applets.piv import profiles as prof_mod
@@ -36,11 +36,7 @@ from cryptnox_id_cli.applets.piv.objects import (
     object_by_name,
     wrap_certificate,
 )
-from cryptnox_id_cli.applets.piv.piv import (
-    PIN_INTERFACE_REFUSED_HINT,
-    PUK_INTERFACE_REFUSED_HINT,
-    PivApplet,
-)
+from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.slots import PIV_SLOTS
 from cryptnox_id_cli.applets.piv.ssd import (
     CRYPTNOX_KEY_VERSION,
@@ -194,7 +190,15 @@ def status(app: AppContext) -> None:
             if vs.refused:
                 c.print(f"  {label}: [yellow]not usable over this interface[/yellow] (SW=6982)")
                 continue
-            extra = f", {vs.retries} tries left" if vs.retries is not None else ""
+            if vs.configured is None:
+                c.print(f"  {label}: [yellow]unknown[/yellow] (SW={vs.sw_hex})")
+                continue
+            if vs.verdict is verifier.Verdict.NO_RETRY_LIMIT:
+                extra = ", no retry limit"
+            elif vs.verdict is verifier.Verdict.NO_TRIES_ON_INTERFACE:
+                extra = ", 0 tries left over this interface"
+            else:
+                extra = f", {vs.retries} tries left" if vs.retries is not None else ""
             blocked = " [red](blocked)[/red]" if vs.blocked else ""
             c.print(f"  {label}: {'set' if vs.configured else 'not set'}{extra}{blocked}")
         if st.piv_objects:
@@ -203,7 +207,7 @@ def status(app: AppContext) -> None:
                 table.add_row(name, _OBJECT_PRESENCE[present])
             c.print(table)
         for note in st.notes:
-            c.print(f"[yellow]*[/yellow] {note}")
+            c.print(f"[yellow]*[/yellow] {escape(note)}")
 
     app.out.result(payload, human)
 
@@ -688,16 +692,15 @@ def objects_read(app: AppContext, object_name: str, out_: str | None) -> None:
             "spends a try, so it refuses to run (nothing was sent to the card). Run it "
             "without --dry-run to read it."
         )
+    secret = (
+        _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", None, "PIN")
+        if obj.pin_protected
+        else None
+    )
     with app.open_session() as session:
         piv = _select(session)
-        if obj.pin_protected:
-            secret = resolve_secret(
-                redactor=app.redactor,
-                env_var="CRYPTNOX_PIV_PIN",
-                prompt_label="PIV PIN",
-            )
-            resp = piv.verify_pin(secret)
-            _check_pin_verify(resp, session)
+        if secret is not None:
+            verifier.require_pin(piv, secret)
             # PIN-gated content (printed, fingerprints, facial) is cardholder data
             # the applet itself protects; it must not land in the "secrets redacted"
             # APDU transcript. Hold the GET DATA lines, register the payload, then
@@ -746,30 +749,26 @@ def pin() -> None:
 def pin_status(app: AppContext) -> None:
     """Show PIN and PUK status (non-decrementing query)."""
     with app.open_session() as session:
-        piv = _select(session)
-        pin_st = piv.pin_status(pivc.REF_PIV_PIN)
-        puk_st = piv.pin_status(pivc.REF_PUK)
-        refused = pin_st.refused or puk_st.refused
-        hint = _interface_hint(session, puk_only=not pin_st.refused) if refused else None
+        probe = verifier.status(_select(session))
+    style = {
+        verifier.Verdict.NOT_CONFIGURED: "dim",
+        verifier.Verdict.BLOCKED: "red",
+        verifier.Verdict.REFUSED: "yellow",
+        verifier.Verdict.NO_TRIES_ON_INTERFACE: "yellow",
+        verifier.Verdict.OTHER: "yellow",
+    }
 
     def human(c: Console) -> None:
-        for label, st in (("PIN (80)", pin_st), ("PUK (81)", puk_st)):
-            if st.refused:
-                c.print(f"  {label}: [yellow]not usable over this interface[/yellow] (SW=6982)")
-            elif not st.configured:
-                c.print(f"  {label}: [dim]not configured[/dim]")
-            elif st.blocked:
-                c.print(f"  {label}: [red]blocked[/red]")
-            else:
-                tries = f"{st.retries} tries left" if st.retries is not None else "configured"
-                c.print(f"  {label}: [green]{tries}[/green]")
-        if hint:
-            c.print(f"[yellow]*[/yellow] {hint[0].upper()}{hint[1:]}")
+        for label, st in (("PIN (80)", probe.pin), ("PUK (81)", probe.puk)):
+            if st is None:
+                continue
+            color = style.get(st.verdict, "green")
+            c.print(f"  {label}: [{color}]{escape(st.message)}[/{color}]")
+        note = probe.note
+        if note:
+            c.print(f"[yellow]*[/yellow] {escape(note[0].upper() + note[1:])}")
 
-    payload: dict[str, object] = {"pin": pin_st.to_dict(), "puk": puk_st.to_dict()}
-    if hint:
-        payload["note"] = hint
-    app.out.result(payload, human)
+    app.out.result(probe.to_dict(), human)
 
 
 @pin.command("verify")
@@ -778,30 +777,10 @@ def pin_status(app: AppContext) -> None:
 def pin_verify(app: AppContext, pin_value: str | None) -> None:
     """Verify the PIV PIN. A wrong PIN consumes one retry."""
     app.out.warn("a wrong PIN decrements the retry counter.")
-    secret = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_PIN",
-        prompt_label="PIV PIN",
-        provided=pin_value,
-    )
+    secret = _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", pin_value, "PIN")
     with app.open_session() as session:
-        resp = _select(session).verify_pin(secret)
-        message = _interface_hint(session) if resp.sw == 0x6982 else None
-    info = describe_sw(resp.sw1, resp.sw2)
-    if message is None:
-        message = info.message
-    payload: dict[str, object] = {"verified": resp.ok, "sw": info.sw_hex(), "message": message}
-    if not resp.ok and info.retries is not None:
-        payload["retries_remaining"] = info.retries
-
-    def human(c: Console) -> None:
-        if resp.ok:
-            c.print("[green]PIN verified.[/green]")
-        else:
-            c.print(f"[red]PIN not verified:[/red] {message} (SW={info.sw_hex()})")
-
-    app.out.result(payload, human)
-    _exit_if_refused(resp.ok)
+        outcome = verifier.verify(_select(session), secret)
+    _show_outcome(app, "PIN", outcome)
 
 
 def _refuse_on_fips_mode_build(session: CardSession, profile: prof_mod.PivProfile) -> None:
@@ -838,54 +817,33 @@ def _exit_if_refused(ok: bool) -> None:
         sys.exit(6)
 
 
-_PIN_6983 = (
-    "The PIN is blocked, or the card's contactless limit for it is reached (contact tries may "
-    "remain). Check `piv pin status` from a contact reader, which does not consume a try; if "
-    "it reports blocked, recover with `piv pin unblock` (needs the PUK)."
-)
-_PUK_6983 = (
-    "The PUK is blocked, or the card's contactless limit for it is reached (contact tries may "
-    "remain). Check `piv pin status` from a contact reader, which does not consume a try. A "
-    "blocked PUK has no recovery path."
-)
+def _verifier_value(
+    app: AppContext, env_var: str, prompt_label: str, provided: str | None, what: str
+) -> bytes:
+    """A PIN or PUK from the option, environment or prompt, refused here when it cannot fit."""
+    secret = resolve_secret(
+        redactor=app.redactor, env_var=env_var, prompt_label=prompt_label, provided=provided
+    )
+    verifier.pad(secret, what)
+    return secret
 
 
-def _change_secret_result(
-    app: AppContext,
-    label: str,
-    resp,
-    session=None,
-    *,
-    blocked_hint: str | None = None,
-    on_6983: str | None = None,
-) -> None:
-    info = describe_sw(resp.sw1, resp.sw2)
-    payload: dict[str, object] = {"changed": resp.ok, "sw": info.sw_hex(), "message": info.message}
-    # Only 63C0 proves a block; the card also answers 6983 at the verifier's contactless limit.
-    blocked = not resp.ok and info.retries == 0
-    hint = None
-    if not resp.ok and info.retries is not None:
-        payload["retries_remaining"] = info.retries
-    if blocked:
-        payload["blocked"] = True
-        if blocked_hint:
-            payload["recovery"] = blocked_hint
-    elif not resp.ok and resp.sw == 0x6983 and on_6983:
-        hint = _with_reader_note(on_6983, session)
-        payload["hint"] = hint
+def _show_outcome(app: AppContext, label: str, outcome: verifier.Outcome) -> None:
+    """Print a cardholder PIN or PUK command's result, then exit 6 when the card refused."""
+    done = "verified" if outcome.op == "verify" else "changed"
 
     def human(c: Console) -> None:
-        if resp.ok:
-            c.print(f"[green]{label} changed.[/green]")
-        else:
-            c.print(f"[red]{label} not changed:[/red] {info.message} (SW={info.sw_hex()})")
-            if blocked and blocked_hint:
-                c.print(f"  [red]{blocked_hint}[/red]")
-            elif hint:
-                c.print(f"  [yellow]{hint}[/yellow]")
+        if outcome.ok:
+            c.print(f"[green]{label} {done}.[/green]")
+            return
+        c.print(f"[red]{label} not {done}:[/red] {escape(outcome.message)} (SW={outcome.sw_hex})")
+        if outcome.recovery:
+            c.print(f"  [red]{escape(outcome.recovery)}[/red]")
+        if outcome.hint:
+            c.print(f"  [yellow]{escape(outcome.hint)}[/yellow]")
 
-    app.out.result(payload, human)
-    _exit_if_refused(resp.ok)
+    app.out.result(outcome.payload(), human)
+    _exit_if_refused(outcome.ok)
 
 
 @pin.command("change")
@@ -895,28 +853,11 @@ def _change_secret_result(
 def pin_change(app: AppContext, old_pin: str | None, new_pin: str | None) -> None:
     """Change the PIV PIN (cardholder). A wrong current PIN consumes one retry."""
     app.out.warn("a wrong current PIN decrements the retry counter.")
-    old = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_PIN",
-        prompt_label="Current PIV PIN",
-        provided=old_pin,
-    )
-    new = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_NEW_PIN",
-        prompt_label="New PIV PIN",
-        provided=new_pin,
-    )
+    old = _verifier_value(app, "CRYPTNOX_PIV_PIN", "Current PIV PIN", old_pin, "current PIN")
+    new = _verifier_value(app, "CRYPTNOX_PIV_NEW_PIN", "New PIV PIN", new_pin, "new PIN")
     with app.open_session() as session:
-        resp = _select(session).change_reference(old, new, pivc.REF_PIV_PIN)
-    _change_secret_result(
-        app,
-        "PIN",
-        resp,
-        session,
-        blocked_hint="PIN is now blocked. Recover it with `piv pin unblock` (needs the PUK).",
-        on_6983=_PIN_6983,
-    )
+        outcome = verifier.change(_select(session), verifier.PIN, old, new)
+    _show_outcome(app, "PIN", outcome)
 
 
 @pin.command("unblock")
@@ -930,28 +871,11 @@ def pin_unblock(app: AppContext, puk_value: str | None, new_pin: str | None) -> 
     right. A correct PUK also resets the PUK's own retry counter.
     """
     app.out.warn("a wrong PUK decrements the PUK counter; a blocked PUK is unrecoverable.")
-    puk = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_PUK",
-        prompt_label="PIV PUK",
-        provided=puk_value,
-    )
-    new = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_NEW_PIN",
-        prompt_label="New PIV PIN",
-        provided=new_pin,
-    )
+    puk = _verifier_value(app, "CRYPTNOX_PIV_PUK", "PIV PUK", puk_value, "PUK")
+    new = _verifier_value(app, "CRYPTNOX_PIV_NEW_PIN", "New PIV PIN", new_pin, "new PIN")
     with app.open_session() as session:
-        resp = _select(session).unblock_pin(puk, new, pivc.REF_PIV_PIN)
-    _change_secret_result(
-        app,
-        "PIN",
-        resp,
-        session,
-        blocked_hint="the PUK just used is now blocked - there is no recovery path.",
-        on_6983=_PUK_6983,
-    )
+        outcome = verifier.unblock(_select(session), puk, new)
+    _show_outcome(app, "PIN", outcome)
 
 
 @command.group("puk")
@@ -966,28 +890,11 @@ def puk() -> None:
 def puk_change(app: AppContext, old_puk: str | None, new_puk: str | None) -> None:
     """Change the PIV PUK (cardholder). A wrong current PUK consumes one retry."""
     app.out.warn("a wrong current PUK decrements the retry counter.")
-    old = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_PUK",
-        prompt_label="Current PIV PUK",
-        provided=old_puk,
-    )
-    new = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_NEW_PUK",
-        prompt_label="New PIV PUK",
-        provided=new_puk,
-    )
+    old = _verifier_value(app, "CRYPTNOX_PIV_PUK", "Current PIV PUK", old_puk, "current PUK")
+    new = _verifier_value(app, "CRYPTNOX_PIV_NEW_PUK", "New PIV PUK", new_puk, "new PUK")
     with app.open_session() as session:
-        resp = _select(session).change_reference(old, new, pivc.REF_PUK)
-    _change_secret_result(
-        app,
-        "PUK",
-        resp,
-        session,
-        blocked_hint="PUK is now blocked - there is no recovery path.",
-        on_6983=_PUK_6983,
-    )
+        outcome = verifier.change(_select(session), verifier.PUK, old, new)
+    _show_outcome(app, "PUK", outcome)
 
 
 # ------------------------------------------------------------------ admin --- #
@@ -1751,67 +1658,9 @@ def _write_standard(adm: PivAdmin, keys, names: tuple[str, ...]) -> list[dict[st
     return results
 
 
-def _contactless_reader(session=None) -> str | None:
-    """``Reader '<name>'`` when the session's reader advertises contactless, else None."""
-    if session is None:
-        return None
-    name = getattr(session, "reader_name", None)
-    atr = None
-    with contextlib.suppress(Exception):
-        atr = session.atr
-    if not is_contactless_interface(name, atr):
-        return None
-    return f"Reader '{escape(name)}'" if name else "This reader"
-
-
-def _with_reader_note(text: str, session=None) -> str:
-    """``text``, plus a note when the session's reader advertises contactless."""
-    where = _contactless_reader(session)
-    return f"{text} {where} advertises a contactless interface." if where else text
-
-
-def _interface_hint(session=None, *, puk_only: bool = False) -> str:
-    """The 6982-on-PIN explanation, naming the reader when it advertises contactless.
-
-    ``puk_only``: the PIN answered and only the PUK was refused, which is what a card
-    set up for the PIN over contactless shows there.
-    """
-    hint = PUK_INTERFACE_REFUSED_HINT if puk_only else PIN_INTERFACE_REFUSED_HINT
-    return _with_reader_note(hint, session)
-
-
-def _check_pin_verify(resp, session=None) -> None:
-    """Raise on a failed PIN verification.
-
-    Only ``63C0`` proves a blocked PIN; the card also answers ``6983`` at the PIN's
-    contactless limit, so that message names both. ``session`` lets the 6983 and 6982
-    messages name a contactless reader.
-    """
-    if resp.ok:
-        return
-    info = describe_sw(resp.sw1, resp.sw2)
-    if info.retries == 0:
-        raise CryptnoxError(
-            f"PIN is blocked - 0 tries remaining (SW={info.sw_hex()}). Recover it with "
-            "`piv pin unblock` (needs the PUK)."
-        )
-    if resp.sw == 0x6983:
-        raise CryptnoxError(
-            f"PIN verification refused (SW={info.sw_hex()}): "
-            f"{_with_reader_note(_PIN_6983, session)}"
-        )
-    if resp.sw == 0x6982:
-        raise CryptnoxError(
-            f"PIN verification refused (SW={info.sw_hex()}): {_interface_hint(session)}"
-        )
-    raise StatusWordError(resp.sw1, resp.sw2, context="VERIFY PIN")
-
-
 def _sign_with_session(session, ref: int, mech: int, pin: bytes, build):
     """Verify the PIN and run ``build(signer)`` against an already-open session."""
-    piv = _select(session)
-    verified = piv.verify_pin(pin)
-    _check_pin_verify(verified, session)
+    verifier.require_pin(_select(session), pin)
 
     def signer(digest: bytes) -> bytes:
         k = keyimport.rsa_modulus_len(mech)
@@ -2110,7 +1959,7 @@ def _execute_key_import(
 
 
 def _post_import_smoke(
-    app: AppContext, session, ref: int, mech: int, key, pin_value: str | None
+    app: AppContext, session, ref: int, mech: int, key, pin_secret: bytes
 ) -> dict[str, object]:
     """Prove the imported key: verify the PIN, sign on-card, verify host-side
     against the key. A SIGN-incapable slot role reports a note, not a failure."""
@@ -2122,15 +1971,7 @@ def _post_import_smoke(
     from cryptography.hazmat.primitives.asymmetric import padding as rsa_padding
 
     modulus_len = keyimport.rsa_modulus_len(mech)
-    pin_secret = resolve_secret(
-        redactor=app.redactor,
-        env_var="CRYPTNOX_PIV_PIN",
-        prompt_label="PIV PIN",
-        provided=pin_value,
-    )
-    piv = _select(session)
-    verified = piv.verify_pin(pin_secret)
-    _check_pin_verify(verified, session)
+    verifier.require_pin(_select(session), pin_secret)
     message = os.urandom(32)
     hash_alg = keyimport.digest_for_mechanism(mech)
     digest = hashlib.new(hash_alg.name, message).digest()
@@ -2392,6 +2233,11 @@ def perso_import_key(
         return
 
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
+    smoke_pin = (
+        None
+        if no_smoke_test
+        else _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", pin_value, "PIN")
+    )
     smoke: dict[str, object] | None = None
     with app.open_session() as session:
         adm = PivAdmin(session)
@@ -2407,8 +2253,8 @@ def perso_import_key(
             create_key_object=create_key_object,
             rsa_crt=(rsa_form == "crt"),
         )
-        if not no_smoke_test:
-            smoke = _post_import_smoke(app, session, ref, mech, key, pin_value)
+        if smoke_pin is not None:
+            smoke = _post_import_smoke(app, session, ref, mech, key, smoke_pin)
 
     pem = key.public_key().public_bytes(
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
@@ -2579,6 +2425,11 @@ def perso_import_p12(
         return
 
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
+    smoke_pin = (
+        None
+        if no_smoke_test
+        else _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", pin_value, "PIN")
+    )
     smoke: dict[str, object] | None = None
     with app.open_session() as session:
         adm = PivAdmin(session)
@@ -2597,8 +2448,8 @@ def perso_import_p12(
         cert_resp = _import_cert_der(adm, keys, ref, cert_der, label=slot)
         if not cert_resp.ok:
             raise StatusWordError(cert_resp.sw1, cert_resp.sw2, context=f"IMPORT cert {slot}")
-        if not no_smoke_test:
-            smoke = _post_import_smoke(app, session, ref, mech, key, pin_value)
+        if smoke_pin is not None:
+            smoke = _post_import_smoke(app, session, ref, mech, key, smoke_pin)
 
     payload = {
         "slot": slot,
@@ -2666,7 +2517,7 @@ def _set_verifier_value(
     secret = resolve_secret(
         redactor=app.redactor, env_var=env_var, prompt_label=prompt_label, provided=pin_value
     )
-    padded = perso_mod.pad_pin(secret)
+    padded = perso_mod.pad_pin(secret, label)
     app.redactor.register(padded)
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
     with app.open_session() as session:
@@ -2754,16 +2605,11 @@ def _sign_on_card(
     modulus-length block, so the digest is EMSA-PKCS1-v1_5 encoded here first; the
     resulting command exceeds a short APDU and goes out via ISO command chaining.
     """
-    pin = (
-        pin_bytes
-        if pin_bytes is not None
-        else resolve_secret(
-            redactor=app.redactor,
-            env_var="CRYPTNOX_PIV_PIN",
-            prompt_label="PIV PIN",
-            provided=pin_value,
-        )
-    )
+    if pin_bytes is not None:
+        verifier.pad(pin_bytes, "PIN")
+        pin = pin_bytes
+    else:
+        pin = _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", pin_value, "PIN")
     with app.open_session() as session:
         return _sign_with_session(session, ref, mech, pin, build)
 
@@ -2989,9 +2835,7 @@ def perso_import_cert(
             )
         checked.append("csr")
     pin_secret = (
-        resolve_secret(redactor=app.redactor, env_var="CRYPTNOX_PIV_PIN", prompt_label="PIV PIN")
-        if verify_pin
-        else None
+        _verifier_value(app, "CRYPTNOX_PIV_PIN", "PIV PIN", None, "PIN") if verify_pin else None
     )
     keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
     with app.open_session() as session:
@@ -3409,28 +3253,29 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
 
 
 def _pin_truth(piv: PivApplet, pin: bytes) -> tuple[str, int | None]:
-    """Distinguish a set PIN from a created-but-valueless verifier, with one VERIFY.
+    """Tell a set PIN from a created-but-valueless verifier, with one VERIFY.
 
-    The status probe (empty VERIFY) cannot tell them apart: OpenFIPS201 answers
-    63Cx with the retry counter for a verifier the pre-perso structure created even
-    when no value was ever set, and only a real VERIFY reveals the difference -
-    observed on hardware 2026-08-21. Returns:
-
-    * ``("match", None)``     - PIN is set and the provided value is correct (9000)
-    * ``("empty", None)``     - verifier exists but holds no value (6A88, no retry
-      consumed - the applet rejects the reference, not the value)
-    * ``("mismatch", tries)`` - PIN is set and the provided value is wrong (63Cx;
-      one retry consumed - the same retry the certificate/smoke-test step would
-      have consumed, since every quickstart path verifies the PIN at least once)
+    The status probe cannot: the applet answers it with the retry counter even for a
+    verifier that never got a value. Returns ``("match", None)``, ``("empty", None)``
+    (no try used) or ``("mismatch", tries)`` (one try used; ``None`` when the PIN has
+    no retry limit), and raises on anything else.
     """
-    resp = piv.verify_pin(pin)
-    if resp.ok:
+    outcome = verifier.verify(piv, pin)
+    if outcome.ok:
         return "match", None
-    if resp.sw == 0x6A88:
+    if outcome.verdict is verifier.Verdict.NO_VALUE:
         return "empty", None
-    if resp.sw1 == 0x63 and (resp.sw2 & 0xF0) == 0xC0:
-        return "mismatch", resp.sw2 & 0x0F
-    raise StatusWordError(resp.sw1, resp.sw2, context="VERIFY PIN (quickstart pre-flight)")
+    # Over 15 tries is a 63D0-63FF answer, which this step ends with exit 6.
+    nibble = outcome.tries is None or outcome.tries <= 15
+    if outcome.verdict in (verifier.Verdict.WRONG, verifier.Verdict.NO_RETRY_LIMIT) and nibble:
+        return "mismatch", outcome.tries
+    detail = " ".join(t for t in (outcome.message, outcome.hint, outcome.recovery) if t)
+    raise StatusWordError(
+        outcome.sw >> 8,
+        outcome.sw & 0xFF,
+        context="VERIFY PIN (quickstart pre-flight)",
+        hint=detail,
+    )
 
 
 def _apply_pin_truth(steps: list[PlannedStep], verdict: str) -> list[PlannedStep]:
@@ -3467,12 +3312,9 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
     and the applet's own key-object listing (the non-destructive (slot, mechanism)
     probe stands in when the listing is withheld)."""
     st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
-    pin_refused = bool(st.piv_pin and st.piv_pin.refused)
-    if pin_refused or (st.piv_puk and st.piv_puk.refused):
-        raise CryptnoxError(
-            "quickstart cannot tell whether the PIN and PUK are set: "
-            + _interface_hint(session, puk_only=not pin_refused)
-        )
+    note = verifier.refused_note(st.piv_pin, st.piv_puk)
+    if note:
+        raise CryptnoxError(f"quickstart cannot tell whether the PIN and PUK are set: {note}")
     piv = _select(session)
     key_objects = None
     verifiers = None
@@ -3785,19 +3627,22 @@ def quickstart(
         # may change as a result.
         keys = resolve_scp03_keys(app.redactor, default_keys=default_keys)
         run_set = {s.step for s in steps if s.run}
-        pin_secret = resolve_secret(
-            redactor=app.redactor,
-            env_var="CRYPTNOX_PIV_NEW_PIN" if "set-pin" in run_set else "CRYPTNOX_PIV_PIN",
-            prompt_label="New PIV PIN" if "set-pin" in run_set else "PIV PIN",
+        pin_secret = _verifier_value(
+            app,
+            "CRYPTNOX_PIV_NEW_PIN" if "set-pin" in run_set else "CRYPTNOX_PIV_PIN",
+            "New PIV PIN" if "set-pin" in run_set else "PIV PIN",
+            None,
+            "PIN",
         )
         if "set-pin" not in run_set:
             verdict, tries = _pin_truth(_select(session), pin_secret)
             if verdict == "mismatch":
+                left = "no retry limit" if tries is None else f"{tries} tries left"
                 raise CryptnoxError(
-                    f"the PIN is set and the provided PIN does not match ({tries} tries "
-                    "left). This pre-flight check consumed one retry - the certificate/"
-                    "smoke-test step would have consumed it otherwise. Provide the card's "
-                    "PIN (CRYPTNOX_PIV_PIN or the prompt) and re-run."
+                    f"the PIN is set and the provided PIN does not match ({left}). This "
+                    "pre-flight check consumed one retry - the certificate/smoke-test step "
+                    "would have consumed it otherwise. Provide the card's PIN "
+                    "(CRYPTNOX_PIV_PIN or the prompt) and re-run."
                 )
             if verdict == "empty":
                 app.out.warn(
@@ -3818,9 +3663,7 @@ def quickstart(
             raise click.Abort()
 
         puk_secret = (
-            resolve_secret(
-                redactor=app.redactor, env_var="CRYPTNOX_PIV_NEW_PUK", prompt_label="New PIV PUK"
-            )
+            _verifier_value(app, "CRYPTNOX_PIV_NEW_PUK", "New PIV PUK", None, "PUK")
             if "set-puk" in run_set
             else None
         )
@@ -3851,7 +3694,7 @@ def quickstart(
                             raise StatusWordError(resp.sw1, resp.sw2, context=f"preperso [{label}]")
                     record(planned_step.step, "ok", detail={"profile": profile.name})
                 elif planned_step.step == "set-pin":
-                    padded = perso_mod.pad_pin(pin_secret)
+                    padded = perso_mod.pad_pin(pin_secret, "PIN")
                     app.redactor.register(padded)
                     resp = _set_verifier(adm, keys, pivc.REF_PIV_PIN, padded, label="PIN")
                     if not resp.ok:
@@ -3860,7 +3703,7 @@ def quickstart(
                 elif planned_step.step == "set-puk":
                     if puk_secret is None:  # unreachable: planner gates set-puk on a resolved PUK
                         raise RuntimeError("set-puk planned without a PUK value")
-                    padded = perso_mod.pad_pin(puk_secret)
+                    padded = perso_mod.pad_pin(puk_secret, "PUK")
                     app.redactor.register(padded)
                     resp = _set_verifier(adm, keys, pivc.REF_PUK, padded, label="PUK")
                     if not resp.ok:

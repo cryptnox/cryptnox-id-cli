@@ -3,9 +3,9 @@
 
 """What ``pin change``, ``pin unblock`` and ``puk change`` read into the card's answer.
 
-``63C0`` (retry counter exhausted) proves a blocked verifier. ``6983`` does not: the
-applet answers it for a blocked PIN or PUK and, over a contactless reader, when the
-verifier's contactless limit is reached while contact tries remain.
+``63C0`` comes from a verifier with no retry limit, never a block. ``6983`` is a block
+over contact; over contactless, or when the interface is not known, it may only be the
+verifier's contactless limit while contact tries remain.
 """
 
 from __future__ import annotations
@@ -53,8 +53,21 @@ COMMANDS = [
 ]
 
 
-def _wire(monkeypatch, mock_connection, apdu: str, sw: str, reader_name: str | None = None):
+GET_STATUS = "00CB3F00055C032F475300"
+CONTACT_STATUS = "5306800107860100"
+
+
+def _wire(
+    monkeypatch,
+    mock_connection,
+    apdu: str,
+    sw: str,
+    reader_name: str | None = None,
+    status: str | None = None,
+):
     exchanges = {SELECT_PIV: f"{APT}|9000", apdu: f"|{sw}"}
+    if status:
+        exchanges[GET_STATUS] = f"{status}|9000"
     wire_session(monkeypatch, mock_connection("3B00", exchanges, []), reader_name=reader_name)
 
 
@@ -64,16 +77,28 @@ def _both(args, env):
 
 
 @pytest.mark.parametrize(("args", "apdu", "env", "verifier"), COMMANDS)
-def test_an_exhausted_counter_is_a_proven_block(
+def test_63c0_is_a_verifier_without_a_retry_limit(
     monkeypatch, mock_connection, args, apdu, env, verifier
 ):
     _wire(monkeypatch, mock_connection, apdu, "63C0")
     payload, human = _both(args, env)
     assert payload["changed"] is False
-    assert payload["retries_remaining"] == 0
-    assert payload["blocked"] is True
-    assert "now blocked" in payload["recovery"]
-    assert "now blocked" in human
+    assert not {"blocked", "recovery", "retries_remaining", "hint"} & payload.keys()
+    assert payload["message"] == f"Verification failed; this {verifier} has no retry limit."
+    assert "is blocked" not in human and "now blocked" not in human
+
+
+@pytest.mark.parametrize(("args", "apdu", "env", "verifier"), COMMANDS)
+def test_6983_over_contact_is_a_block_with_its_recovery(
+    monkeypatch, mock_connection, args, apdu, env, verifier
+):
+    _wire(monkeypatch, mock_connection, apdu, "6983", status=CONTACT_STATUS)
+    payload, human = _both(args, env)
+    assert payload["changed"] is False
+    assert payload["blocked"] is True and "hint" not in payload
+    assert payload["message"] == f"The {verifier} is blocked."
+    recovery = "`piv pin unblock`" if verifier == "PIN" else "no recovery path"
+    assert recovery in payload["recovery"] and recovery in human
 
 
 @pytest.mark.parametrize(("args", "apdu", "env", "verifier"), COMMANDS)
@@ -94,6 +119,7 @@ def test_6983_names_both_causes_and_the_status_check(
     payload, human = _both(args, env)
     assert payload["changed"] is False
     assert not {"blocked", "recovery"} & payload.keys()
+    assert payload["message"] == f"No {verifier} tries left over this interface."
     hint = payload["hint"]
     assert hint.startswith(f"The {verifier} is blocked, or ")
     assert "`piv pin status`" in hint
@@ -101,8 +127,7 @@ def test_6983_names_both_causes_and_the_status_check(
         assert "`piv pin unblock`" in hint
     else:
         assert "no recovery path" in hint
-    assert "now blocked" not in human
-    assert f"The {verifier} is blocked" in human and "status" in human
+    assert f"The {verifier} is blocked, or" in human and "status" in human
 
 
 def test_6983_names_a_reader_that_advertises_contactless(monkeypatch, mock_connection):

@@ -65,6 +65,8 @@ blocked as well, which makes it a test that the PUK is right, and a correct PUK
 also resets the PUK's own retry counter. Current/new values come from masked
 prompts or the ``CRYPTNOX_PIV_PIN`` / ``CRYPTNOX_PIV_NEW_PIN`` / ``CRYPTNOX_PIV_PUK``
 / ``CRYPTNOX_PIV_NEW_PUK`` environment variables — never the command line.
+A PIN or PUK is 4 to 8 characters; a value outside that is refused before
+anything is sent to the card, so it costs no try.
 
 .. warning::
 

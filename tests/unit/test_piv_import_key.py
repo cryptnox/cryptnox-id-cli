@@ -130,15 +130,25 @@ def test_world_readable_key_file_warns(tmp_path):
 
 def test_missing_key_object_without_create_flag_is_refused(tmp_path, scp03_card):
     conn = scp03_card((0x6A, 0x86))
-    result = run(_import(tmp_path, key=ec.generate_private_key(ec.SECP256R1())))
+    key = ec.generate_private_key(ec.SECP256R1())
+    result = run(_import(tmp_path, "--no-smoke-test", key=key))
     assert result.exit_code != 0
     assert "slot 9C has no ECC-P256 key object" in result.output
     assert not any(c.startswith("8050") for c in conn.log)
 
 
+def test_a_smoke_test_pin_that_does_not_fit_is_refused_before_the_import(tmp_path, scp03_card):
+    conn = scp03_card((0x6A, 0x86))
+    result = run(_import(tmp_path, "--pin", "12", key=ec.generate_private_key(ec.SECP256R1())))
+    assert result.exit_code == 2
+    assert "Nothing was sent to the card." in result.output
+    assert conn.log == []
+
+
 def test_refused_element_stops_the_import(tmp_path, scp03_card):
     conn = scp03_card((0x69, 0x82))
-    result = run(_import(tmp_path, key=ec.generate_private_key(ec.SECP256R1())))
+    key = ec.generate_private_key(ec.SECP256R1())
+    result = run(_import(tmp_path, "--no-smoke-test", key=key))
     assert result.exit_code != 0
     assert "key is left uninitialised" in result.output
     assert "IMPORT 9C [CLEAR (9F)]" in result.output
@@ -148,7 +158,7 @@ def test_refused_element_stops_the_import(tmp_path, scp03_card):
 def test_create_key_object_refused_on_the_secured_channel(tmp_path, scp03_card):
     conn = scp03_card((0x6A, 0x86))
     key = ec.generate_private_key(ec.SECP256R1())
-    result = run(["--yes", *_import(tmp_path, "--create-key-object", key=key)])
+    result = run(["--yes", *_import(tmp_path, "--create-key-object", "--no-smoke-test", key=key)])
     assert result.exit_code != 0
     assert "creating the key object (PUT DATA ADMIN)" in result.output
     assert "CREATE KEY 9C" in result.output

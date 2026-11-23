@@ -323,15 +323,27 @@ def _card_over_nfc(mock_connection):
     return mock_connection(PICC_ATR, exchanges, [])
 
 
-def test_the_hint_names_whichever_was_refused():
-    from cryptnox_id_cli.applets.piv import piv as piv_applet
+@pytest.mark.parametrize(
+    ("pin_sw", "puk_sw", "words"),
+    [
+        ("63C3", "63C3", None),
+        ("6982", "6982", "refuses PIN and PUK commands"),
+        ("6982", "63C3", "refuses PIN and PUK commands"),
+        ("63C3", "6982", "refuses PUK commands over this interface (SW=6982) and accepts the PIN"),
+    ],
+)
+def test_the_hint_names_whichever_was_refused(mock_connection, pin_sw, puk_sw, words):
+    from cryptnox_id_cli.applets.piv import verifier
+    from cryptnox_id_cli.applets.piv.piv import PivApplet
+    from cryptnox_id_cli.transport.pcsc import CardSession
 
-    assert piv_applet.interface_refused_hint(False, False) is None
-    assert piv_applet.interface_refused_hint(True, True) == piv_applet.PIN_INTERFACE_REFUSED_HINT
-    assert piv_applet.interface_refused_hint(True, False) == piv_applet.PIN_INTERFACE_REFUSED_HINT
-    puk_only = piv_applet.interface_refused_hint(False, True)
-    assert puk_only == piv_applet.PUK_INTERFACE_REFUSED_HINT
-    assert "refuses PUK commands" in puk_only and "accepts the PIN" in puk_only
+    exchanges = {PROBE_PIN: f"|{pin_sw}", PROBE_PUK: f"|{puk_sw}"}
+    session = CardSession(mock_connection(PICC_ATR, exchanges, []), reader_name=PICC_READER)
+    note = verifier.status(PivApplet(session)).note
+    if words is None:
+        assert note is None
+    else:
+        assert note is not None and words in note
 
 
 def test_pin_status_over_contactless_says_the_puk_alone_is_refused(monkeypatch, mock_connection):

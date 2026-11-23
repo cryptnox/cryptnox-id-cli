@@ -242,7 +242,8 @@ whole profile before anything is sent to a card:
 - the admin key mechanism must be AES-128/192/256 (this applet's 9B is
   AES-only);
 - PIN and PUK ``min`` must be at least 6 (at least 4 with ``fips_mode: false``),
-  and ``max`` must be at least ``min`` and at most 16;
+  and ``max`` must be 8, because this tool sends every PIN and PUK as 8 bytes
+  and the card takes only values of exactly ``max`` bytes;
 - PIN and PUK ``retries`` must be 0–10 (0–15 with ``fips_mode: false``: the
   applet takes up to 127 there, but it reports at most 15 back);
 - PIN and PUK ``contactless`` must be ``NEVER`` or ``ALWAYS``; ``ALWAYS`` needs

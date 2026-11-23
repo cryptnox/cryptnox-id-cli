@@ -26,6 +26,19 @@ _Avoid_: chip mode
 The ISO 14443 (PICC) interface; the only interface where DESFire answers.
 _Avoid_: NFC mode (phone NFC follows different rules than PC/SC contactless)
 
+**Contactless limit**:
+A lower try allowance the applet can give the PIN or PUK over the contactless
+interface. It comes out of the same counter as the contact tries: once wrong values
+on either interface bring that counter down to the gap between the contact and the
+contactless retries, contactless commands answer as if the verifier were blocked
+while contact tries remain. Only a check from a contact reader tells the two apart.
+_Avoid_: blocked (for a limit reached over contactless only)
+
+**No retry limit**:
+A PIN or PUK the applet keeps without a try count: a wrong value never blocks it,
+and the card reports no number of tries left.
+_Avoid_: blocked, zero tries
+
 **Card manager**:
 The card's issuer security domain (`A000000151000000`). It holds the card's lifecycle
 and administers what is loaded on the card; its key is the card's master key.

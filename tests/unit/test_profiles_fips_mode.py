@@ -91,13 +91,15 @@ def test_a_profile_for_the_build_with_fips_mode_off_may_use_its_bounds():
     [
         ({"min": 3}, "PIN min_length 3 < minimum 4"),
         ({"retries": 16}, "PIN retries 16 out of range (max 15)"),
-        ({"max": 17}, "PIN max_length 17 > maximum 16"),
+        ({"max": 17}, "PIN max_length 17 must be 8: "),
+        ({"max": 16}, "PIN max_length 16 must be 8: "),
+        ({"min": 4, "max": 7}, "PIN max_length 7 must be 8: "),
         ({"min": 9, "max": 8}, "PIN max_length < min_length"),
     ],
 )
 def test_the_other_build_has_bounds_too_and_no_hint_is_offered_past_them(pin, fragment):
     errors = profiles.from_dict(off_profile(**pin)).validate()
-    assert any(e == fragment for e in errors), errors
+    assert any(e.startswith(fragment) for e in errors), errors
 
 
 def test_below_both_builds_the_fips_mode_message_offers_no_hint():

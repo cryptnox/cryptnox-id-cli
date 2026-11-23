@@ -17,11 +17,11 @@ import json
 import _cardfakes
 import pytest
 
-from cryptnox_id_cli.applets.piv.piv import PIN_INTERFACE_REFUSED_HINT, _pin_status_from_sw
-from cryptnox_id_cli.cli.commands.piv import _check_pin_verify, _interface_hint, _sign_with_session
+from cryptnox_id_cli.applets.piv import verifier
+from cryptnox_id_cli.applets.piv.piv import PivApplet
+from cryptnox_id_cli.cli.commands.piv import _sign_with_session
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.state.model import PivState
-from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import CryptnoxError
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -43,10 +43,6 @@ CONTACT_READER = "ACS ACR39U ICC Reader 0"
 REFUSED = "not usable over this interface"
 
 
-def _resp(sw: int) -> Response:
-    return Response(b"", sw >> 8, sw & 0xFF)
-
-
 def _card(mock_connection, atr: str, pin_sw: str, puk_sw: str):
     exchanges = {SELECT_PIV: f"{APT}|9000", PROBE_PIN: f"|{pin_sw}", PROBE_PUK: f"|{puk_sw}"}
     return mock_connection(atr, exchanges, [])
@@ -66,51 +62,52 @@ def _detect(conn, reader_name: str):
 
 
 # ---------------------------------------------------------------- probe parsing #
-def test_probe_6982_is_refused_not_unset():
-    st = _pin_status_from_sw(0x80, _resp(0x6982))
+def _probe(mock_connection, sw: str, atr: str = CONTACT_ATR, reader: str = CONTACT_READER):
+    conn = _card(mock_connection, atr, sw, sw)
+    return verifier.status(PivApplet(CardSession(conn, reader_name=reader)))
+
+
+def test_probe_6982_is_refused_and_unknown_not_unset(mock_connection):
+    st = _probe(mock_connection, "6982").pin
     assert st.refused is True
-    assert st.configured is False and st.blocked is False and st.retries is None
+    assert st.configured is None and st.blocked is None and st.retries is None
     assert st.to_dict()["refused_on_interface"] is True
 
 
-@pytest.mark.parametrize("sw", [0x9000, 0x63C6, 0x63C0, 0x6983, 0x6A88, 0x6A82, 0x6F00])
-def test_other_probe_answers_are_not_refused(sw):
-    st = _pin_status_from_sw(0x80, _resp(sw))
+@pytest.mark.parametrize("sw", ["9000", "63C6", "63C0", "6983", "6A88", "6A82", "6F00"])
+def test_other_probe_answers_are_not_refused(mock_connection, sw):
+    st = _probe(mock_connection, sw).pin
     assert st.refused is False
     assert st.to_dict()["refused_on_interface"] is False
 
 
 # -------------------------------------------------------------- VERIFY failures #
-def test_check_pin_verify_6982_explains_the_interface():
+def _require(mock_connection, sw: str, atr: str = CONTACT_ATR, reader: str = CONTACT_READER):
+    conn = mock_connection(atr, {VERIFY_123456: f"|{sw}"}, [])
     with pytest.raises(CryptnoxError) as exc:
-        _check_pin_verify(_resp(0x6982))
-    msg = str(exc.value)
+        verifier.require_pin(PivApplet(CardSession(conn, reader_name=reader)), b"123456")
+    return str(exc.value)
+
+
+def test_require_pin_6982_explains_the_interface(mock_connection):
+    msg = _require(mock_connection, "6982")
     assert "6982" in msg and "contact reader" in msg
     # The generic status-word text points at a PIN or admin-key problem that is not there.
     assert "authenticate with the admin key" not in msg
 
 
-def test_check_pin_verify_names_a_contactless_reader():
-    session = CardSession(
-        _cardfakes.RecordingConn(atr=bytes.fromhex(PICC_ATR)), reader_name=PICC_READER
-    )
-    with pytest.raises(CryptnoxError) as exc:
-        _check_pin_verify(_resp(0x6982), session)
-    assert PICC_READER in str(exc.value)
+def test_require_pin_names_a_contactless_reader(mock_connection):
+    assert PICC_READER in _require(mock_connection, "6982", PICC_ATR, PICC_READER)
 
 
-def test_hint_stays_generic_without_contactless_evidence():
-    session = CardSession(
-        _cardfakes.RecordingConn(atr=bytes.fromhex(CONTACT_ATR)), reader_name=CONTACT_READER
-    )
-    assert _interface_hint(session) == PIN_INTERFACE_REFUSED_HINT
-    assert _interface_hint(None) == PIN_INTERFACE_REFUSED_HINT
+def test_hint_stays_generic_without_contactless_evidence(mock_connection):
+    msg = _require(mock_connection, "6982")
+    assert "contact-only" in msg and "advertises" not in msg
 
 
-def test_check_pin_verify_other_answers_unchanged():
-    with pytest.raises(CryptnoxError) as exc:
-        _check_pin_verify(_resp(0x63C0))
-    assert "blocked" in str(exc.value)
+def test_require_pin_63c0_is_no_retry_limit(mock_connection):
+    msg = _require(mock_connection, "63C0")
+    assert "no retry limit" in msg and "blocked" not in msg
 
 
 def test_sign_with_session_6982_names_the_reader(mock_connection):
@@ -188,7 +185,7 @@ def test_piv_status_cli_unchanged_on_a_contact_reader(monkeypatch, mock_connecti
     res = _cardfakes.run(["piv", "status"])
     assert res.exit_code == 0, res.output
     assert "PIN (80): set, 6 tries left" in res.output
-    assert "PUK (81): set, 0 tries left (blocked)" in res.output
+    assert "PUK (81): set, no retry limit" in res.output
     assert REFUSED not in res.output
 
 

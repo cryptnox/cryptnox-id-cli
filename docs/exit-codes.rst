@@ -21,7 +21,8 @@ machine token (see :doc:`/json-output`).
    * - 2
      - — / ``invalid_input`` / ``desfire_frame_too_large``
      - Command-line usage error (unknown option, bad parameter, a value that is
-       not valid hex). Also used by one DESFire transport-limit error.
+       not valid hex, a PIN or PUK that is empty or not 4 to 8 characters). Also
+       used by one DESFire transport-limit error.
    * - 3
      - ``no_readers`` / ``reader_not_found`` / ``no_card`` / ``secret_input``
      - No usable reader/card, or a required secret could not be obtained

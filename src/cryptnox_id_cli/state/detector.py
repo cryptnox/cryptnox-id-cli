@@ -9,10 +9,10 @@ from __future__ import annotations
 import contextlib
 
 from cryptnox_id_cli.applets.genuine.genuine import GenuinenessApplet
-from cryptnox_id_cli.applets.piv import inventory
+from cryptnox_id_cli.applets.piv import inventory, verifier
 from cryptnox_id_cli.applets.piv import objects as piv_obj
-from cryptnox_id_cli.applets.piv.constants import REF_PIV_PIN, REF_PUK
-from cryptnox_id_cli.applets.piv.piv import PivApplet, interface_refused_hint
+from cryptnox_id_cli.applets.piv.piv import PivApplet
+from cryptnox_id_cli.applets.piv.verifier import Outcome
 from cryptnox_id_cli.state.model import (
     CardPresence,
     CardState,
@@ -45,6 +45,14 @@ _PROBE_OBJECTS = (
     "keymgmt-cert",
     "printed",
 )
+
+
+def _ladder_set(outcome: Outcome | None) -> bool:
+    """Whether the personalization ladder counts this verifier as set."""
+    # A try count over 15 stays unset here so personalization rungs do not move.
+    if outcome is None or not outcome.configured:
+        return False
+    return not 0x63D0 <= outcome.sw <= 0x63FF
 
 
 class StateDetector:
@@ -109,15 +117,13 @@ class StateDetector:
             st.piv_secured = status.secured
 
         with contextlib.suppress(CryptnoxError):
-            st.piv_pin = piv.pin_status(REF_PIV_PIN)
-            st.piv_puk = piv.pin_status(REF_PUK)
-        pin_refused = bool(st.piv_pin and st.piv_pin.refused)
-        puk_refused = bool(st.piv_puk and st.piv_puk.refused)
-        verifier_refused = pin_refused or puk_refused
-        hint = interface_refused_hint(pin_refused, puk_refused)
-        if hint:
-            what = "PIN/PUK state" if pin_refused else "PUK state"
-            st.notes.append(f"{what} not readable: {hint}")
+            probe = verifier.status(piv, applet_status=status, partial=True)
+            st.piv_pin, st.piv_puk = probe.pin, probe.puk
+            if probe.note:
+                st.notes.append(f"{probe.note_scope} not readable: {probe.note}")
+        verifier_refused = bool(
+            (st.piv_pin and st.piv_pin.refused) or (st.piv_puk and st.piv_puk.refused)
+        )
 
         present: dict[str, bool | None] = {}
         for name in _PROBE_OBJECTS:
@@ -130,16 +136,14 @@ class StateDetector:
                 present[name] = None
         st.piv_objects = present
 
-        any_verifier = bool(
-            (st.piv_pin and st.piv_pin.configured) or (st.piv_puk and st.piv_puk.configured)
-        )
+        any_verifier = _ladder_set(st.piv_pin) or _ladder_set(st.piv_puk)
         any_object = any(present.values())
         mandatory_present = all(present.get(n) for n in _MANDATORY)
 
         # 6982 means the verifier exists (a missing one answers 6A88).
         if not any_verifier and not any_object and not verifier_refused:
             st.piv = PivState.PRE_PERSONALIZED
-        elif mandatory_present and st.piv_pin and st.piv_pin.configured:
+        elif mandatory_present and _ladder_set(st.piv_pin):
             st.piv = PivState.PERSONALIZED
         else:
             st.piv = PivState.PARTIALLY_PERSONALIZED
