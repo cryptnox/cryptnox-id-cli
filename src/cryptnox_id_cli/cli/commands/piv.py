@@ -3103,38 +3103,47 @@ class PlannedStep:
     reason: str | None = None
 
 
+def _creates_key_object(facts: CardFacts) -> bool:
+    """The (slot, mechanism) key object is missing, so quickstart would create it."""
+    return not facts.structure_present or not facts.key_object_present
+
+
+def _key_cannot_sign(facts: CardFacts, opts: QuickstartOptions) -> bool:
+    """The slot's key, existing or about to be created, is known to lack the SIGN role."""
+    if _creates_key_object(facts):
+        return not opts.new_object_can_sign
+    return facts.key_object_can_sign is False
+
+
 def _refuse_unsignable_certificate(
     facts: CardFacts, opts: QuickstartOptions, certificate_runs: bool
 ) -> None:
     """Stop before any write when the certificate step is bound to end in 6985."""
-    if not certificate_runs:
+    if not certificate_runs or not _key_cannot_sign(facts, opts):
         return
     slot = f"{opts.slot:02X}"
-    if not facts.structure_present or not facts.key_object_present:
-        if not opts.new_object_can_sign:
-            raise CryptnoxError(
-                f"the key object quickstart would create on slot {slot} (roles from profile "
-                f"'{opts.profile_name}') cannot sign, so the certificate step would fail after "
-                "a permanent change to the card. Use --profile ssh or ms-logon, a SIGN-capable "
-                "slot such as 9C, or --cert-mode none."
-            )
-    elif facts.key_object_can_sign is False:
-        text = f"the key in slot {slot} cannot sign, so the certificate step would fail."
-        if facts.signing_siblings:
-            name = facts.signing_siblings[0]
-            raise CryptnoxError(
-                f"{text} Slot {slot} also holds a {name} key that can sign: "
-                f"pass --algorithm {name}."
-            )
-        options = ["--cert-mode none"]
-        if opts.slot != pivc.KEYREF_DIGITAL_SIGNATURE:
-            options.insert(0, "slot 9C")
-        if not facts.applet_secured:
-            options.append(
-                "a signing key object for another algorithm, added with "
-                f"`{CLI_NAME} piv perso create-key-object`"
-            )
-        raise CryptnoxError(f"{text} Use {', or '.join(options)}.")
+    if _creates_key_object(facts):
+        raise CryptnoxError(
+            f"the key object quickstart would create on slot {slot} (roles from profile "
+            f"'{opts.profile_name}') cannot sign, so the certificate step would fail after "
+            "a permanent change to the card. Use --profile ssh or ms-logon, a SIGN-capable "
+            "slot such as 9C, or --cert-mode none."
+        )
+    text = f"the key in slot {slot} cannot sign, so the certificate step would fail."
+    if facts.signing_siblings:
+        name = facts.signing_siblings[0]
+        raise CryptnoxError(
+            f"{text} Slot {slot} also holds a {name} key that can sign: pass --algorithm {name}."
+        )
+    options = ["--cert-mode none"]
+    if opts.slot != pivc.KEYREF_DIGITAL_SIGNATURE:
+        options.insert(0, "slot 9C")
+    if not facts.applet_secured:
+        options.append(
+            "a signing key object for another algorithm, added with "
+            f"`{CLI_NAME} piv perso create-key-object`"
+        )
+    raise CryptnoxError(f"{text} Use {', or '.join(options)}.")
 
 
 def _refuse_other_certificate(slot: str, other: str) -> None:
@@ -3168,7 +3177,7 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
                 f"writing one would replace it. Check `{CLI_NAME} piv objects read "
                 f"--object {name.lower()}`, then re-run."
             )
-    if (not facts.structure_present or not facts.key_object_present) and facts.applet_secured:
+    if _creates_key_object(facts) and facts.applet_secured:
         raise CryptnoxError(
             f"quickstart would add a key object to slot {slot}, but the applet is "
             "finalized (SECURED), so none can be added. Choose an algorithm the slot already "
@@ -3257,7 +3266,10 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
             "write-ccc", not facts.ccc_present, None if not facts.ccc_present else "already present"
         )
     )
-    steps.append(PlannedStep("smoke-test", True))
+    if _key_cannot_sign(facts, opts):
+        steps.append(PlannedStep("smoke-test", False, "the slot's key cannot sign"))
+    else:
+        steps.append(PlannedStep("smoke-test", True))
     return steps
 
 
@@ -3615,11 +3627,12 @@ def quickstart(
         if "set-pin" not in run_set:
             outcome = verifier.verify(_select(session), pin_secret)
             if outcome.verdict in (verifier.Verdict.WRONG, verifier.Verdict.NO_RETRY_LIMIT):
+                spent = "This pre-flight check consumed one retry"
+                if run_set & {"certificate", "smoke-test"}:
+                    spent += ", which the certificate or smoke-test step would have used otherwise"
                 raise CryptnoxError(
                     f"the PIN is set and the provided PIN does not match ({outcome.status_text}). "
-                    "This pre-flight check consumed one retry, which the certificate/smoke-test "
-                    "step would have consumed otherwise. Provide the card's PIN "
-                    "(CRYPTNOX_PIV_PIN or the prompt) and re-run."
+                    f"{spent}. Provide the card's PIN (CRYPTNOX_PIV_PIN or the prompt) and re-run."
                 )
             empty = outcome.verdict is verifier.Verdict.NO_VALUE
             if not (outcome.ok or empty):
@@ -3633,13 +3646,16 @@ def quickstart(
             run_set = {s.step for s in steps if s.run}
 
         to_run = [s.step for s in steps if s.run]
-        app.out.warn(f"quickstart will run: {', '.join(to_run)}")
+        if to_run:
+            app.out.warn(f"quickstart will run: {', '.join(to_run)}")
+        else:
+            app.out.warn("quickstart has nothing left to run on this card.")
         if steps[0].run:
             app.out.warn(
                 "--include-preperso lays down the applet structure (PUT DATA ADMIN), "
                 "a manufacturing-style step intended for dev/eval cards."
             )
-        if not app.yes and not click.confirm("Proceed?", default=False):
+        if to_run and not app.yes and not click.confirm("Proceed?", default=False):
             raise click.Abort()
 
         puk_secret = _verifier_value(app, _PUK_INPUT.new) if "set-puk" in run_set else None
@@ -3800,16 +3816,16 @@ def quickstart(
                         signature = _sign_with_session(
                             session, ref, mech, pin_secret, lambda s, _d=digest: s(_d)
                         )
-                        record(planned_step.step, "ok", detail={"signature_len": len(signature)})
                     except StatusWordError as exc:
                         if exc.info.sw_hex() == "6985":
-                            record(
-                                planned_step.step,
-                                "ok",
-                                detail={"note": "slot role cannot sign on this applet"},
-                            )
-                        else:
-                            raise
+                            raise CryptnoxError(
+                                f"slot {slot} refused to sign (SW=6985): its key cannot sign "
+                                "on this applet, so no signature was made. For a signing key, "
+                                "use slot 9C or a key object for another algorithm that can "
+                                f"sign; `{CLI_NAME} piv inventory` lists each key's role."
+                            ) from exc
+                        raise
+                    record(planned_step.step, "ok", detail={"signature_len": len(signature)})
             except CryptnoxError as exc:
                 record(planned_step.step, "failed", reason=str(exc))
                 failed = True

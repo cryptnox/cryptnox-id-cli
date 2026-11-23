@@ -4,6 +4,7 @@
 """Quickstart planner: which steps run for each starting card state."""
 
 import contextlib
+import json
 
 import pytest
 from _cardfakes import QueueConn
@@ -41,6 +42,10 @@ def _facts(**overrides) -> CardFacts:
 
 def _runs(steps) -> list[str]:
     return [s.step for s in steps if s.run]
+
+
+def _step(steps, name: str):
+    return next(s for s in steps if s.step == name)
 
 
 BLANK = {"structure_present": False, "key_object_present": False}
@@ -113,6 +118,31 @@ def test_partially_personalized_runs_only_the_gaps():
     by_name = {s.step: s for s in steps}
     assert by_name["set-pin"].reason == "PIN already set"
     assert by_name["write-chuid"].reason == "already present"
+
+
+@pytest.mark.parametrize(
+    ("facts", "opts"),
+    [
+        (
+            _facts(key_object_can_sign=False),
+            QuickstartOptions(0x9A, 0x11, "none", include_preperso=False),
+        ),
+        (
+            _facts(key_object_present=False),
+            QuickstartOptions(0x9A, 0x11, "none", include_preperso=True, new_object_can_sign=False),
+        ),
+    ],
+    ids=["existing-key", "key-object-to-create"],
+)
+def test_smoke_test_is_skipped_for_a_key_that_cannot_sign(facts, opts):
+    smoke = _step(_plan_quickstart(facts, opts), "smoke-test")
+    assert not smoke.run
+    assert smoke.reason == "the slot's key cannot sign"
+
+
+def test_smoke_test_runs_when_the_role_is_unknown():
+    smoke = _step(_plan_quickstart(_facts(), OPTS), "smoke-test")
+    assert smoke.run and smoke.reason is None
 
 
 def test_fully_personalized_runs_smoke_only():
@@ -605,33 +635,39 @@ def _pre_flight(monkeypatch, sw: int):
     conn = QueueConn([(b"", sw >> 8, sw & 0xFF)])
     seen: list[bool] = []
 
-    @contextlib.contextmanager
-    def open_session(self):
-        yield CardSession(conn)
-
     def stop(steps, empty):
         seen.append(empty)
         raise CryptnoxError("stop after the pre-flight")
 
-    monkeypatch.setattr(AppContext, "open_session", open_session)
-    monkeypatch.setattr(
-        piv_cmd,
-        "_collect_quickstart_facts",
-        lambda session, ref, mech: (_facts(pin_configured=True), "PivPartiallyPersonalized"),
-    )
-    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
     monkeypatch.setattr(piv_cmd, "_apply_pin_truth", stop)
     monkeypatch.setattr(
         piv_cmd,
         "_set_verifier",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
     )
-    monkeypatch.setenv("CRYPTNOX_PIV_PIN", "999999")
-    result = CliRunner().invoke(
-        piv_cmd.command, ["quickstart", "--default-keys"], obj=AppContext(json=True, yes=True)
-    )
+    result = _quickstart(monkeypatch, conn, _facts(pin_configured=True))
     assert len(conn.sent) == 1 and conn.sent[0][:4] == bytes.fromhex("00200080")
     return (seen[0] if seen else None), result
+
+
+def _quickstart(monkeypatch, conn, facts: CardFacts, *args: str, yes: bool = True):
+    """Run quickstart over ``conn`` on a card described by ``facts``."""
+
+    @contextlib.contextmanager
+    def open_session(self):
+        yield CardSession(conn)
+
+    monkeypatch.setattr(AppContext, "open_session", open_session)
+    monkeypatch.setattr(
+        piv_cmd, "_collect_quickstart_facts", lambda session, ref, mech: (facts, "PivState")
+    )
+    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
+    monkeypatch.setenv("CRYPTNOX_PIV_PIN", "999999")
+    return CliRunner().invoke(
+        piv_cmd.command,
+        ["quickstart", "--default-keys", *args],
+        obj=AppContext(json=True, yes=yes),
+    )
 
 
 def test_pin_truth_match(monkeypatch):
@@ -652,12 +688,62 @@ def test_quickstart_mismatch_aborts_before_any_write(monkeypatch, sw, left):
     assert verdict is None
     assert type(result.exception) is CryptnoxError
     assert f"does not match ({left})" in str(result.exception)
+    assert "smoke-test step would have used otherwise" in str(result.exception)
+
+
+def test_a_mismatch_with_no_signing_step_left_names_only_the_spent_retry(monkeypatch):
+    conn = QueueConn([(b"", 0x63, 0xC4)])
+    personalized = _facts(
+        pin_configured=True,
+        puk_configured=True,
+        cert_present=True,
+        chuid_present=True,
+        ccc_present=True,
+        key_object_can_sign=False,
+    )
+    result = _quickstart(monkeypatch, conn, personalized, "--cert-mode", "none")
+    message = str(result.exception)
+    assert "consumed one retry. Provide the card's PIN" in message
+    assert "would have used otherwise" not in message
 
 
 def test_pin_truth_other_answers_keep_exit_6(monkeypatch):
     verdict, result = _pre_flight(monkeypatch, 0x6985)
     assert verdict is None
     assert isinstance(result.exception, StatusWordError) and result.exception.exit_code == 6
+
+
+def test_a_personalized_card_whose_key_cannot_sign_runs_nothing_and_asks_nothing(monkeypatch):
+    conn = QueueConn([(b"", 0x90, 0x00)])
+    personalized = _facts(
+        pin_configured=True,
+        puk_configured=True,
+        cert_present=True,
+        chuid_present=True,
+        ccc_present=True,
+        key_object_can_sign=False,
+    )
+    result = _quickstart(monkeypatch, conn, personalized, "--cert-mode", "none", yes=False)
+    assert result.exit_code == 0, result.output
+    steps = {s["step"]: s for s in json.loads(result.stdout)["steps"]}
+    assert {s["status"] for s in steps.values()} == {"skipped"}
+    assert steps["smoke-test"]["reason"] == "the slot's key cannot sign"
+    assert len(conn.sent) == 1 and conn.sent[0][:4] == bytes.fromhex("00200080")
+    assert "nothing left to run" in result.stderr
+
+
+def test_a_dry_run_shows_the_smoke_test_skipped_for_a_key_that_cannot_sign(monkeypatch):
+    conn = QueueConn([])
+    facts = _facts(key_object_can_sign=False)
+    result = _quickstart(monkeypatch, conn, facts, "--cert-mode", "none", "--dry-run")
+    assert result.exit_code == 0, result.output
+    planned = {s["step"]: s for s in json.loads(result.stdout)["steps"]}
+    assert planned["smoke-test"] == {
+        "step": "smoke-test",
+        "status": "skip",
+        "reason": "the slot's key cannot sign",
+    }
+    assert conn.sent == []
 
 
 def _skip_plan():
