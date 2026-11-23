@@ -243,6 +243,9 @@ Notes
   the key it was issued to. When it belongs to the slot's other key and that
   key cannot sign, quickstart generates the requested key and replaces the
   certificate, and says so; any other certificate it refuses to overwrite.
+  The smoke test is skipped for a key known to lack the SIGN role, and a
+  signature the card refuses with ``6985`` fails the run. When nothing is left
+  to run, quickstart says so and does not ask to proceed.
 * ``piv perso import-cert`` writes the certificate it is given. ``--csr FILE``
   refuses one whose public key is not the CSR's, with no PIN; ``--verify-pin``
   has the slot sign a challenge and refuses unless the certificate's key

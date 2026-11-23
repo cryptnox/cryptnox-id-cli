@@ -116,8 +116,7 @@ def test_set_pin_is_verified_not_overwritten(card):
     piv, scp = card
     piv.status = {0x80: (0x63, 0xC3), 0x81: (0x63, 0xC3)}
     piv.key = ec.generate_private_key(ec.SECP256R1())
-    piv.sign_sw = (0x69, 0x85)
-    as_json, human = run_both_modes(_qs("--cert-mode", "none"))
+    as_json = run(["--json", *_qs("--cert-mode", "none")])
     steps = _steps(as_json.stdout)
     assert steps["set-pin"] == {
         "step": "set-pin",
@@ -125,9 +124,24 @@ def test_set_pin_is_verified_not_overwritten(card):
         "reason": "PIN already set (verified)",
     }
     assert steps["certificate"]["reason"] == "--cert-mode none"
-    assert steps["smoke-test"]["detail"]["note"] == "slot role cannot sign on this applet"
+    assert steps["smoke-test"]["status"] == "ok"
     assert SET_PIN not in [s[:3] for s in scp.secured]
-    assert "slot role cannot sign on this applet" in human.output
+
+
+def test_a_signature_the_card_refuses_fails_the_smoke_test(card):
+    piv, _ = card
+    piv.status = {0x80: (0x63, 0xC3), 0x81: (0x63, 0xC3)}
+    piv.key = ec.generate_private_key(ec.SECP256R1())
+    piv.sign_sw = (0x69, 0x85)
+    as_json, human = run_both_modes(_qs("--cert-mode", "none"))
+    assert as_json.exit_code == 6, as_json.output
+    payload = json.loads(as_json.stdout)
+    smoke = _steps(as_json.stdout)["smoke-test"]
+    assert smoke["status"] == "failed" and "SW=6985" in smoke["reason"]
+    assert "piv inventory` lists each key's role" in smoke["reason"]
+    assert payload["next"] == []
+    assert human.exit_code == 6
+    assert "stopped at the first failure" in " ".join(human.output.split())
 
 
 def test_empty_verifier_flips_pin_and_puk_back_on(card):

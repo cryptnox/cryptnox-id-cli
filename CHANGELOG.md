@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before it is sent, instead of a traceback.
 - `quickstart` no longer sets a PIN or PUK whose state the card's answer left
   unknown, and `piv validate` reports that check as unknown.
+- `quickstart` no longer reports the smoke test as ok when no signature was
+  made: it skips the step for a key known to lack the SIGN role, and a
+  signature the card refuses with `6985` fails the run with exit code 6. When
+  nothing is left to run, it says so and does not ask to proceed.
 
 ## [1.2.0] - 2026-11-23
 
