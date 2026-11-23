@@ -18,12 +18,20 @@ from __future__ import annotations
 
 import click
 
-from . import attest, ping, read_only, reset
+from . import attest, consumer_lock, ping, read_only, reset
 from .attest import ATTEST_ALGORITHMS
+from .consumer_lock import SEAL_PHRASE
 from .reset import DEV_RESET_PHRASE, PIV_BUILDS, RESET_PHRASE
 from .run import FULL_TRANSCRIPT_KEY
 
-__all__ = ["ATTEST_ALGORITHMS", "DEV_RESET_PHRASE", "PIV_BUILDS", "RESET_PHRASE", "command"]
+__all__ = [
+    "ATTEST_ALGORITHMS",
+    "DEV_RESET_PHRASE",
+    "PIV_BUILDS",
+    "RESET_PHRASE",
+    "SEAL_PHRASE",
+    "command",
+]
 
 
 @click.group("remote")
@@ -53,3 +61,5 @@ command.add_command(read_only.inspect)
 command.add_command(reset.reset)
 command.add_command(reset.dev_reset)
 command.add_command(attest.attest)
+command.add_command(consumer_lock.consumer_lock)
+command.add_command(consumer_lock.key_sheet)

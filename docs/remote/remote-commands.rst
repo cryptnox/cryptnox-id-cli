@@ -261,11 +261,81 @@ printing its result; with ``--json`` the result object carries the ``false``
 and no error object follows it. A check with nothing to compare against is
 ``null``, printed as unchecked, and not a failure.
 
+Consumer lock
+-------------
+
+.. code-block:: text
+
+   remote consumer-lock [--ssd-key1 seal|keep|provided]
+                        [--mgmt-key generate|provided|skip]
+                        [--sheet-out FILE] [--show-once]
+                        [--i-understand-this-is-irreversible]
+
+                         IRREVERSIBLY take the card's administration keys away
+                         from everyone, Cryptnox included: the service replaces
+                         the card manager key and key version 2 of the PIV
+                         security domain with random keys that nobody keeps.
+                         Afterwards the card is a plain PIV token under its
+                         owner's PIN and management key. Interactively the
+                         phrase SEAL-CARD must be typed; non-interactively the
+                         flag is required. --yes is not accepted.
+
+   Options:
+     --ssd-key1 MODE     key version 1 of the PIV security domain: seal
+                         (default; random, kept by nobody), keep (random,
+                         delivered to you) or provided (your value)
+     --mgmt-key MODE     the PIV management key 9B: generate (default; random,
+                         delivered to you), provided (your value) or skip
+                         (unchanged)
+     --sheet-out FILE    save the delivered keys to this new file, encrypted
+                         under a passphrase
+     --show-once         print the delivered keys on the terminal once
+
+   Environment:
+     CRYPTNOX_KEYSHEET_PASSWORD   the key sheet passphrase; prompted when unset
+     CRYPTNOX_PROVIDED_SSD_KEY1   your key version 1 value, hex, 16 bytes
+     CRYPTNOX_PROVIDED_MGMT_KEY   your 9B value, hex, 16 or 32 bytes
+
+When the run delivers keys (``--ssd-key1 keep`` or ``--mgmt-key generate``),
+``--sheet-out``, ``--show-once`` or both are required: the delivered keys exist
+nowhere else. The passphrase is asked for and the file is created before the
+card is touched, and an existing file is never overwritten. ``--show-once``
+prints to the terminal only and is refused when standard error is not one.
+Values you supply come from the environment or a masked prompt, never from the
+command line.
+
+Under the global ``--dry-run`` the service checks the card and returns its plan
+without changing anything, and no confirmation is asked. The relay then refuses
+every command that would write to the card, whatever the service sends.
+
+The output reports the delivered keys by name only, whether their check values
+match, and whether the sheet was made for this card; the values themselves
+appear only in the sheet file or on the terminal. A mismatch on either, keys
+that are lost, or a run that delivers keys but receives none ends with exit
+code 17. When the operation fails after the keys were delivered, they are
+still saved or shown, the output says where, and the service's recovery note
+is printed. That holds when |cli| stops the run itself, for a refused command,
+a card error, the time limit or a second interrupt: it then waits for the
+service's result before it exits. When a run fails after a command that writes
+reached the card, |cli| warns that the card may be partly changed. A first
+interrupt does not stop the run. See
+:doc:`/remote/remote-guide` for what each step does and what can be recovered.
+
+.. code-block:: text
+
+   remote key-sheet FILE
+
+                         show the keys in a key sheet file that consumer-lock
+                         saved, with the variable each one goes into for later
+                         local administration. The passphrase comes from
+                         CRYPTNOX_KEYSHEET_PASSWORD or a prompt. No card is
+                         needed.
+
 Endpoint
 --------
 
 The service endpoint is fixed to ``wss://piv.cryptnox.com``. For development
 against a local stand-in, ``CRYPTNOX_REMOTE_URL`` redirects ``ping`` and the
 identification and inspection commands only; it must be a ``wss://`` URL, or
-``ws://`` to loopback. ``reset`` and ``dev-reset`` refuse to run while it is
-set.
+``ws://`` to loopback. ``reset``, ``dev-reset`` and ``consumer-lock`` refuse to
+run while it is set.

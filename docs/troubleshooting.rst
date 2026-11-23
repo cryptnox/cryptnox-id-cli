@@ -172,8 +172,29 @@ Remote service
   refused because the card cannot prove it is genuine, or a
   ``reset --default-keys`` refused for lack of a factory token, left the card
   untouched: contact Cryptnox support to have the card re-provisioned.
+  A failed ``consumer-lock`` names the step it stopped at and the service's
+  note on what can still be recovered; keys delivered before the failure are
+  saved or shown all the same, and the output says where they went.
+- **17** ``key_sheet``: for ``remote key-sheet``, the file did not decrypt;
+  check the passphrase. For ``consumer-lock``, the service reported success
+  but the delivered keys are lost or failed a check: they did not open with
+  this run's key; the sheet file could not be written and standard error was
+  not a terminal to show them on; their check values did not match, or the
+  sheet was made for another card; a run that delivers keys received none; or
+  the service delivered keys the run did not ask for and there was nowhere to
+  put them. The error says which. Keys that failed a check are still saved or
+  shown as delivered.
 
-``remote reset`` and ``remote dev-reset`` refuse to run non-interactively
+When |cli| stops a ``consumer-lock`` itself, with 15 for a refused command or
+12 when the card stopped answering, the time limit ran out or the run was
+interrupted twice, it sends nothing more to the card and waits up to 30
+seconds for the service's result. Keys delivered before the stop are then
+saved or shown, the service's recovery note is printed, and with ``--json``
+the error object carries the result. When a run fails after a command that
+writes reached the card, |cli| warns that the card may be partly changed and
+says whether a ``reset`` can still rebuild it.
+
+``remote reset``, ``remote dev-reset`` and ``remote consumer-lock`` refuse to run non-interactively
 without ``--i-understand-this-is-irreversible``, and ``--yes`` is not
 accepted for them. ``remote attest`` refuses non-interactively without
 ``--yes`` when the slot or the attestation container already holds a

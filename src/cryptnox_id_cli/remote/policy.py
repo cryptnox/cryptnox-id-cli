@@ -26,7 +26,10 @@ another SELECT.
 Counters guard the other way a command can do harm without being forbidden:
 a failed GlobalPlatform authentication decrements a bounded retry counter, so
 the number of authentication attempts per security domain is capped, and a
-failed authentication ends the operation on the spot.
+failed authentication ends the operation on the spot. The one exception is the
+card manager refusing security level 0x33 during ``consumer-lock``: the service
+may open it again at 0x13. Any other failure, or a second in a row, ends the
+operation.
 """
 
 from __future__ import annotations
@@ -60,10 +63,19 @@ _UNCERTAIN_SW1: frozenset[int] = frozenset({0x62, 0x63, 0x6C})
 #: EXTERNAL AUTHENTICATE P1 bit requesting command encryption (C-DECRYPTION).
 _SECURITY_LEVEL_C_DEC = 0x02
 
+#: SCP03 security levels the service opens a domain at: 0x33 first, then 0x13.
+_LEVEL_HARDENED = 0x33
+_LEVEL_FALLBACK = 0x13
+#: Status words of an EXTERNAL AUTHENTICATE that refused the requested level.
+_LEVEL_REFUSED_SW: frozenset[tuple[int, int]] = frozenset({(0x69, 0x82), (0x69, 0x85)})
+#: Refused levels admitted per domain: one for each time the service opens it.
+_MAX_LEVEL_REFUSALS = 3
+
 #: Operations grouped by what they may do to the card.
 READ_ONLY_OPS = ("authenticate", "inspect")
 DESTRUCTIVE_OPS = ("reset", "dev-reset")
 KEY_OPS = ("attest",)
+SEALING_OPS = ("consumer-lock",)
 
 #: The PIV management key reference: the only key GENERAL AUTHENTICATE may
 #: address during a remote operation, and the only reference whose value
@@ -129,6 +141,9 @@ class OpRules:
     #: service does this over the secure channel before generating a key.
     #: Card-holder references stay denied regardless.
     allow_management_key_change: bool = False
+    #: Whether the card manager may refuse security level 0x33 at EXTERNAL
+    #: AUTHENTICATE and be opened at 0x13 instead (see RelayPolicy.observe).
+    level_fallback: bool = False
 
 
 _GP_READS: frozenset[int] = frozenset(
@@ -170,6 +185,42 @@ _RESET_RULES = OpRules(
     delete_targets=_PIV_DELETE_TARGETS,
     max_load_blocks=1500,
     allow_management_key_change=True,
+)
+
+_CONSUMER_LOCK_RULES = OpRules(
+    selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
+    allowed_ins={
+        # Keys are only ever replaced in place: nothing is loaded, installed or deleted.
+        ISD: _GP_READS | _GP_AUTH | {INS_PUT_KEY},
+        PIV_SSD: _GP_READS | _GP_AUTH | {INS_PUT_KEY},
+        PIV: _PIV_READS
+        | _GP_AUTH
+        | {INS_PUT_DATA, INS_CHANGE_REFERENCE_DATA, INS_GENERAL_AUTHENTICATE},
+    },
+    max_apdus=500,
+    # Above the service's 300 s budget plus its 20 s card handshake, so its deadline fires first.
+    max_seconds=420.0,
+    # Four opens per replaced key; the PIV security domain has two keys replaced.
+    # With the level fallback the card manager takes seven and six.
+    max_initialize_updates=10,
+    max_external_authenticates=8,
+    allow_management_key_change=True,
+    level_fallback=True,
+)
+
+#: A dry run reads and authenticates, so the relay holds it to that even if the
+#: service ignored the flag.
+_CONSUMER_LOCK_DRY_RUN_RULES = OpRules(
+    selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
+    allowed_ins={
+        ISD: _GP_READS,
+        PIV_SSD: _GP_READS,
+        PIV: _PIV_READS | _GP_AUTH,
+    },
+    max_apdus=300,
+    max_seconds=300.0,
+    max_initialize_updates=2,
+    max_external_authenticates=2,
 )
 
 RULES: dict[str, OpRules] = {
@@ -225,15 +276,19 @@ RULES: dict[str, OpRules] = {
         slot_bound=True,
         allow_management_key_change=True,
     ),
+    "consumer-lock": _CONSUMER_LOCK_RULES,
 }
 
+DRY_RUN_RULES: dict[str, OpRules] = {"consumer-lock": _CONSUMER_LOCK_DRY_RUN_RULES}
 
-def rules_for(op: str) -> OpRules:
+
+def rules_for(op: str, *, dry_run: bool = False) -> OpRules:
     """The rule set for an operation; refuses operations with no rules."""
+    table, kind = (DRY_RUN_RULES, "dry-run relay policy") if dry_run else (RULES, "relay policy")
     try:
-        return RULES[op]
+        return table[op]
     except KeyError:
-        raise RemotePolicyError(f"no relay policy exists for operation {op!r}") from None
+        raise RemotePolicyError(f"no {kind} exists for operation {op!r}") from None
 
 
 @dataclass(frozen=True)
@@ -340,6 +395,8 @@ class RelayPolicy:
     op: str
     #: For key operations: the slot the operation was asked to generate into.
     slot: int | None = None
+    #: Hold the operation to its read-only dry-run rules.
+    dry_run: bool = False
     rules: OpRules = field(init=False)
     #: Context after a fresh connection: the card manager answers by default.
     context: str = ISD
@@ -352,9 +409,12 @@ class RelayPolicy:
     #: Whether the open secure channel encrypts command data, from the security
     #: level the last successful EXTERNAL AUTHENTICATE asked for.
     _command_encryption: bool = field(default=False, init=False, repr=False)
+    #: Domains whose last EXTERNAL AUTHENTICATE was a refused level, not yet retried.
+    _level_refused: set[str] = field(default_factory=set, init=False, repr=False)
+    _level_refusals: dict[str, int] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        self.rules = rules_for(self.op)
+        self.rules = rules_for(self.op, dry_run=self.dry_run)
         if self.rules.slot_bound and self.slot is None:
             raise RemotePolicyError(f"the {self.op} policy needs the target slot")
 
@@ -444,6 +504,13 @@ class RelayPolicy:
                 "EXTERNAL AUTHENTICATE",
                 header,
             )
+            if self.context in self._level_refused and header.p1 != _LEVEL_FALLBACK:
+                raise RemotePolicyError(
+                    f"EXTERNAL AUTHENTICATE at level {header.p1:02X} refused; after the "
+                    f"{self.context} refused level {_LEVEL_HARDENED:02X}, only "
+                    f"{_LEVEL_FALLBACK:02X} may follow",
+                    header=header.hex,
+                )
         elif header.ins == INS_DELETE:
             if rules.delete_targets is None:
                 raise RemotePolicyError(
@@ -475,11 +542,7 @@ class RelayPolicy:
                 f"for slot {self.slot:02X}",
                 header=header.hex,
             )
-        elif (
-            rules.slot_bound
-            and header.ins == INS_GENERAL_AUTHENTICATE
-            and header.p2 != MANAGEMENT_KEY_REF
-        ):
+        elif header.ins == INS_GENERAL_AUTHENTICATE and header.p2 != MANAGEMENT_KEY_REF:
             raise RemotePolicyError(
                 f"GENERAL AUTHENTICATE with key {header.p2:02X} refused; only the "
                 "management key may be exercised, never a slot key",
@@ -520,12 +583,35 @@ class RelayPolicy:
                 self.external_authenticates.get(self.context, 0) + 1
             )
             if not ok:
+                if self._admit_level_refusal(header, sw1, sw2):
+                    return
                 raise RemotePolicyError(
                     f"EXTERNAL AUTHENTICATE failed (SW={sw1:02X}{sw2:02X}); stopping before "
                     "another attempt can burn a retry",
                     header=header.hex,
                 )
+            self._level_refused.discard(self.context)
             self._command_encryption = bool(header.p1 & _SECURITY_LEVEL_C_DEC)
             self.open_initialize_updates.pop(self.context, None)
         elif header.ins == INS_LOAD:
             self.load_blocks += 1
+
+    def _admit_level_refusal(self, header: Header, sw1: int, sw2: int) -> bool:
+        """Whether a failed EXTERNAL AUTHENTICATE is the card manager refusing level 0x33.
+
+        A wrong key fails on the service's side before EXTERNAL AUTHENTICATE is
+        sent, so this refusal costs no key retry, and the service retries at 0x13.
+        """
+        context = self.context
+        if not (
+            self.rules.level_fallback
+            and context == ISD
+            and header.p1 == _LEVEL_HARDENED
+            and (sw1, sw2) in _LEVEL_REFUSED_SW
+            and context not in self._level_refused
+            and self._level_refusals.get(context, 0) < _MAX_LEVEL_REFUSALS
+        ):
+            return False
+        self._level_refused.add(context)
+        self._level_refusals[context] = self._level_refusals.get(context, 0) + 1
+        return True

@@ -77,9 +77,17 @@ machine token (see :doc:`/json-output`).
      - The exchange completed, but the remote PIV service reported the
        operation as failed.
    * - 17
-     - —
+     - ``key_sheet``, or none
      - A ``remote`` operation ended, but a check |cli| makes on its own did
        not hold (a ``false`` under ``verified_locally``): the returned key
        attestation did not verify, the card does not carry the applet build
        asked for, the card is not the one the service reports. The result
        object is printed in place of an error object (see :doc:`/json-output`).
+       With the token ``key_sheet``: a key sheet could not be decrypted or
+       read, a wrong passphrase or a damaged file; or, for ``consumer-lock``,
+       the service reported success but the delivered keys are lost or failed
+       a check: keys that do not open with this run's key; a sheet file that
+       could not be written, with no terminal to show the keys on; check
+       values that do not match, or a sheet made for another card; no keys in
+       a run that delivers them; or keys the run did not ask for, with nowhere
+       to put them.

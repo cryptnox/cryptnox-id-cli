@@ -15,15 +15,26 @@ understand may be one it was meant to answer.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from ..transport.errors import RemoteProtocolError
+from . import keysheet
 
 #: Operations of the service this client speaks. ``ping`` involves no card.
-OPS: tuple[str, ...] = ("ping", "authenticate", "inspect", "attest", "reset", "dev-reset")
+OPS: tuple[str, ...] = (
+    "ping",
+    "authenticate",
+    "inspect",
+    "attest",
+    "reset",
+    "dev-reset",
+    "consumer-lock",
+)
 
 #: Largest WebSocket message accepted, in bytes. A CAP load block is ~255 bytes
 #: and the largest result carries a certificate, so this is generous.
@@ -37,6 +48,10 @@ MAX_APDU_BYTES = 65544
 
 #: Longest untrusted string rendered from a service frame.
 MAX_TEXT_CHARS = 2000
+
+#: Most fields a key exchange may ask for, and the longest name or context accepted.
+MAX_KEX_FIELDS = 4
+MAX_KEX_NAME_CHARS = 64
 
 _ANSI_CSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 _ANSI_OTHER = re.compile(r"\x1b[@-Z\\-_]")
@@ -74,6 +89,15 @@ class LogMessage:
 
 
 @dataclass(frozen=True)
+class KexRequest:
+    """The service asks for values the owner supplies, encrypted to ``public_key``."""
+
+    public_key: bytes
+    fields: tuple[str, ...]
+    context: str
+
+
+@dataclass(frozen=True)
 class OpResult:
     """The final frame: the operation's outcome."""
 
@@ -84,7 +108,7 @@ class OpResult:
         return bool(self.payload.get("ok", False))
 
 
-ServerFrame = PowChallenge | ApduCommand | AtrRequest | LogMessage | OpResult
+ServerFrame = PowChallenge | ApduCommand | AtrRequest | LogMessage | KexRequest | OpResult
 
 
 def sanitize_server_text(text: object, *, limit: int = MAX_TEXT_CHARS) -> str:
@@ -193,11 +217,43 @@ def parse_server_frame(obj: Mapping[str, object]) -> ServerFrame:
     if kind == "log":
         return LogMessage(message=sanitize_server_text(obj.get("msg", "")))
 
+    if kind == "kex":
+        return _parse_kex(obj)
+
     if kind == "result":
         payload = {k: v for k, v in obj.items() if k != "type"}
         return OpResult(payload=payload)
 
     raise RemoteProtocolError(f"the service sent an unsupported frame type: {kind!r}")
+
+
+def _parse_kex(obj: Mapping[str, object]) -> KexRequest:
+    pub_text = _require_str(obj, "pub", "kex")
+    if len(pub_text) > 128:
+        raise RemoteProtocolError("the service sent a kex frame with an oversized 'pub'")
+    try:
+        public_key = base64.b64decode(pub_text, validate=True)
+    except (binascii.Error, ValueError):
+        raise RemoteProtocolError(
+            "the service sent a kex frame whose 'pub' is not base64"
+        ) from None
+    try:
+        keysheet.public_from_bytes(public_key)
+    except keysheet.KeySheetError:
+        raise RemoteProtocolError(
+            "the service sent a kex frame whose 'pub' is not a P-256 point"
+        ) from None
+    fields = obj.get("fields")
+    if (
+        not isinstance(fields, list)
+        or not 0 < len(fields) <= MAX_KEX_FIELDS
+        or not all(isinstance(f, str) and 0 < len(f) <= MAX_KEX_NAME_CHARS for f in fields)
+    ):
+        raise RemoteProtocolError("the service sent a kex frame without a usable 'fields' list")
+    context = _require_str(obj, "context", "kex")
+    if len(context) > MAX_KEX_NAME_CHARS:
+        raise RemoteProtocolError("the service sent a kex frame with an oversized 'context'")
+    return KexRequest(public_key=public_key, fields=tuple(fields), context=context)
 
 
 def hello_frame(op: str, params: Mapping[str, object] | None = None) -> dict[str, object]:
@@ -226,3 +282,11 @@ def apdu_error_frame(message: str) -> dict[str, object]:
 
 def atr_response_frame(atr: bytes) -> dict[str, object]:
     return {"type": "atr_resp", "atr": bytes(atr).hex().upper()}
+
+
+def kex_response_frame(blob: bytes) -> dict[str, object]:
+    return {"type": "kex_resp", "blob": base64.b64encode(blob).decode("ascii")}
+
+
+def kex_error_frame(message: str) -> dict[str, object]:
+    return {"type": "kex_resp", "error": message}
