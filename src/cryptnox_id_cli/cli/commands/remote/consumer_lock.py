@@ -129,8 +129,8 @@ class _SheetFile:
     written: bool = False
     closed: bool = False
 
-    @classmethod
-    def create(cls, path: str, passphrase: str) -> _SheetFile:
+    @staticmethod
+    def create(path: str, passphrase: str) -> _SheetFile:
         # Windows opens an fd in text mode unless told otherwise, which writes each 0A as 0D 0A.
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
         try:
@@ -139,7 +139,7 @@ class _SheetFile:
             raise CryptnoxError(f"{path} exists; the key sheet goes to a new file.") from None
         except OSError as exc:
             raise CryptnoxError(f"cannot create {path}: {exc.strerror}") from None
-        return cls(path, fd, passphrase)
+        return _SheetFile(path, fd, passphrase)
 
     def write(self, sheet: dict[str, object]) -> None:
         data = keysheet.seal_file(sheet, self.passphrase)

@@ -23,11 +23,11 @@ from collections.abc import Mapping
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
+from ..applets.piv.ssd import kcv_aes
 from ..transport.errors import CryptnoxError
 
 KEY_SHEET_CONTEXT = b"cryptnox/consumer-lock/key-sheet/v1"
@@ -181,12 +181,6 @@ def open_file(raw: bytes, passphrase: str) -> dict[str, object]:
             "the key sheet file does not decrypt: wrong passphrase, or the file is damaged"
         ) from None
     return _json_object(plaintext)
-
-
-def kcv_aes(key: bytes) -> bytes:
-    """Key check value of an AES key: the first 3 bytes of AES-ECB(key, 01 * 16)."""
-    encryptor = Cipher(algorithms.AES(key), modes.ECB()).encryptor()
-    return (encryptor.update(b"\x01" * 16) + encryptor.finalize())[:3]
 
 
 def sheet_keys(sheet: dict[str, object]) -> list[tuple[str, str]]:
