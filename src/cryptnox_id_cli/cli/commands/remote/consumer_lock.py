@@ -41,7 +41,7 @@ SSD_KEY1_MODES = ("seal", "keep", "provided")
 MGMT_KEY_MODES = ("generate", "provided", "skip")
 PROVIDED_SSD_KEY1_ENV = "CRYPTNOX_PROVIDED_SSD_KEY1"
 PROVIDED_MGMT_KEY_ENV = "CRYPTNOX_PROVIDED_MGMT_KEY"
-KEYSHEET_PASSWORD_ENV = "CRYPTNOX_KEYSHEET_PASSWORD"
+KEYSHEET_PASSPHRASE_ENV = "CRYPTNOX_KEYSHEET_PASSWORD"
 _SHEET_MARKER = "decrypted locally"
 _SHEET_NOT_DECRYPTED = "not decrypted"
 
@@ -104,11 +104,11 @@ def _provided_value(app: AppContext, env_var: str, label: str, lengths: tuple[in
 
 
 def _sheet_passphrase(app: AppContext, *, confirm: bool) -> str:
-    value = os.environ.get(KEYSHEET_PASSWORD_ENV)
+    value = os.environ.get(KEYSHEET_PASSPHRASE_ENV)
     if value is None:
         if not sys.stdin.isatty():
             raise SecretInputError(
-                f"the key sheet passphrase is required; set ${KEYSHEET_PASSWORD_ENV}."
+                f"the key sheet passphrase is required; set ${KEYSHEET_PASSPHRASE_ENV}."
             )
         value = click.prompt(
             "Key sheet passphrase", hide_input=True, confirmation_prompt=confirm, err=True
@@ -440,7 +440,7 @@ def _print_sheet_info(c: Console, info: dict[str, object]) -> None:
     "sheet_out",
     type=click.Path(dir_okay=False),
     help="Save the delivered keys to this new file, encrypted under a passphrase from "
-    f"${KEYSHEET_PASSWORD_ENV} or a prompt.",
+    f"${KEYSHEET_PASSPHRASE_ENV} or a prompt.",
 )
 @click.option("--show-once", "show_once", is_flag=True, help="Print the delivered keys once.")
 @click.option(

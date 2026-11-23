@@ -322,7 +322,7 @@ def wired(monkeypatch, mock_connection):
     monkeypatch.setattr(rchannel, "open_channel", fake_open)
     monkeypatch.delenv(rchannel.URL_ENV, raising=False)
     for name in (
-        remote_cmd.KEYSHEET_PASSWORD_ENV,
+        remote_cmd.KEYSHEET_PASSPHRASE_ENV,
         remote_cmd.PROVIDED_SSD_KEY1_ENV,
         remote_cmd.PROVIDED_MGMT_KEY_ENV,
     ):
@@ -402,7 +402,7 @@ def test_show_once_needs_a_terminal(unreachable, monkeypatch):
 
 
 def test_a_lock_saves_the_keys_encrypted_and_prints_none(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     channel = wired["arm"]([*SCRIPT, delivered(sheet(), ok=True, stage="done")])
     result = run(["--json", *LOCK, "--sheet-out", str(out)])
@@ -435,7 +435,7 @@ def test_a_lock_saves_the_keys_encrypted_and_prints_none(wired, tmp_path, monkey
 def test_a_wrong_passphrase_on_the_sheet_exits_17(wired, tmp_path, monkeypatch):
     out = tmp_path / "card.cnxks"
     out.write_bytes(keysheet.seal_file(sheet(), "right"))
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "wrong")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "wrong")
     result = run(["remote", "key-sheet", str(out)])
     assert result.exit_code == 17
 
@@ -466,7 +466,7 @@ def test_a_sheet_for_another_card_exits_17(wired, monkeypatch, uid_sha256):
 
 
 def test_keys_that_do_not_match_their_check_values_exit_17(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([delivered(sheet(kcv={"mgmt_key_9b_aes128": "000000"}), ok=True)])
     result = run(["--json", *LOCK, "--sheet-out", str(out)])
@@ -484,7 +484,7 @@ def test_keys_that_do_not_match_their_check_values_exit_17(wired, tmp_path, monk
 
 
 def test_a_check_mismatch_is_reported_once_in_human_output(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([delivered(sheet(kcv={"mgmt_key_9b_aes128": "000000"}), ok=True)])
     result = run([*LOCK, "--sheet-out", str(out)])
@@ -558,7 +558,7 @@ def failed_after(payload_sheet, **extra):
 
 
 def test_a_failure_after_delivery_still_saves_the_keys(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([*SCRIPT, failed_after(sheet())])
     result = run([*LOCK, "--sheet-out", str(out)])
@@ -574,7 +574,7 @@ def test_a_failure_after_delivery_still_saves_the_keys(wired, tmp_path, monkeypa
 
 
 def test_a_failure_under_keep_and_skip_names_key_version_1(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     kvn1_sheet = sheet(
         ssd_kvn1=NEW_KVN1,
@@ -590,7 +590,7 @@ def test_a_failure_under_keep_and_skip_names_key_version_1(wired, tmp_path, monk
 
 
 def test_a_failure_with_no_write_relayed_warns_of_no_change(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([failed_after(sheet())])
     result = run([*LOCK, "--sheet-out", str(out)])
@@ -600,7 +600,7 @@ def test_a_failure_with_no_write_relayed_warns_of_no_change(wired, tmp_path, mon
 
 
 def test_a_failed_lock_reports_where_the_keys_went_in_json(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([*SCRIPT, failed_after(sheet())])
     result = run(["--json", *LOCK, "--sheet-out", str(out)])
@@ -613,7 +613,7 @@ def test_a_failed_lock_reports_where_the_keys_went_in_json(wired, tmp_path, monk
 
 
 def test_a_failed_lock_whose_keys_do_not_decrypt_says_so_in_json(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: False)
     out = tmp_path / "card.cnxks"
 
@@ -635,7 +635,7 @@ def test_a_failed_lock_whose_keys_do_not_decrypt_says_so_in_json(wired, tmp_path
 
 
 def test_a_failure_before_delivery_leaves_no_file(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([{"type": "result", "ok": False, "error": "refused", "stage": "checks"}])
     result = run([*LOCK, "--sheet-out", str(out)])
@@ -644,7 +644,7 @@ def test_a_failure_before_delivery_leaves_no_file(wired, tmp_path, monkeypatch):
 
 
 def test_an_existing_sheet_file_is_never_overwritten(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     out.write_bytes(b"keep me")
     wired["arm"]([])
@@ -658,7 +658,7 @@ def test_an_existing_sheet_file_is_never_overwritten(wired, tmp_path, monkeypatc
 
 def test_an_existing_sheet_file_is_refused_before_the_phrase(wired, tmp_path, monkeypatch):
     monkeypatch.setattr(remote_cmd, "sys", _FakeSys())
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     out.write_bytes(b"keep me")
     wired["arm"]([])
@@ -670,7 +670,7 @@ def test_an_existing_sheet_file_is_refused_before_the_phrase(wired, tmp_path, mo
 
 
 def test_no_consent_no_lock(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([])
     result = run(["remote", "consumer-lock", "--sheet-out", str(out)])
@@ -775,7 +775,7 @@ def disk_full(fh, data):
 
 
 def test_a_sheet_that_cannot_be_written_falls_back_to_the_terminal(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: True)
     patch_writes(monkeypatch, disk_full)
     out = tmp_path / "card.cnxks"
@@ -788,7 +788,7 @@ def test_a_sheet_that_cannot_be_written_falls_back_to_the_terminal(wired, tmp_pa
 
 
 def test_a_sheet_that_cannot_be_written_with_no_terminal_is_lost(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: False)
     patch_writes(monkeypatch, disk_full)
     out = tmp_path / "card.cnxks"
@@ -807,7 +807,7 @@ def test_a_sheet_that_cannot_be_written_with_no_terminal_is_lost(wired, tmp_path
 
 
 def test_a_sheet_that_does_not_read_back_is_not_counted_as_saved(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: True)
     patch_writes(monkeypatch, lambda fh, data: fh.write(data[:-1] + bytes([data[-1] ^ 1])))
     out = tmp_path / "card.cnxks"
@@ -821,7 +821,7 @@ def test_a_sheet_that_does_not_read_back_is_not_counted_as_saved(wired, tmp_path
 
 
 def test_the_sheet_file_is_opened_in_binary_mode(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     binary = 1 << 30
     monkeypatch.setattr(os, "O_BINARY", binary, raising=False)
     real_open = os.open
@@ -841,7 +841,7 @@ def test_the_sheet_file_is_opened_in_binary_mode(wired, tmp_path, monkeypatch):
 
 
 def test_the_sheet_is_synced_to_disk_before_it_counts_as_saved(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     real_fsync = os.fsync
     synced = []
 
@@ -860,7 +860,7 @@ def test_the_sheet_is_synced_to_disk_before_it_counts_as_saved(wired, tmp_path, 
 
 
 def test_human_output_names_the_keys_and_never_shows_them(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([delivered(sheet(), ok=True, stage="done")])
     result = run([*LOCK, "--sheet-out", str(out)])
@@ -884,7 +884,7 @@ def test_a_kex_key_off_the_curve_is_a_protocol_error(wired, monkeypatch):
 
 
 def test_a_success_without_the_keys_it_should_deliver_exits_17(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"]([*SCRIPT, {"type": "result", "ok": True, "cplc_uid": CARD_UID}])
     result = run(["--json", *LOCK, "--sheet-out", str(out)])
@@ -949,7 +949,7 @@ def test_an_aes192_management_key_names_its_variable(wired, tmp_path, monkeypatc
     out = tmp_path / "card.cnxks"
     out.write_bytes(keysheet.seal_file(s192, "sheet pass"))
     shown = run(
-        ["remote", "key-sheet", str(out)], env={remote_cmd.KEYSHEET_PASSWORD_ENV: "sheet pass"}
+        ["remote", "key-sheet", str(out)], env={remote_cmd.KEYSHEET_PASSPHRASE_ENV: "sheet pass"}
     )
     assert shown.exit_code == 0, shown.output
     assert "PIV_MGMT_KEY" in line_after_key(shown.output)
@@ -967,7 +967,7 @@ def test_text_in_a_delivered_sheet_is_printed_inert(wired, tmp_path, monkeypatch
     out = tmp_path / "card.cnxks"
     out.write_bytes(keysheet.seal_file(odd, "sheet pass"))
     shown = run(
-        ["remote", "key-sheet", str(out)], env={remote_cmd.KEYSHEET_PASSWORD_ENV: "sheet pass"}
+        ["remote", "key-sheet", str(out)], env={remote_cmd.KEYSHEET_PASSPHRASE_ENV: "sheet pass"}
     )
     assert shown.exit_code == 0, shown.output
     assert "\x1b" not in shown.output
@@ -1001,7 +1001,7 @@ def test_a_terminal_does_not_stand_in_for_the_flag_in_json_mode(wired, monkeypat
 
 
 def test_keep_delivers_key_version_1(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: True)
     kcv = {
         "ssd_kvn1": keysheet.kcv_aes(bytes.fromhex(NEW_KVN1)).hex().upper(),
@@ -1281,7 +1281,7 @@ def partial_result(**extra):
 
 
 def test_a_card_error_after_a_write_still_saves_the_keys(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     failing_on(wired["conn"], PUT_KEY, monkeypatch)
     channel = wired["arm"](
@@ -1301,7 +1301,7 @@ def test_a_card_error_after_a_write_still_saves_the_keys(wired, tmp_path, monkey
 
 
 def test_a_refusal_after_a_9b_write_still_saves_the_keys(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     wired["arm"](
         [
@@ -1322,7 +1322,7 @@ def test_a_refusal_after_a_9b_write_still_saves_the_keys(wired, tmp_path, monkey
 
 
 def test_the_time_cap_still_saves_the_keys(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     ticks = [0.0, 0.0, 500.0]
 
@@ -1340,7 +1340,7 @@ def test_the_time_cap_still_saves_the_keys(wired, tmp_path, monkeypatch):
 
 
 def test_no_result_after_a_write_warns_the_card_may_be_partly_changed(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     failing_on(wired["conn"], PUT_KEY, monkeypatch)
     wired["arm"](SCRIPT)
@@ -1414,7 +1414,7 @@ def test_one_interrupt_does_not_stop_the_lock(wired, monkeypatch):
 def test_a_second_interrupt_stops_after_the_current_command_and_keeps_the_result(
     wired, tmp_path, monkeypatch
 ):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     before = signal.getsignal(signal.SIGINT)
     channel = wired["arm"]([SCRIPT[0], interrupt(2, SCRIPT[1]), partial_result()])
@@ -1428,7 +1428,7 @@ def test_a_second_interrupt_stops_after_the_current_command_and_keeps_the_result
 
 
 def test_a_termination_request_stops_after_the_current_command(wired, tmp_path, monkeypatch):
-    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSWORD_ENV, "sheet pass")
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
 
     def terminate(sent):
