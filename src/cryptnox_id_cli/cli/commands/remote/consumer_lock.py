@@ -25,14 +25,30 @@ from rich.markup import escape
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.remote import keysheet, relay
 from cryptnox_id_cli.remote import protocol as proto
+from cryptnox_id_cli.remote.policy import PIV_SSD
 from cryptnox_id_cli.remote.protocol import sanitize_server_text
 from cryptnox_id_cli.secrets.resolver import SecretInputError
 from cryptnox_id_cli.transport.errors import CryptnoxError, RemoteError, RemoteProtocolError
 from cryptnox_id_cli.util.hexutil import from_hex
 
-from .card import Card, open_card
-from .render import print_channel, print_checks, print_header, print_result, text, warn_channel
-from .run import cross_check, endpoint, relay_info, relay_operation, warn_contactless_reader
+from .card import Card, inventory, open_card
+from .render import (
+    print_channel,
+    print_checks,
+    print_header,
+    print_inventory,
+    print_result,
+    text,
+    warn_channel,
+)
+from .run import (
+    cross_check,
+    endpoint,
+    exit_if_unverified,
+    relay_info,
+    relay_operation,
+    warn_contactless_reader,
+)
 
 #: Phrase typed to confirm the lock interactively.
 SEAL_PHRASE = "SEAL-CARD"
@@ -42,7 +58,7 @@ MGMT_KEY_MODES = ("generate", "provided", "skip")
 PROVIDED_SSD_KEY1_ENV = "CRYPTNOX_PROVIDED_SSD_KEY1"
 PROVIDED_MGMT_KEY_ENV = "CRYPTNOX_PROVIDED_MGMT_KEY"
 KEYSHEET_PASSPHRASE_ENV = "CRYPTNOX_KEYSHEET_PASSWORD"
-_SHEET_MARKER = "decrypted locally"
+_SHEET_DECRYPTED = "decrypted locally"
 _SHEET_NOT_DECRYPTED = "not decrypted"
 
 _SSD_KEY1_CONSEQUENCE = {
@@ -67,6 +83,55 @@ _KEY_USES = {
 }
 
 
+@dataclass(frozen=True)
+class Modes:
+    """What the run asks for key version 1 and the management key."""
+
+    ssd_key1: str
+    mgmt_key: str
+
+    @property
+    def delivers(self) -> bool:
+        return self.ssd_key1 == "keep" or self.mgmt_key == "generate"
+
+    def as_dict(self) -> dict[str, object]:
+        return {"ssd_key1": self.ssd_key1, "mgmt_key": self.mgmt_key}
+
+    def __str__(self) -> str:
+        return f"--ssd-key1 {self.ssd_key1} --mgmt-key {self.mgmt_key}"
+
+
+@dataclass
+class SheetInfo:
+    """The tool's account of the keys a run delivered."""
+
+    delivered: bool = False
+    decrypted: bool | None = None
+    keys: list[str] | None = None
+    kcv_match: bool | None = None
+    for_this_card: bool | None = None
+    saved_to: str | None = None
+    shown: bool = False
+    lost: bool = False
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        out: dict[str, object] = {"delivered": self.delivered}
+        if self.decrypted is not None:
+            out["decrypted"] = self.decrypted
+        if self.decrypted:
+            out["keys"] = self.keys
+            out["kcv_match"] = self.kcv_match
+            out["for_this_card"] = self.for_this_card
+            out["saved_to"] = self.saved_to
+            out["shown"] = self.shown
+        if self.lost:
+            out["lost"] = True
+        if self.error is not None:
+            out["error"] = self.error
+        return out
+
+
 def _yes_no(value: object) -> str:
     if value is True:
         return "yes"
@@ -82,16 +147,23 @@ def _names(values: object) -> str:
 
 
 def _stderr_is_terminal() -> bool:
+    # Replaced in tests: under CliRunner standard error is never a terminal.
     return sys.stderr.isatty()
+
+
+def _secret(env_var: str, what: str, prompt: Callable[[], str], *, hint: str = "") -> str:
+    """A secret from the environment or, on a terminal, a prompt; never argv."""
+    value = os.environ.get(env_var)
+    if value is None:
+        if not sys.stdin.isatty():
+            raise SecretInputError(f"the {what} is required; set ${env_var}{hint}.")
+        value = prompt()
+    return value
 
 
 def _provided_value(app: AppContext, env_var: str, label: str, lengths: tuple[int, ...]) -> str:
     """An owner-supplied key value, from the environment or a masked prompt, never argv."""
-    raw = os.environ.get(env_var)
-    if raw is None:
-        if not sys.stdin.isatty():
-            raise SecretInputError(f"the {label} is required; set ${env_var} (hex).")
-        raw = getpass.getpass(f"{label} (hex): ")
+    raw = _secret(env_var, label, lambda: getpass.getpass(f"{label} (hex): "), hint=" (hex)")
     try:
         value = from_hex(raw)
     except ValueError:
@@ -104,15 +176,13 @@ def _provided_value(app: AppContext, env_var: str, label: str, lengths: tuple[in
 
 
 def _sheet_passphrase(app: AppContext, *, confirm: bool) -> str:
-    value = os.environ.get(KEYSHEET_PASSPHRASE_ENV)
-    if value is None:
-        if not sys.stdin.isatty():
-            raise SecretInputError(
-                f"the key sheet passphrase is required; set ${KEYSHEET_PASSPHRASE_ENV}."
-            )
-        value = click.prompt(
+    value = _secret(
+        KEYSHEET_PASSPHRASE_ENV,
+        "key sheet passphrase",
+        lambda: click.prompt(
             "Key sheet passphrase", hide_input=True, confirmation_prompt=confirm, err=True
-        )
+        ),
+    )
     if not value:
         raise SecretInputError("the key sheet passphrase is empty.")
     app.redactor.register(value.encode("utf-8"))
@@ -190,6 +260,12 @@ def _show_keys(app: AppContext, sheet: dict[str, object]) -> None:
     _print_keys(app.out.err, keysheet.sheet_keys(sheet))
 
 
+def _register_keys(app: AppContext, keys: list[tuple[str, str]]) -> None:
+    for _name, value in keys:
+        with contextlib.suppress(ValueError):
+            app.redactor.register(bytes.fromhex(value))
+
+
 def _sheet_for_card(sheet: dict[str, object], card: Card) -> bool | None:
     expected = sheet.get("uid_sha256")
     if not isinstance(expected, str) or not card.cplc_uid:
@@ -204,52 +280,48 @@ def _receive_sheet(
     card: Card,
     sheet_file: _SheetFile | None,
     show_once: bool,
-) -> dict[str, object]:
+) -> SheetInfo:
     """Decrypt the delivered keys, save and/or show them, and take them out of the result."""
     blob_text = result.get("key_sheet")
     if not isinstance(blob_text, str) or not blob_text:
-        return {"delivered": False}
+        return SheetInfo()
     result["key_sheet"] = _SHEET_NOT_DECRYPTED
     try:
         blob = keysheet.b64decode(blob_text, "key sheet")
         sheet = keysheet.decrypt(kex, blob, context=keysheet.KEY_SHEET_CONTEXT)
     except keysheet.KeySheetError as exc:
-        return {"delivered": True, "decrypted": False, "lost": True, "error": str(exc)}
-    result["key_sheet"] = _SHEET_MARKER
+        return SheetInfo(delivered=True, decrypted=False, lost=True, error=str(exc))
+    result["key_sheet"] = _SHEET_DECRYPTED
     keys = keysheet.sheet_keys(sheet)
-    for _name, value in keys:
-        with contextlib.suppress(ValueError):
-            app.redactor.register(bytes.fromhex(value))
-    info: dict[str, object] = {
-        "delivered": True,
-        "decrypted": True,
-        "keys": [name for name, _value in keys],
-        "kcv_match": keysheet.check_kcvs(sheet),
-        "for_this_card": _sheet_for_card(sheet, card),
-        "saved_to": None,
-        "shown": False,
-    }
+    _register_keys(app, keys)
+    info = SheetInfo(
+        delivered=True,
+        decrypted=True,
+        keys=[name for name, _value in keys],
+        kcv_match=keysheet.check_kcvs(sheet),
+        for_this_card=_sheet_for_card(sheet, card),
+    )
     if sheet_file is not None:
         try:
             sheet_file.write(sheet)
-            info["saved_to"] = sheet_file.path
+            info.saved_to = sheet_file.path
         except OSError as exc:
-            info["error"] = f"the key sheet could not be written to {sheet_file.path}: {exc}"
-    if show_once or (info["saved_to"] is None and _stderr_is_terminal()):
+            info.error = f"the key sheet could not be written to {sheet_file.path}: {exc}"
+    if show_once or (info.saved_to is None and _stderr_is_terminal()):
         _show_keys(app, sheet)
-        info["shown"] = True
-    elif info["saved_to"] is None:
-        info["lost"] = True
-        info.setdefault(
-            "error",
-            "the service delivered keys this run did not ask for, and there was nowhere to "
-            "put them",
-        )
+        info.shown = True
+    elif info.saved_to is None:
+        info.lost = True
+        if info.error is None:
+            info.error = (
+                "the service delivered keys this run did not ask for, and there was nowhere "
+                "to put them"
+            )
     return info
 
 
 def _confirm_consumer_lock(
-    app: AppContext, card: Card, ssd_key1: str, mgmt_key: str, understood: bool
+    app: AppContext, card: Card, modes: Modes, before: dict[str, object], understood: bool
 ) -> None:
     app.out.warn(
         f"remote consumer-lock takes the administration keys of card "
@@ -260,13 +332,15 @@ def _confirm_consumer_lock(
         "the PIV function for good. The keys and certificates on the card stay and keep "
         "working. This cannot be undone."
     )
-    app.out.warn(_SSD_KEY1_CONSEQUENCE[ssd_key1])
-    app.out.warn(_MGMT_KEY_CONSEQUENCE[mgmt_key])
+    app.out.warn(_SSD_KEY1_CONSEQUENCE[modes.ssd_key1])
+    app.out.warn(_MGMT_KEY_CONSEQUENCE[modes.mgmt_key])
     app.out.warn(
         "if the PIV applet is not finalized, the service first creates the cryptnox-default "
-        "profile's missing objects and turns on the applet's NFC admin lock."
+        "profile's missing objects and turns on the applet's contactless-administration lock."
     )
     app.out.warn("Do not interrupt the command or remove the card until it finishes.")
+    if not app.json:
+        print_inventory(app.out.console, "Before", before)
     if understood:
         return
     if app.json or not sys.stdin.isatty():
@@ -324,41 +398,50 @@ def _hold_signals(app: AppContext, *, enabled: bool) -> Iterator[Callable[[], bo
             signal.signal(signum, handler if handler is not None else signal.SIG_DFL)
 
 
-def _join(names: list[str]) -> str:
+def _subject(names: list[str]) -> str:
+    """The names joined with "and", as the start of a sentence."""
     joined = " and ".join(names)
     return joined[:1].upper() + joined[1:]
 
 
-def _partly_changed_warning(
-    ssd_key1: str, mgmt_key: str, sheet_info: dict[str, object], card_manager_written: bool
-) -> str:
+def _partly_changed_warning(modes: Modes, sheet_info: SheetInfo, report: relay.RelayReport) -> str:
     """What may have changed when a failed run had relayed commands that write to the card."""
     nine_b, kvn1 = "the 9B management key", "key version 1 of the PIV security domain"
+    ssd_put = report.put_keys.get(PIV_SSD, [])
+    touched = {nine_b: report.piv_written and modes.mgmt_key != "skip", kvn1: 1 in ssd_put}
+    chosen = {nine_b: modes.mgmt_key, kvn1: modes.ssd_key1}
     random_keys = [
-        name for name, on in ((nine_b, mgmt_key == "generate"), (kvn1, ssd_key1 == "keep")) if on
+        name for name, mode in chosen.items() if mode in ("generate", "keep") and touched[name]
     ]
-    supplied = [
-        name
-        for name, on in ((nine_b, mgmt_key == "provided"), (kvn1, ssd_key1 == "provided"))
-        if on
-    ]
+    supplied = [name for name, mode in chosen.items() if mode == "provided" and touched[name]]
     parts = [
         "the card may be partly changed: the run stopped after commands that write reached it."
     ]
     if random_keys:
-        if sheet_info.get("saved_to") or sheet_info.get("shown"):
+        if sheet_info.saved_to or sheet_info.shown:
             values = "value" if len(random_keys) == 1 else "values"
-            parts.append(f"{_join(random_keys)} may already be on the delivered {values}.")
-        elif sheet_info.get("delivered"):
+            parts.append(f"{_subject(random_keys)} may already be on the delivered {values}.")
+        elif sheet_info.delivered:
             parts.append(
-                f"{_join(random_keys)} may hold a random value that is lost with the "
+                f"{_subject(random_keys)} may hold a random value that is lost with the "
                 "delivered keys."
             )
         else:
-            parts.append(f"{_join(random_keys)} may hold a random value that was never delivered.")
+            parts.append(
+                f"{_subject(random_keys)} may hold a random value that was never delivered."
+            )
     if supplied:
-        parts.append(f"{_join(supplied)} may hold the value you supplied.")
-    if card_manager_written:
+        parts.append(f"{_subject(supplied)} may hold the value you supplied.")
+    if modes.ssd_key1 == "seal" and touched[kvn1]:
+        parts.append(
+            f"{_subject([kvn1])} may already be sealed: nobody holds its key, so the service "
+            "cannot open it with the public default key on a retry."
+        )
+    if 2 in ssd_put:
+        parts.append(
+            "Key version 2 of the PIV security domain may already hold a key nobody keeps."
+        )
+    if report.card_manager_key_written:
         parts.append(
             "A PUT KEY reached the card manager, so Cryptnox may no longer be able to rebuild "
             "the card."
@@ -371,47 +454,47 @@ def _partly_changed_warning(
     return " ".join(parts)
 
 
-def _lost_message(info: dict[str, object]) -> str:
-    if info.get("delivered"):
-        return f"the keys the service delivered are lost: {info['error']}"
-    return f"the keys this run should have received are lost: {info['error']}"
+def _lost_message(info: SheetInfo) -> str:
+    if info.delivered:
+        return f"the keys the service delivered are lost: {info.error}"
+    return f"the keys this run should have received are lost: {info.error}"
 
 
-def _sheet_problem(info: dict[str, object]) -> str | None:
+def _sheet_problem(info: SheetInfo) -> str | None:
     """Why a lock the service reports as done still ends with exit code 17, if it does."""
-    if info.get("lost"):
+    if info.lost:
         return _lost_message(info)
     problems = []
-    if info.get("kcv_match") is False:
+    if info.kcv_match is False:
         problems.append("the delivered keys do not match the check values that came with them")
-    if info.get("for_this_card") is False:
+    if info.for_this_card is False:
         problems.append("the key sheet was made for another card")
     if not problems:
         return None
     where = " and ".join(
         label
         for label, on in (
-            (f"saved to {info.get('saved_to')}", info.get("saved_to")),
-            ("shown on the terminal", info.get("shown")),
+            (f"saved to {info.saved_to}", info.saved_to),
+            ("shown on the terminal", info.shown),
         )
         if on
     )
     return f"{'; '.join(problems)}. The keys were {where} as delivered."
 
 
-def _print_sheet_info(c: Console, info: dict[str, object]) -> None:
-    if not info.get("delivered"):
+def _print_sheet_info(c: Console, info: SheetInfo) -> None:
+    if not info.delivered:
         return
     c.print("\n[bold]Delivered keys[/bold] (checked locally)")
-    if not info.get("decrypted"):
-        c.print(f"  [red]not decrypted:[/red] {escape(str(info.get('error')))}")
+    if not info.decrypted:
+        c.print(f"  [red]not decrypted:[/red] {escape(str(info.error))}")
         return
-    c.print(f"  keys: {_names(info.get('keys'))}")
-    c.print(f"  check values match: {_yes_no(info.get('kcv_match'))}")
-    c.print(f"  made for this card: {_yes_no(info.get('for_this_card'))}")
-    if info.get("saved_to"):
-        c.print(f"  saved, encrypted, to {escape(str(info['saved_to']))}")
-    if info.get("shown"):
+    c.print(f"  keys: {_names(info.keys)}")
+    c.print(f"  check values match: {_yes_no(info.kcv_match)}")
+    c.print(f"  made for this card: {_yes_no(info.for_this_card)}")
+    if info.saved_to:
+        c.print(f"  saved, encrypted, to {escape(info.saved_to)}")
+    if info.shown:
         c.print("  shown once on the terminal")
 
 
@@ -463,8 +546,8 @@ def consumer_lock(
     The service replaces the card manager key and the PIV security domain's key
     version 2 with random keys that nobody keeps, and handles key version 1 and
     the PIV management key 9B as the options say. Afterwards the card is a plain
-    PIV token under its owner's PIN and 9B: no remote reset, attestation or FIPS
-    switch, and the PIV applet can never be reinstalled. The keys and
+    PIV token under its owner's PIN and 9B: no remote reset, key attestation or
+    FIPS switch, and the PIV applet can never be reinstalled. The keys and
     certificates already on the card stay. Under --dry-run the service checks the
     card and returns its plan, and the relay refuses any command that writes.
     """
@@ -472,7 +555,8 @@ def consumer_lock(
     op = "consumer-lock"
     url, _production = endpoint(op)
     dry_run = app.dry_run
-    delivers = not dry_run and (ssd_key1 == "keep" or mgmt_key == "generate")
+    modes = Modes(ssd_key1, mgmt_key)
+    delivers = not dry_run and modes.delivers
     if delivers and not (sheet_out or show_once):
         raise click.UsageError(
             "this run delivers keys that exist nowhere else: pass --sheet-out FILE, "
@@ -486,11 +570,11 @@ def consumer_lock(
     provided: dict[str, str] = {}
     passphrase: str | None = None
     if not dry_run:
-        if ssd_key1 == "provided":
+        if modes.ssd_key1 == "provided":
             provided["ssd_kvn1"] = _provided_value(
                 app, PROVIDED_SSD_KEY1_ENV, "SSD key version 1 value", (16,)
             )
-        if mgmt_key == "provided":
+        if modes.mgmt_key == "provided":
             provided["mgmt_key_9b"] = _provided_value(
                 app, PROVIDED_MGMT_KEY_ENV, "9B management key value", (16, 32)
             )
@@ -499,8 +583,7 @@ def consumer_lock(
 
     kex = keysheet.generate_kex()
     params: dict[str, object] = {
-        "ssd_key1": ssd_key1,
-        "mgmt_key": mgmt_key,
+        **modes.as_dict(),
         "client_kex_pub": keysheet.b64encode(keysheet.public_bytes(kex)),
         "confirm": SEAL_PHRASE,
         "fused": True,
@@ -527,13 +610,15 @@ def consumer_lock(
         _SheetFile.create(sheet_out, passphrase) if passphrase is not None and sheet_out else None
     )
     failure: RemoteError | None = None
+    after: dict[str, object] | None = None
     report = relay.RelayReport(op=op, result={})
     try:
         card = open_card(app)
         try:
             warn_contactless_reader(app, card, refused=True)
+            before = inventory(card)
             if not dry_run:
-                _confirm_consumer_lock(app, card, ssd_key1, mgmt_key, understood)
+                _confirm_consumer_lock(app, card, modes, before, understood)
             app.out.note(f"remote {op}{' (dry run)' if dry_run else ''} via {url}")
             try:
                 with _hold_signals(app, enabled=not dry_run) as stop_requested:
@@ -550,6 +635,7 @@ def consumer_lock(
                         report=report,
                     )
                 result = report.result
+                after = inventory(card)
             except RemoteError as exc:
                 failure = exc
                 result = exc.result if exc.result is not None else {}
@@ -560,37 +646,31 @@ def consumer_lock(
         if sheet_file is not None:
             sheet_file.discard_unwritten()
 
-    if failure is None and delivers and not sheet_info.get("delivered"):
-        sheet_info = {
-            "delivered": False,
-            "lost": True,
-            "error": "the service reported success but delivered no key sheet, though "
-            f"--ssd-key1 {ssd_key1} --mgmt-key {mgmt_key} deliver keys",
-        }
-    if sheet_info.get("error") and not sheet_info.get("lost"):
-        app.out.error(
-            f"{escape(str(sheet_info['error']))}; the keys were shown on the terminal instead."
+    if failure is None and delivers and not sheet_info.delivered:
+        sheet_info = SheetInfo(
+            lost=True,
+            error="the service reported success but delivered no key sheet, though "
+            f"{modes} deliver keys",
         )
-    if not delivers and sheet_info.get("delivered"):
+    if sheet_info.error and not sheet_info.lost:
+        app.out.error(f"{escape(sheet_info.error)}; the keys were shown on the terminal instead.")
+    if not delivers and sheet_info.delivered:
         if dry_run:
             app.out.warn("the service delivered keys during a dry run, which asks for none.")
         else:
             app.out.warn(
-                f"the service delivered keys, though --ssd-key1 {ssd_key1} --mgmt-key "
-                f"{mgmt_key} ask for none: the card may hold keys other than the ones you chose."
+                f"the service delivered keys, though {modes} ask for none: the card may hold "
+                "keys other than the ones you chose."
             )
-    if failure is not None:
-        failure.key_sheet = sheet_info
+    if failure is not None or after is None:
+        failure = failure or RemoteError(f"the {op} operation ended without a result")
+        failure.key_sheet = sheet_info.to_dict()
         if not app.json:
             _print_sheet_info(app.out.console, sheet_info)
-        if sheet_info.get("lost"):
+        if sheet_info.lost:
             app.out.error(escape(_lost_message(sheet_info)))
         if report.card_written:
-            app.out.warn(
-                _partly_changed_warning(
-                    ssd_key1, mgmt_key, sheet_info, report.card_manager_key_written
-                )
-            )
+            app.out.warn(_partly_changed_warning(modes, sheet_info, report))
         recovery = result.get("recovery")
         if isinstance(recovery, str) and recovery.strip():
             app.out.warn(f"the service's recovery note: {escape(sanitize_server_text(recovery))}")
@@ -598,18 +678,22 @@ def consumer_lock(
 
     card_info = card.to_dict()
     checks = cross_check(card_info, result)
-    if sheet_info.get("decrypted"):
-        checks["key_sheet_kcv_match"] = sheet_info["kcv_match"]
-        checks["key_sheet_for_this_card"] = sheet_info["for_this_card"]
+    checks["piv_present_after"] = after["piv_state"] not in ("PivNotPresent", "PivUnknown")
+    checks["piv_ssd_present_after"] = after.get("piv_ssd_key_versions") is not None
+    if sheet_info.decrypted:
+        checks["key_sheet_kcv_match"] = sheet_info.kcv_match
+        checks["key_sheet_for_this_card"] = sheet_info.for_this_card
     relayed = relay_info(report)
     payload: dict[str, object] = {
         "op": op,
         "endpoint": url,
         "dry_run": dry_run,
-        "modes": {"ssd_key1": ssd_key1, "mgmt_key": mgmt_key},
+        "modes": modes.as_dict(),
         "card": card_info,
+        "before": before,
         "result": result,
-        "key_sheet": sheet_info,
+        "after": after,
+        "key_sheet": sheet_info.to_dict(),
         "verified_locally": checks,
         "relay": relayed,
     }
@@ -619,6 +703,8 @@ def consumer_lock(
         print_channel(c, result, expected=not dry_run)
         print_result(c, result)
         _print_sheet_info(c, sheet_info)
+        c.print()
+        print_inventory(c, "After", after)
         print_checks(c, checks)
 
     problem = _sheet_problem(sheet_info)
@@ -627,6 +713,7 @@ def consumer_lock(
     warn_channel(app, result)
     if problem is not None:
         raise keysheet.KeySheetRunError(problem, report=payload)
+    exit_if_unverified(app, checks)
 
 
 @click.command("key-sheet")
@@ -642,9 +729,7 @@ def key_sheet(ctx: click.Context, path: str) -> None:
     passphrase = _sheet_passphrase(app, confirm=False)
     sheet = keysheet.open_file(Path(path).read_bytes(), passphrase)
     keys = keysheet.sheet_keys(sheet)
-    for _name, value in keys:
-        with contextlib.suppress(ValueError):
-            app.redactor.register(bytes.fromhex(value))
+    _register_keys(app, keys)
     payload: dict[str, object] = {
         "path": path,
         "op": sheet.get("op"),

@@ -170,9 +170,7 @@ class RemoteOperationError(RemoteError):
             out["retry_in_seconds"] = self.retry_in_seconds
         if self.ref is not None:
             out["ref"] = self.ref
-        if self.key_sheet is not None:
-            out["key_sheet"] = self.key_sheet
-        return out
+        return self._extras(out)
 
 
 @dataclass(frozen=True)

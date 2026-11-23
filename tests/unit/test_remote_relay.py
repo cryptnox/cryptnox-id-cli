@@ -324,10 +324,13 @@ def test_relayed_transcript_masks_by_default(mock_connection):
     generate = "0047009C05AC03800111"
     channel = ScriptedChannel([{"type": "apdu", "hex": generate}, {"type": "result", "ok": True}])
     # Give inspect a policy that lets the command through, so the masking alone is tested.
+    from dataclasses import replace
+
     from cryptnox_id_cli.remote.policy import PIV, RelayPolicy
 
     policy = RelayPolicy("inspect")
-    policy.rules.allowed_ins[PIV] |= {0x47}  # type: ignore[index]
+    allowed = {**policy.rules.allowed_ins, PIV: policy.rules.allowed_ins[PIV] | {0x47}}
+    policy.rules = replace(policy.rules, allowed_ins=allowed)
     policy.context = PIV
     conn = card(mock_connection, {generate: "7F49AABB|9000"})
     lines: list[str] = []

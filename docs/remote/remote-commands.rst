@@ -305,14 +305,16 @@ Values you supply come from the environment or a masked prompt, never from the
 command line.
 
 Under the global ``--dry-run`` the service checks the card and returns its plan
-without changing anything, and no confirmation is asked. The relay then refuses
-every command that would write to the card, whatever the service sends.
+without changing anything, and no confirmation is asked. The relay then admits
+reads, the authentication of each security domain and the 9B handshake, and
+refuses every command that would write to the card, whatever the service sends.
 
-The output reports the delivered keys by name only, whether their check values
-match, and whether the sheet was made for this card; the values themselves
-appear only in the sheet file or on the terminal. A mismatch on either, keys
-that are lost, or a run that delivers keys but receives none ends with exit
-code 17. When the operation fails after the keys were delivered, they are
+The output carries what |cli| read from the card before and after the run,
+as ``remote reset`` does, and reports the delivered keys by name only, whether
+their check values match, and whether the sheet was made for this card; the
+values themselves appear only in the sheet file or on the terminal. A mismatch
+on either, keys that are lost, a run that delivers keys but receives none, or
+a PIV function or security domain missing afterwards ends with exit code 17. When the operation fails after the keys were delivered, they are
 still saved or shown, the output says where, and the service's recovery note
 is printed. That holds when |cli| stops the run itself, for a refused command,
 a card error, the time limit or a second interrupt: it then waits for the

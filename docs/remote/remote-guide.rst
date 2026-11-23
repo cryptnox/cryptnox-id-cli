@@ -104,8 +104,9 @@ Operations
    and the PIV security domain, and in the PIV applet's admin channel the
    object and configuration writes, setting the management key and exercising
    it; it refuses every DELETE, INSTALL and LOAD, key generation, and any key
-   but 9B. Under ``--dry-run`` it admits reads and the applet channel's
-   authentication only.
+   but 9B. Under ``--dry-run`` it admits reads, the authentication of each
+   security domain and of the applet channel, and the 9B handshake; nothing
+   that writes.
 
 The consumer lock
 -----------------
@@ -125,7 +126,7 @@ nobody can administer the card's GlobalPlatform layer:
 * the PIV applet can never be reinstalled, so a PUK that is blocked ends the PIV
   function for good;
 * the keys and certificates already on the card stay and keep working, and so
-  do attestation certificates issued before the lock.
+  do key-attestation certificates issued before the lock.
 
 What happens to key version 1 and the management key depends on the options:
 
@@ -157,8 +158,8 @@ The service changes the card in this order, and verifies each key after
 replacing it: the new key opens the domain, the old one no longer does.
 
 #. If the PIV applet is not finalized, the missing objects of the
-   ``cryptnox-default`` profile are created and the applet's NFC admin lock is
-   turned on.
+   ``cryptnox-default`` profile are created and the applet's
+   contactless-administration lock is turned on.
 #. The management key 9B is replaced.
 #. Key version 1, then key version 2 of the PIV security domain are replaced.
 #. The card manager key is replaced, last.
@@ -169,15 +170,21 @@ nothing can be undone. A failed run reports how far it got, where the keys
 delivered before the failure went, and the service's note on what can be
 recovered.
 
+Before asking for confirmation, |cli| reads the PIV function, its security
+domain's key versions and the neighbouring functions, and reads them again
+after the run; the output carries both. A PIV function or security domain
+missing afterwards fails a local check and ends with exit code 17.
+
 When |cli| has to stop a run, because the relay policy refused a command, the
 card stopped answering, the run took longer than the relay allows or it was
 interrupted twice, it answers the service with an error, sends nothing more to
 the card, and waits up to 30 seconds for the service's result. Keys delivered before the
 stop are then saved or shown as usual, and the service's recovery note is
 printed. When a run fails after a command that writes had reached the card,
-|cli| warns that the card may be partly changed, names the keys that may
-already hold a new value and whether you have it, and says whether a
-``reset`` can still rebuild the card. The relay's time limit is set above the service's own, so a
+|cli| warns that the card may be partly changed: it names the keys the
+relayed commands could have replaced, whether you have their new value, and
+whether key version 1 may already be sealed, and says whether a ``reset`` can
+still rebuild the card. The relay's time limit is set above the service's own, so a
 slow run ends at the service's deadline, with its result.
 
 While the lock runs, a first interrupt (Ctrl-C) only prints that the run
@@ -190,10 +197,10 @@ The service runs the lock on SCP03 cards over the hardened channel, where the
 card authenticates its answers, including the check values of each new key.
 SCP02 cards are served only with a Cryptnox factory token, which |cli| does
 not send. The service opens each security domain at level ``0x33`` and, if the
-card manager refuses it, again at ``0x13``, which still authenticates the
-card's answers. For ``consumer-lock`` the relay policy lets that one refusal
-through each time the service opens the card manager; any other failed
-authentication, or a second in a row, ends the operation.
+domain refuses it, again at ``0x13``, which still authenticates the card's
+answers. For ``consumer-lock`` the relay policy lets that one refusal through
+each time the service opens the card manager or the PIV security domain; any
+other failed authentication, or a second in a row, ends the operation.
 
 Delivered and supplied keys
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -205,7 +212,8 @@ the service that passes the traffic through sees ciphertext only. The one-time
 keys are not signed, so a terminator that rewrites the traffic could
 substitute them and read the keys. Values you supply travel the same way in
 the other direction, encrypted to a one-time key the service sends before it
-changes anything.
+changes anything. Delivered and supplied values are ordinary strings in
+|cli|'s memory for as long as the process lives; it cannot wipe them.
 
 With ``--sheet-out`` the delivered keys are saved in a key sheet: a file that
 starts with ``CNXKS1``, encrypted with AES-256-GCM under a key scrypt derives
@@ -241,9 +249,9 @@ channel used (``channel``: protocol, level, ``hardened`` or ``legacy``) and
 service's log says why. The relay policy stops at the first failed
 authentication, so an SCP03 security domain that refused the hardened level
 ends the operation rather than being driven at the legacy level. The one
-exception is the card manager during ``consumer-lock``: refusing ``0x33``, it
-may be opened at ``0x13``, which still authenticates its answers (see
-`The consumer lock`_).
+exception is the card manager or the PIV security domain during
+``consumer-lock``: refusing ``0x33``, it may be opened at ``0x13``, which
+still authenticates its answers (see `The consumer lock`_).
 
 Three rules follow from the channel:
 

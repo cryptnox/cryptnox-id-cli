@@ -55,6 +55,16 @@ the tool reads back is checked. Card-holder verifier commands are never relayed.
 command header, so the rules can be reviewed against what the service actually
 needs rather than loosened in advance.
 
+Two things soften that rule for the consumer lock, where a refusal can leave
+keys on the card that exist nowhere else. An EXTERNAL AUTHENTICATE that the card
+manager or the PIV security domain refuses at security level 0x33 is not a
+failed authentication: the service retries at 0x13, which still authenticates
+the card's answers, and the policy admits that one retry per open and nothing
+else after a refusal. And when the relay stops the operation itself, it answers
+the service with an error and reads on, for a bounded time and number of
+frames, until the service's result arrives, relaying nothing more to the card;
+the result may carry keys already written.
+
 Inside an encrypted channel only the class and instruction bytes stay in the
 clear. The policy fences which security domain the channel was opened to and
 which instructions pass through it; it cannot see what an encrypted command

@@ -191,8 +191,9 @@ interrupted twice, it sends nothing more to the card and waits up to 30
 seconds for the service's result. Keys delivered before the stop are then
 saved or shown, the service's recovery note is printed, and with ``--json``
 the error object carries the result. When a run fails after a command that
-writes reached the card, |cli| warns that the card may be partly changed and
-says whether a ``reset`` can still rebuild it.
+writes reached the card, |cli| warns that the card may be partly changed,
+names the keys the relayed commands could have replaced or sealed, and says
+whether a ``reset`` can still rebuild it.
 
 ``remote reset``, ``remote dev-reset`` and ``remote consumer-lock`` refuse to run non-interactively
 without ``--i-understand-this-is-irreversible``, and ``--yes`` is not

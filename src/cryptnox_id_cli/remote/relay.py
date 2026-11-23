@@ -49,7 +49,7 @@ from .policy import (
     INS_PUT_KEY,
     INS_SELECT,
     ISD,
-    SEALING_OPS,
+    PIV,
     RelayPolicy,
 )
 
@@ -100,14 +100,20 @@ class RelayReport:
     open_initialize_updates: dict[str, int] = field(default_factory=dict)
     #: A command in :data:`WRITE_INS` was handed to the card.
     card_written: bool = False
-    #: A PUT KEY was handed to the card manager.
-    card_manager_key_written: bool = False
+    #: Key versions the PUT KEYs named, per security domain they were handed to.
+    put_keys: dict[str, list[int]] = field(default_factory=dict)
+    #: A write was handed to the PIV applet: an object, its configuration or the management key.
+    piv_written: bool = False
     #: Diagnostic outputs that failed during the operation and were switched off.
     warnings: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return bool(self.result.get("ok", False))
+
+    @property
+    def card_manager_key_written(self) -> bool:
+        return bool(self.put_keys.get(ISD))
 
 
 class _Sink:
@@ -201,7 +207,7 @@ def run_operation(
     redactor = redactor or Redactor()
     if report is None:
         report = RelayReport(op=op, result={})
-    sealing = op in SEALING_OPS
+    sealing = policy.rules.sealing
     emit = _Sink(transcript, "APDU transcript", report, guarded=sealing)
     log = _Sink(on_log, "service log output", report, guarded=sealing)
     started: float | None = None
@@ -277,8 +283,10 @@ def run_operation(
                     )
                     if apdu[1] in WRITE_INS:
                         report.card_written = True
-                        if apdu[1] == INS_PUT_KEY and policy.context == ISD:
-                            report.card_manager_key_written = True
+                        if apdu[1] == INS_PUT_KEY:
+                            report.put_keys.setdefault(policy.context, []).append(apdu[2])
+                        elif policy.context == PIV:
+                            report.piv_written = True
                     try:
                         data, sw1, sw2 = card.transmit(list(apdu))
                     except TransportError as exc:

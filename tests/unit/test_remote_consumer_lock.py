@@ -11,7 +11,16 @@ import stat
 import pytest
 from _cardfakes import wire_session
 from click.testing import CliRunner
-from test_remote_gates import _FakeSys
+from test_remote_gates import (
+    APT,
+    GET_STATUS,
+    GET_VERSION,
+    KEY_INFO,
+    KEY_INFO_ONE,
+    STATUS_FIPS,
+    VERSION_FIPS,
+    _FakeSys,
+)
 
 from cryptnox_id_cli.cli.commands.remote import consumer_lock as remote_cmd
 from cryptnox_id_cli.cli.context import AppContext
@@ -83,6 +92,11 @@ def allow(policy, command, sw=(0x90, 0x00)):
 IU = apdu(0x80, 0x50, 0x01, 0x00, bytes(8))
 EA_33 = apdu(0x84, 0x82, 0x33, 0x00, bytes(16), le=False)
 PUT_KEY_CMD = apdu(0x84, 0xD8, 0x01, 0x81, bytes(24))
+PIV_READ = apdu(0x84, 0xCB, 0x3F, 0xFF, bytes(8))
+PIV_PUT_DATA = apdu(0x84, 0xDB, 0x3F, 0x00, bytes(16), le=False)
+PIV_SET_9B = apdu(0x84, 0x24, 0x08, 0x9B, bytes(18), le=False)
+PIV_PROVE_9B = apdu(0x84, 0x87, 0x08, 0x9B, bytes(4))
+PIV_PROVE_9B_PLAIN = apdu(0x00, 0x87, 0x08, 0x9B, bytes(4))
 
 
 # --------------------------------------------------------------------------- #
@@ -99,10 +113,8 @@ def test_the_lock_sequence_passes():
     allow(p, select(pol.PIV_AID))
     allow(p, IU)
     allow(p, EA_33)
-    allow(p, apdu(0x84, 0xCB, 0x3F, 0xFF, bytes(8)))  # enumeration, status, random
-    allow(p, apdu(0x84, 0xDB, 0x3F, 0x00, bytes(16), le=False))  # create objects, NFC lock
-    allow(p, apdu(0x84, 0x24, 0x08, 0x9B, bytes(18), le=False))  # 9B CLEAR + import
-    allow(p, apdu(0x84, 0x87, 0x08, 0x9B, bytes(4)))  # 9B proof through the channel
+    for command in (PIV_READ, PIV_PUT_DATA, PIV_SET_9B, PIV_PROVE_9B):
+        allow(p, command)
     assert not p.open_initialize_updates.get(pol.PIV_SSD)
 
 
@@ -148,10 +160,8 @@ def test_authentication_attempts_are_capped_per_domain():
     [
         (pol.ISD_AID, PUT_KEY_CMD),
         (pol.PIV_SSD_AID, PUT_KEY_CMD),
-        (pol.PIV_SSD_AID, IU),
-        (pol.PIV_AID, apdu(0x84, 0xDB, 0x3F, 0x00, bytes(16), le=False)),
-        (pol.PIV_AID, apdu(0x84, 0x24, 0x08, 0x9B, bytes(18), le=False)),
-        (pol.PIV_AID, apdu(0x00, 0x87, 0x08, 0x9B, bytes(4))),
+        (pol.PIV_AID, PIV_PUT_DATA),
+        (pol.PIV_AID, PIV_SET_9B),
     ],
 )
 def test_a_dry_run_cannot_write_even_if_the_service_tries(context_aid, command):
@@ -161,15 +171,22 @@ def test_a_dry_run_cannot_write_even_if_the_service_tries(context_aid, command):
         p.check(command)
 
 
-def test_a_dry_run_reads_and_opens_the_applet_channel():
+def test_a_dry_run_reads_and_authenticates():
+    """The pre-seal checks: every security domain opens, 9B is probed, nothing is written."""
     p = pol.RelayPolicy("consumer-lock", dry_run=True)
     allow(p, apdu(0x80, 0xCA, 0x9F, 0x7F))
-    allow(p, select(pol.PIV_SSD_AID))
-    allow(p, apdu(0x80, 0xCA, 0x00, 0xE0))
+    for aid in (pol.ISD_AID, pol.PIV_SSD_AID):
+        allow(p, select(aid))
+        allow(p, apdu(0x80, 0xCA, 0x00, 0xE0))
+        allow(p, IU)
+        allow(p, EA_33, sw=(0x69, 0x82))
+        allow(p, IU)
+        allow(p, apdu(0x84, 0x82, 0x13, 0x00, bytes(16), le=False))
     allow(p, select(pol.PIV_AID))
+    allow(p, PIV_PROVE_9B_PLAIN)
     allow(p, IU)
     allow(p, EA_33)
-    allow(p, apdu(0x84, 0xCB, 0x3F, 0xFF, bytes(8)))
+    allow(p, PIV_READ)
 
 
 def test_other_operations_have_no_dry_run_rules():
@@ -299,7 +316,11 @@ def wired(monkeypatch, mock_connection):
             SELECT_SSD: "|9000",
             INIT_UPDATE: "00" * 29 + "|9000",
             PUT_KEY: "01" + "AABBCC" * 3 + "|9000",
-            SELECT_PIV: "|9000",
+            SELECT_PIV: f"{APT}|9000",
+            GET_VERSION: f"{VERSION_FIPS}|9000",
+            GET_STATUS: f"{STATUS_FIPS}|9000",
+            KEY_INFO: f"{KEY_INFO_ONE}|9000",
+            "00A4040000": "|9000",
             CRD_9B: "|9000",
         },
         [],
@@ -368,6 +389,8 @@ SCRIPT = [
     {"type": "apdu", "hex": INIT_UPDATE},
     {"type": "apdu", "hex": PUT_KEY},
 ]
+#: The management key rotated first, as the service does before it touches the security domain.
+SCRIPT_9B = [{"type": "apdu", "hex": SELECT_PIV}, {"type": "apdu", "hex": CRD_9B}]
 
 
 @pytest.fixture
@@ -419,6 +442,10 @@ def test_a_lock_saves_the_keys_encrypted_and_prints_none(wired, tmp_path, monkey
 
     assert NEW_9B not in result.output
     payload = json.loads(result.stdout)
+    assert payload["before"]["piv_ssd_key_versions"] == [1]
+    assert payload["after"]["piv_ssd_key_versions"] == [1]
+    assert payload["verified_locally"]["piv_present_after"] is True
+    assert payload["verified_locally"]["piv_ssd_present_after"] is True
     assert payload["result"]["key_sheet"] == "decrypted locally"
     assert payload["key_sheet"]["saved_to"] == str(out)
     assert payload["key_sheet"]["keys"] == ["mgmt_key_9b_aes128"]
@@ -560,13 +587,13 @@ def failed_after(payload_sheet, **extra):
 def test_a_failure_after_delivery_still_saves_the_keys(wired, tmp_path, monkeypatch):
     monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
-    wired["arm"]([*SCRIPT, failed_after(sheet())])
+    wired["arm"]([*SCRIPT_9B, *SCRIPT, failed_after(sheet())])
     result = run([*LOCK, "--sheet-out", str(out)])
     assert result.exit_code == 16
     assert keysheet.open_file(out.read_bytes(), "sheet pass") == sheet()
     text = " ".join(result.output.split())
     assert "The 9B management key may already be on the delivered value" in text
-    assert "key version 1" not in text.split("partly changed")[1]
+    assert "Key version 1 of the PIV security domain may already be sealed" in text
     assert f"saved, encrypted, to {out}" in text
     assert "check values match: yes" in text
     assert "recovery note: retry" in result.output
@@ -581,7 +608,7 @@ def test_a_failure_under_keep_and_skip_names_key_version_1(wired, tmp_path, monk
         mgmt_key_9b={},
         kcv={"ssd_kvn1": keysheet.kcv_aes(bytes.fromhex(NEW_KVN1)).hex().upper()},
     )
-    wired["arm"]([*SCRIPT, failed_after(kvn1_sheet)])
+    wired["arm"]([*SCRIPT_9B, *SCRIPT, failed_after(kvn1_sheet)])
     result = run([*LOCK, "--ssd-key1", "keep", "--mgmt-key", "skip", "--sheet-out", str(out)])
     assert result.exit_code == 16, result.output
     text = " ".join(result.output.split())
@@ -1084,6 +1111,18 @@ def test_a_card_manager_refusing_level_33_is_opened_at_13():
     assert not p.open_initialize_updates.get(pol.ISD)
 
 
+def test_a_security_domain_refusing_level_33_is_opened_at_13():
+    p = pol.RelayPolicy("consumer-lock")
+    replay(
+        p,
+        rotate(pol.PIV_SSD_AID, 1, refused=(0x33,))
+        + rotate(pol.PIV_SSD_AID, 2, refused=(0x33,))
+        + rotate(pol.ISD_AID, 1),
+    )
+    assert p.external_authenticates[pol.PIV_SSD] == 12
+    assert not p.open_initialize_updates.get(pol.PIV_SSD)
+
+
 def test_after_a_refused_level_only_13_may_follow():
     p = pol.RelayPolicy("consumer-lock")
     replay(p, [(select(pol.ISD_AID), "9000"), (iu(1), "9000"), (ea(0x33), "6982"), (iu(1), "9000")])
@@ -1104,7 +1143,7 @@ def test_a_failed_retry_at_13_stops():
     [
         (pol.ISD_AID, 0x33, (0x63, 0x00)),  # a cryptogram failure, not a level refusal
         (pol.ISD_AID, 0x13, (0x69, 0x82)),  # 0x13 has no fallback below it
-        (pol.PIV_SSD_AID, 0x33, (0x69, 0x82)),  # the PIV security domain already opened at 0x33
+        (pol.PIV_AID, 0x33, (0x69, 0x82)),  # the applet's admin channel has no fallback
     ],
 )
 def test_other_failed_authentications_still_stop(aid, level, sw):
@@ -1343,7 +1382,7 @@ def test_no_result_after_a_write_warns_the_card_may_be_partly_changed(wired, tmp
     monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
     out = tmp_path / "card.cnxks"
     failing_on(wired["conn"], PUT_KEY, monkeypatch)
-    wired["arm"](SCRIPT)
+    wired["arm"]([*SCRIPT_9B, *SCRIPT])
     result = run([*LOCK, "--ssd-key1", "keep", "--sheet-out", str(out)])
     assert result.exit_code == 12, result.output
     text = " ".join(result.output.split())
@@ -1359,7 +1398,8 @@ def test_no_result_after_a_write_warns_the_card_may_be_partly_changed(wired, tmp
 def test_a_card_manager_write_says_the_card_may_not_be_rebuilt(wired, monkeypatch):
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: True)
     failing_on(wired["conn"], PUT_KEY, monkeypatch)
-    wired["arm"]([{"type": "apdu", "hex": SELECT_ISD}, {"type": "apdu", "hex": PUT_KEY}])
+    isd_put_key = [{"type": "apdu", "hex": SELECT_ISD}, {"type": "apdu", "hex": PUT_KEY}]
+    wired["arm"]([*SCRIPT_9B, *isd_put_key])
     result = run(
         [*LOCK, "--mgmt-key", "provided", "--show-once"],
         env={remote_cmd.PROVIDED_MGMT_KEY_ENV: NEW_9B},
@@ -1372,11 +1412,56 @@ def test_a_card_manager_write_says_the_card_may_not_be_rebuilt(wired, monkeypatc
 
 def test_no_write_no_partial_change_warning(wired, monkeypatch):
     monkeypatch.setattr(remote_cmd, "_stderr_is_terminal", lambda: True)
-    failing_on(wired["conn"], SELECT_SSD, monkeypatch)
+    failing_on(wired["conn"], INIT_UPDATE, monkeypatch)
     wired["arm"](SCRIPT)
     result = run([*LOCK, "--show-once"])
     assert result.exit_code == 12, result.output
     assert "partly changed" not in result.output
+
+
+def test_a_security_domain_missing_afterwards_fails_the_local_check(wired, tmp_path, monkeypatch):
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
+    out = tmp_path / "card.cnxks"
+    conn = wired["conn"]
+    channel = wired["arm"]([*SCRIPT, delivered(sheet(), ok=True, stage="done")])
+    original = conn.transmit
+
+    def vanishing(apdu):
+        if bytes(apdu).hex().upper() == SELECT_SSD and len(channel.script) == 0:
+            return [], 0x6A, 0x82
+        return original(apdu)
+
+    conn.transmit = vanishing
+    result = run(["--json", *LOCK, "--sheet-out", str(out)])
+    assert result.exit_code == 17, result.output
+    payload = json.loads(result.stdout)
+    assert payload["after"]["piv_ssd_key_versions"] is None
+    assert payload["verified_locally"]["piv_ssd_present_after"] is False
+    assert "piv_ssd_present_after" in result.output
+
+
+def test_only_the_keys_a_relayed_write_could_reach_are_named(wired, tmp_path, monkeypatch):
+    """A PUT KEY to the security domain says nothing about 9B, which no command touched."""
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
+    out = tmp_path / "card.cnxks"
+    wired["arm"]([*SCRIPT, failed_after(sheet())])
+    result = run([*LOCK, "--sheet-out", str(out)])
+    assert result.exit_code == 16
+    text = " ".join(result.output.split())
+    assert "Key version 1 of the PIV security domain may already be sealed" in text
+    assert "9B" not in text.split("partly changed")[1]
+
+
+def test_a_key_version_2_write_is_named(wired, tmp_path, monkeypatch):
+    monkeypatch.setenv(remote_cmd.KEYSHEET_PASSPHRASE_ENV, "sheet pass")
+    out = tmp_path / "card.cnxks"
+    put_kvn2 = "84D8028118" + "AA" * 24
+    wired["conn"]._exchanges[put_kvn2] = wired["conn"]._exchanges[PUT_KEY]
+    wired["arm"]([*SCRIPT, {"type": "apdu", "hex": put_kvn2}, failed_after(sheet())])
+    result = run([*LOCK, "--sheet-out", str(out)])
+    assert result.exit_code == 16
+    text = " ".join(result.output.split())
+    assert "Key version 2 of the PIV security domain may already hold a key nobody keeps" in text
 
 
 # --------------------------------------------------------------------------- #

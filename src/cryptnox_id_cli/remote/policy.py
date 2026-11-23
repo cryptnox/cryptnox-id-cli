@@ -68,14 +68,14 @@ _LEVEL_HARDENED = 0x33
 _LEVEL_FALLBACK = 0x13
 #: Status words of an EXTERNAL AUTHENTICATE that refused the requested level.
 _LEVEL_REFUSED_SW: frozenset[tuple[int, int]] = frozenset({(0x69, 0x82), (0x69, 0x85)})
-#: Refused levels admitted per domain: one for each time the service opens it.
-_MAX_LEVEL_REFUSALS = 3
+#: Refused levels admitted per security domain: one per authenticated open,
+#: three per replaced key.
+_MAX_LEVEL_REFUSALS = {ISD: 3, PIV_SSD: 6}
 
 #: Operations grouped by what they may do to the card.
 READ_ONLY_OPS = ("authenticate", "inspect")
 DESTRUCTIVE_OPS = ("reset", "dev-reset")
 KEY_OPS = ("attest",)
-SEALING_OPS = ("consumer-lock",)
 
 #: The PIV management key reference: the only key GENERAL AUTHENTICATE may
 #: address during a remote operation, and the only reference whose value
@@ -141,9 +141,12 @@ class OpRules:
     #: service does this over the secure channel before generating a key.
     #: Card-holder references stay denied regardless.
     allow_management_key_change: bool = False
-    #: Whether the card manager may refuse security level 0x33 at EXTERNAL
+    #: Whether a security domain may refuse security level 0x33 at EXTERNAL
     #: AUTHENTICATE and be opened at 0x13 instead (see RelayPolicy.observe).
     level_fallback: bool = False
+    #: Whether a refusal mid-run leaves keys on the card worth waiting for: the
+    #: relay then tells the service and reads on for its result.
+    sealing: bool = False
 
 
 _GP_READS: frozenset[int] = frozenset(
@@ -200,12 +203,12 @@ _CONSUMER_LOCK_RULES = OpRules(
     max_apdus=500,
     # Above the service's 300 s budget plus its 20 s card handshake, so its deadline fires first.
     max_seconds=420.0,
-    # Four opens per replaced key; the PIV security domain has two keys replaced.
-    # With the level fallback the card manager takes seven and six.
-    max_initialize_updates=10,
-    max_external_authenticates=8,
+    # Two keys replaced in the PIV security domain, each open possibly retried at 0x13.
+    max_initialize_updates=14,
+    max_external_authenticates=12,
     allow_management_key_change=True,
     level_fallback=True,
+    sealing=True,
 )
 
 #: A dry run reads and authenticates, so the relay holds it to that even if the
@@ -213,14 +216,16 @@ _CONSUMER_LOCK_RULES = OpRules(
 _CONSUMER_LOCK_DRY_RUN_RULES = OpRules(
     selectable=frozenset({ISD_AID, PIV_SSD_AID, PIV_AID}),
     allowed_ins={
-        ISD: _GP_READS,
-        PIV_SSD: _GP_READS,
-        PIV: _PIV_READS | _GP_AUTH,
+        ISD: _GP_READS | _GP_AUTH,
+        PIV_SSD: _GP_READS | _GP_AUTH,
+        PIV: _PIV_READS | _GP_AUTH | {INS_GENERAL_AUTHENTICATE},
     },
     max_apdus=300,
     max_seconds=300.0,
     max_initialize_updates=2,
     max_external_authenticates=2,
+    level_fallback=True,
+    sealing=True,
 )
 
 RULES: dict[str, OpRules] = {
@@ -597,7 +602,7 @@ class RelayPolicy:
             self.load_blocks += 1
 
     def _admit_level_refusal(self, header: Header, sw1: int, sw2: int) -> bool:
-        """Whether a failed EXTERNAL AUTHENTICATE is the card manager refusing level 0x33.
+        """Whether a failed EXTERNAL AUTHENTICATE is a security domain refusing level 0x33.
 
         A wrong key fails on the service's side before EXTERNAL AUTHENTICATE is
         sent, so this refusal costs no key retry, and the service retries at 0x13.
@@ -605,11 +610,10 @@ class RelayPolicy:
         context = self.context
         if not (
             self.rules.level_fallback
-            and context == ISD
             and header.p1 == _LEVEL_HARDENED
             and (sw1, sw2) in _LEVEL_REFUSED_SW
             and context not in self._level_refused
-            and self._level_refusals.get(context, 0) < _MAX_LEVEL_REFUSALS
+            and self._level_refusals.get(context, 0) < _MAX_LEVEL_REFUSALS.get(context, 0)
         ):
             return False
         self._level_refused.add(context)
