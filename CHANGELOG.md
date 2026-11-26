@@ -5,7 +5,7 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-11-26
 
 ### Added
 
@@ -386,7 +386,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Three interchangeable console commands: `cryptnox-id`, the short `cnx-id`,
   and `cryptnox-id-card`.
 
-[Unreleased]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/cryptnox/cryptnox-id-cli/compare/v1.0.2...v1.0.3
