@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `piv perso status` on a card without a PIV applet says so. It no longer
+  reports a structure or names the card manager as the admin channel.
 - `63C0` is shown as a PIN or PUK without a retry limit, not as blocked.
 - `6983` over a contactless reader is shown as no tries left on that
   interface, not as blocked, by every command that reads the PIN or PUK; over
