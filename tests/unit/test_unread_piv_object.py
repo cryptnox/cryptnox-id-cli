@@ -11,7 +11,7 @@ import json
 import pytest
 from _cardfakes import ResponseAdapter, run, wire_session
 from test_detector_failures import GET_CHUID, detect
-from test_factory_preperso_commands import PivAdminCard
+from test_piv_preperso_commands import PivAdminCard
 from test_quickstart import OPTS, _facts
 from test_state_detector import APT, SELECT_PIV
 

@@ -139,7 +139,7 @@ def test_admin_status_fails_clearly_when_nothing_selects(monkeypatch):
 def test_preperso_status_reports_the_domain_and_sends_no_initialize_update(monkeypatch):
     conn = _conn({SELECT_SSD: (FCI_SSD, *OK), GET_E0: (E0_DES, *OK)})
     wire_session(monkeypatch, conn)
-    result = run(["--json", "factory", "piv", "preperso", "status"])
+    result = run(["--json", "piv", "perso", "status"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert payload["scp03_available"] is True

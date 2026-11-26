@@ -1,10 +1,10 @@
 Pre-personalization profiles
 ============================
 
-A **profile** describes the PIV applet structure to lay down during factory
+A **profile** describes the PIV applet structure to lay down during
 pre-personalization: the data containers, the PIN/PUK verifiers and their
 policy, and the asymmetric key slots with their access rules and mechanisms.
-``factory piv preperso load-config`` turns a profile into a sequence of
+``piv perso load-config`` turns a profile into a sequence of
 OpenFIPS201 ``PUT DATA ADMIN`` commands over SCP03. See
 :doc:`/piv/piv-personalization` for where this fits in the full lifecycle.
 
@@ -87,8 +87,8 @@ Inspecting profiles
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso inspect-defaults
-   $ cryptnox-id factory piv preperso init-config --profile ms-logon --out profile.yaml
+   $ cryptnox-id piv perso inspect-defaults
+   $ cryptnox-id piv perso init-config --profile ms-logon --out profile.yaml
 
 ``inspect-defaults`` shows the applet's supported algorithms, key slots, and
 PIN/PUK limits — no card needed. ``init-config`` writes a built-in
@@ -262,13 +262,13 @@ Applying a profile
 .. code-block:: console
 
    # preview the exact APDUs without touching the card
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --dry-run
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --dry-run
 
    # apply (development/evaluation cards)
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --default-keys
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --default-keys
 
    # or apply a custom profile file
-   $ cryptnox-id factory piv preperso load-config --file profile.yaml --default-keys
+   $ cryptnox-id piv perso load-config --file profile.yaml --default-keys
 
 Each builder command is sent as a **single short APDU in its own SCP03
 session** (JCOP 4.5 accepts one application APDU per applet-directed SCP03
@@ -279,4 +279,4 @@ Next steps
 
 * :doc:`/piv/piv-personalization` — the full lifecycle this structure feeds into
 * :doc:`/piv/quick-start-a-working-piv-card` — the condensed, one-command path
-* :doc:`/factory/factory-commands` — the full ``factory piv preperso`` command reference
+* :ref:`piv-preperso-commands` — the pre-personalization command reference

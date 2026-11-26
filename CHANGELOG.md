@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The pre-personalization commands (`status`, `inspect-defaults`, `init-config`,
+  `export-config`, `load-config`, `set-mgmt-key`, `finalize`) are under
+  `piv perso`. `factory piv preperso` stops with the command's new name;
+  `factory` keeps `card status` and `card fuse`.
 - The `pin` and `puk` objects in JSON output gain `state` and `interface`;
   `configured`, `blocked` and `retries_remaining` are `null` where the card's
   answer leaves them unknown (see the JSON output reference).

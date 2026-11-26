@@ -36,6 +36,7 @@ driven by one tool: |cli|.
    piv/tls-client-authentication
    piv/macos-smart-card-login
    piv/piv-personalization
+   piv/pre-personalization-profiles
    Commands <piv/piv-commands>
 
 .. toctree::

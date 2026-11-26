@@ -57,8 +57,9 @@ key tier
 ### PIV structure and lifecycle
 
 **Pre-personalization**:
-The manufacturing-style step that creates the PIV applet's structure - containers,
-key objects, verifiers - from a profile. It decides what _can_ exist on the card.
+The step that creates the PIV applet's structure - containers, key objects,
+verifiers - from a profile, once per card before personalization. Cards ship
+without it. It decides what _can_ exist on the card.
 _Avoid_: provisioning (ambiguous), setup
 
 **Personalization**:

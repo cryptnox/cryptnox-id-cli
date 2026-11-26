@@ -9,7 +9,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from cryptnox_id_cli.cli.commands import factory as factory_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.state.model import PivState
@@ -27,12 +27,14 @@ def _status(monkeypatch, piv_state, *, secured=None, json_out=True):
         piv_secured = secured
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(factory_cmd, "describe_security_domain", lambda session: None)
-    monkeypatch.setattr(factory_cmd, "_probe_mgmt_key", lambda session: None)
+    monkeypatch.setattr(preperso_cmd, "describe_security_domain", lambda session: None)
+    monkeypatch.setattr(preperso_cmd, "_probe_mgmt_key", lambda session: None)
     monkeypatch.setattr(
-        factory_cmd, "StateDetector", lambda *a, **kw: type("D", (), {"detect": lambda s: _State})()
+        preperso_cmd,
+        "StateDetector",
+        lambda *a, **kw: type("D", (), {"detect": lambda s: _State})(),
     )
-    args = ["factory", "piv", "preperso", "status"]
+    args = ["piv", "perso", "status"]
     result = CliRunner().invoke(root, (["--json"] if json_out else []) + args)
     assert result.exit_code == 0, result.output
     return json.loads(result.stdout) if json_out else result.output

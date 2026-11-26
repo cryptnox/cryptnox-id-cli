@@ -343,7 +343,7 @@ channel behave the same in both builds; a card personalized with a profile
 that asks for none of the three behaves the same whichever build it carries.
 
 A profile asks for them with ``fips_mode: false``
-(:doc:`/factory/pre-personalization-profiles`). The built-in ``ms-logon-nfc``
+(:doc:`/piv/pre-personalization-profiles`). The built-in ``ms-logon-nfc``
 profile, for Windows logon with the card on an NFC reader, is the one that
 does (:doc:`/piv/windows-logon-and-remote-desktop`).
 

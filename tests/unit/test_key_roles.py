@@ -382,7 +382,7 @@ def test_profile_warning_only_for_a_9a_that_cannot_sign():
 
 def test_load_config_warns_before_a_real_write():
     result = run(
-        ["factory", "piv", "preperso", "load-config", "--profile", "cryptnox-default"],
+        ["piv", "perso", "load-config", "--profile", "cryptnox-default"],
         input="n\n",
     )
     assert result.exit_code != 0
@@ -390,9 +390,7 @@ def test_load_config_warns_before_a_real_write():
 
 
 def test_load_config_dry_run_warns_about_9a():
-    result = run(
-        ["factory", "piv", "preperso", "load-config", "--profile", "cryptnox-default", "--dry-run"]
-    )
+    result = run(["piv", "perso", "load-config", "--profile", "cryptnox-default", "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "can authenticate but not sign" in result.output
 
@@ -874,6 +872,6 @@ def test_load_config_warns_about_vci_names(tmp_path):
     text = prof.builtin("cryptnox-default").to_yaml().replace("SM_PIN", "VCI_PIN")
     path = tmp_path / "p.yaml"
     path.write_text(text)
-    result = run(["factory", "piv", "preperso", "load-config", "--file", str(path), "--dry-run"])
+    result = run(["piv", "perso", "load-config", "--file", str(path), "--dry-run"])
     assert result.exit_code == 0, result.output
     assert "version 1.1" in " ".join(result.output.split())

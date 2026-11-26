@@ -24,7 +24,7 @@ How it has to look
 
 Same role rule as the rest of this card: the login/authentication signature
 needs a **SIGN-capable** slot. This guide is written and tested against
-**9A**, provisioned with the **ssh** profile (see :doc:`/factory/pre-personalization-profiles`)
+**9A**, provisioned with the **ssh** profile (see :doc:`/piv/pre-personalization-profiles`)
 — the same key used in :doc:`/piv/ssh-public-key-authentication`/:doc:`/piv/tls-client-authentication`.
 
 .. note::
@@ -38,7 +38,7 @@ needs a **SIGN-capable** slot. This guide is written and tested against
    ``cryptnox-default`` card, see the next section.
 
 ``cryptnox-default`` is one named profile among several, not necessarily
-what any given card has — check with ``factory piv preperso export-config``
+what any given card has — check with ``piv perso export-config``
 or whoever personalized the card. Unlike Windows AD, macOS local pairing
 doesn't require a specific EKU or UPN in the certificate — a plain client
 certificate from :doc:`/piv/quick-start-a-working-piv-card` is enough.
@@ -213,4 +213,4 @@ Next steps
 ------------
 
 * :doc:`/piv/quick-start-a-working-piv-card` — provision the key and certificate this guide builds on
-* :doc:`/factory/pre-personalization-profiles` — profile options for the signing slot
+* :doc:`/piv/pre-personalization-profiles` — profile options for the signing slot

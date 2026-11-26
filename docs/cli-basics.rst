@@ -27,8 +27,8 @@ Global options
      - Append a redacted APDU transcript to a file.
    * - ``--dry-run``
      - Write nothing to the card. Planning-capable commands (``piv quickstart``,
-       ``apdu send``/``select``/``transcript``, ``factory piv preperso
-       load-config``/``finalize``, ``piv perso import-key``/``import-p12``,
+       ``apdu send``/``select``/``transcript``, ``piv perso
+       load-config``/``finalize``/``import-key``/``import-p12``,
        ``remote consumer-lock``) show the intended actions; read-only commands run normally; every other
        command refuses to run under the flag (fail-closed) instead of silently
        executing.

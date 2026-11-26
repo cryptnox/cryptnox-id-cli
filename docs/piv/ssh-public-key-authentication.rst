@@ -10,9 +10,9 @@ and the server authorizes it like any other public key in
 
    Everything below that references ``cryptnox-default`` applies to a card
    provisioned with that specific built-in profile — one option among
-   several (see :doc:`/factory/pre-personalization-profiles`), not necessarily what any given
+   several (see :doc:`/piv/pre-personalization-profiles`), not necessarily what any given
    card actually has. Check which profile your card was provisioned with
-   (``factory piv preperso export-config``, or ask whoever personalized it)
+   (``piv perso export-config``, or ask whoever personalized it)
    before assuming this section applies to you.
 
 .. warning::
@@ -35,7 +35,7 @@ below). 9A (PIV Authentication) is ``AUTHENTICATE``-role only on
 profile change before it can be used — the built-in **ssh** profile changes
 only 9A's role (no extra objects, unlike **ms-logon**, which also adds
 ``SIGN+AUTHENTICATE`` to 9A but includes an importable RSA-2048 object for
-AD-issued credentials you don't need here) — see :doc:`/factory/pre-personalization-profiles`
+AD-issued credentials you don't need here) — see :doc:`/piv/pre-personalization-profiles`
 and `Fixing it: give 9A the SIGN role`_.
 
 This guide's steps below use whichever slot has your key + certificate —
@@ -87,7 +87,7 @@ Fixing it: give 9A the SIGN role
 You don't need the full ``ms-logon`` profile for this — the built-in ``ssh``
 profile changes only 9A's ``role`` (``AUTHENTICATE`` -> ``AUTHENTICATE,
 SIGN``); everything else is identical to ``cryptnox-default``. See
-:doc:`/factory/pre-personalization-profiles` for the full built-in profile list.
+:doc:`/piv/pre-personalization-profiles` for the full built-in profile list.
 
 The profile applies at **pre-personalization**: it sets the key's role at
 the structural level, and an existing key object keeps its role. If your card
@@ -127,7 +127,7 @@ block below is for a blank or pre-personalized card; skip it on this path.
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso load-config --profile ssh --default-keys
+   $ cryptnox-id piv perso load-config --profile ssh --default-keys
    $ cryptnox-id piv perso set-puk --default-keys
    $ cryptnox-id piv perso set-pin --default-keys
    $ cryptnox-id piv perso generate-key --slot 9A --algorithm ECCP256 \
@@ -266,4 +266,4 @@ Next steps
 ------------
 
 * :doc:`/piv/quick-start-a-working-piv-card` — provision the key and certificate this guide builds on
-* :doc:`/factory/pre-personalization-profiles` — profile YAML grammar (role, access mode, mechanisms)
+* :doc:`/piv/pre-personalization-profiles` — profile YAML grammar (role, access mode, mechanisms)

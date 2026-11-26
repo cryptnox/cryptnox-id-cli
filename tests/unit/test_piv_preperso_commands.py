@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""``factory piv preperso finalize`` and ``load-config`` over a real SCP03 handshake."""
+"""``piv perso finalize`` and ``load-config`` over a real SCP03 handshake."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from _cardfakes import ResponseAdapter, fake_tty, run, wire_session
 from test_scp03 import GP_KEY, FakeScp03Card
 from test_state_detector import APT, GET_STATUS, SELECT_PIV
 
-from cryptnox_id_cli.cli.commands import factory as factory_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 
@@ -53,7 +53,7 @@ def _wrapped_puts(conn):
     return [c for c in conn.log if c.startswith("04DB")]
 
 
-FINALIZE = ["factory", "piv", "preperso", "finalize", "--default-keys"]
+FINALIZE = ["piv", "perso", "finalize", "--default-keys"]
 CONFIRMED = [*FINALIZE, "--i-understand-this-is-irreversible"]
 
 
@@ -104,14 +104,14 @@ def test_finalize_dry_run_plans_without_a_channel(monkeypatch):
 @pytest.mark.parametrize(("typed", "finalized"), [("FINALIZE-PIV", True), ("finalize", False)])
 def test_finalize_on_a_terminal_wants_the_phrase(monkeypatch, typed, finalized):
     conn = _wire(monkeypatch)
-    fake_tty(monkeypatch, factory_cmd)
+    fake_tty(monkeypatch, preperso_cmd)
     result = run(FINALIZE, input=f"{typed}\n")
     assert (result.exit_code == 0) is finalized, result.output
     assert "This is IRREVERSIBLE" in result.output
     assert len(_wrapped_puts(conn)) == int(finalized)
 
 
-LOAD = ["factory", "piv", "preperso", "load-config", "--profile", "ssh", "--default-keys"]
+LOAD = ["piv", "perso", "load-config", "--profile", "ssh", "--default-keys"]
 
 
 @pytest.mark.parametrize("json_mode", [True, False])

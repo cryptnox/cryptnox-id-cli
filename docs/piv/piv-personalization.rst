@@ -14,8 +14,8 @@ For the condensed version, see the :doc:`/piv/quick-start-a-working-piv-card`.
    (DESFire has no PIN at all; its access is symmetric-key based). Each
    application's PIN has its own retry counter and is managed separately.
 
-Operator commands live under ``piv``; factory pre-personalization lives under
-``factory piv preperso``. The SCP03 admin channel uses the keys of the card's
+Pre-personalization and personalization commands both live under
+``piv perso``. The SCP03 admin channel uses the keys of the card's
 PIV security domain — as shipped, the GlobalPlatform test keys
 (``--default-keys``); after :ref:`piv-admin-key-rotation`, the
 ``PIV_SCP03_ENC`` / ``PIV_SCP03_MAC`` / ``PIV_SCP03_DEK`` environment variables.
@@ -35,7 +35,7 @@ first; ``--dry-run`` shows the step plan without writing.
    $ cryptnox-id piv quickstart --default-keys --dry-run
    $ cryptnox-id piv quickstart --default-keys                        # 9C, ECCP256, self-signed cert
    $ cryptnox-id piv quickstart --default-keys --cert-mode csr --csr-out 9c.csr.pem
-   $ cryptnox-id piv quickstart --default-keys --include-preperso     # blank card: lay down the structure too
+   $ cryptnox-id piv quickstart --default-keys --include-preperso     # card as shipped: lay down the structure too
 
 .. note::
 
@@ -54,26 +54,27 @@ first; ``--dry-run`` shows the step plan without writing.
 The same sequence, below, as individual commands — useful to understand what
 quickstart does, or to vary it.
 
-Step 0 — factory: pre-personalize the applet structure
-------------------------------------------------------
+Step 0 — pre-personalize the applet structure
+---------------------------------------------
 
 .. note::
 
-   **Factory / provisioning step — not part of normal end-user setup.**
-   Pre-personalization is done once at manufacturing; a card you receive is
-   already structured, so start at Step 1. Full detail lives under
-   :doc:`/factory/factory-commands`.
+   Cards ship with the PIV applet installed and no structure, so every card
+   goes through this step once. The structure is permanent: a later profile can
+   add elements but not change or remove existing ones, so choose the profile
+   for the card's use first. Full detail lives under
+   :ref:`piv-preperso-commands`.
 
 ``load-config`` applies a profile (containers, PIN/PUK verifiers, key slots) to
 a blank OpenFIPS201 applet over SCP03 — one short ``PUT DATA ADMIN`` per
-command. See :doc:`/factory/pre-personalization-profiles` for the profile format itself.
+command. See :doc:`/piv/pre-personalization-profiles` for the profile format itself.
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso status
-   $ cryptnox-id factory piv preperso inspect-defaults
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --dry-run
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --default-keys
+   $ cryptnox-id piv perso status
+   $ cryptnox-id piv perso inspect-defaults
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --dry-run
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --default-keys
 
 Step 1 — set the PIN and PUK
 -----------------------------
@@ -97,7 +98,7 @@ slot (9C) for anything you will sign with.
 
 A slot generates on-card for any mechanism it has a **key object** for, and the
 pre-personalization profile decides which those are (see
-:doc:`/factory/pre-personalization-profiles`). Every key object in ``cryptnox-default`` is ECC
+:doc:`/piv/pre-personalization-profiles`). Every key object in ``cryptnox-default`` is ECC
 (``ECCP256``, ``ECCP384``), so on such a card RSA has to be imported with
 ``import-key`` (next). A profile that provides an RSA object generates RSA
 on-card just as well — ``ms-logon`` creates an ``RSA2048`` object on 9A, and::
@@ -117,7 +118,7 @@ value; load one once with:
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+   $ cryptnox-id piv perso set-mgmt-key --default-keys
    $ cryptnox-id piv perso generate-key --slot 9A --algorithm RSA2048 --out 9a.pub.pem --default-keys
 
 ``piv quickstart`` follows the same rule with training wheels: it defaults to
@@ -152,7 +153,7 @@ The target key **object** must exist with the same (slot, mechanism) pair and
 the IMPORTABLE attribute. The ``cryptnox-default`` profile creates ECC-P256
 objects only, so an RSA (or P-384) import needs either a profile that defines
 it (the ``ms-logon`` profile pre-creates an importable RSA-2048 object on 9A —
-see :doc:`/factory/pre-personalization-profiles`) or ``--create-key-object`` (a structural
+see :doc:`/piv/pre-personalization-profiles`) or ``--create-key-object`` (a structural
 ``PUT DATA ADMIN``: development/evaluation cards only — a finalized applet
 refuses it). RSA objects fix CRT vs. plain form at creation; ``--rsa-form``
 must match, or the card rejects the import (``6A80``). A post-import smoke
@@ -209,14 +210,13 @@ Step 5 — validate and smoke-test
    $ cryptnox-id piv validate               # consistency check (NOT a FIPS/NIST validation)
    $ cryptnox-id report piv --out piv.json
 
-Step 6 — finalize (irreversible, factory)
---------------------------------------------
+Step 6 — finalize (irreversible)
+--------------------------------
 
 .. note::
 
-   **Factory / provisioning step — not part of normal end-user setup.**
-   Finalizing is a manufacturing operation and is irreversible. See
-   :doc:`/factory/factory-commands`.
+   Finalizing cannot be undone. Run it only on a card whose structure is
+   final. See :ref:`piv-preperso-commands`.
 
 ``finalize`` transitions the applet to its ``SECURED`` operational state. It
 is irreversible; a full reset of the PIV applet runs through the Cryptnox
@@ -235,7 +235,7 @@ production keys.
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso finalize --default-keys
+   $ cryptnox-id piv perso finalize --default-keys
    # at the prompt: Type FINALIZE-PIV to continue
    # (scripted/non-interactive: add --i-understand-this-is-irreversible)
 
@@ -372,7 +372,7 @@ Cryptnox support).
 Next steps
 ------------
 
-* :doc:`/factory/pre-personalization-profiles` — customizing the pre-personalization profile
+* :doc:`/piv/pre-personalization-profiles` — customizing the pre-personalization profile
 * :doc:`/piv/quick-start-a-working-piv-card` — the condensed, one-command path with a
   ``yubico-piv-tool`` interoperability matrix
 * :doc:`/piv/piv-commands` — every ``piv`` command

@@ -102,7 +102,7 @@ AUTHENTICATE`` signing. The error names the key's role, and ``piv inventory``
 lists the role of every key object. A role cannot be changed; to give the slot
 a signing key, add a key object for another algorithm with ``piv perso
 create-key-object`` (see :doc:`/piv/piv-commands`). See
-:doc:`/factory/pre-personalization-profiles`.
+:doc:`/piv/pre-personalization-profiles`.
 
 **``6986`` on ``piv inventory``.**
 The applet's ``restrict-enumeration`` config flag is set, so the structure
