@@ -13,7 +13,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
 from cryptnox_id_cli.applets.piv.objects import wrap_certificate
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.util import tlv
 

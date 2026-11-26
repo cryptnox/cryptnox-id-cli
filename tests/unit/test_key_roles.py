@@ -17,7 +17,12 @@ from _cardfakes import accept_any_pin, run, wire_session
 
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles as prof
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
+from cryptnox_id_cli.cli.commands.piv.perso import keys as piv_perso
+from cryptnox_id_cli.cli.commands.piv.quickstart import plan as quickstart_plan
+from cryptnox_id_cli.cli.commands.piv.quickstart import preflight as quickstart_preflight
+from cryptnox_id_cli.cli.commands.piv.quickstart import steps as quickstart_steps
 from cryptnox_id_cli.transport.errors import CryptnoxError
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -218,7 +223,7 @@ class ProbeCard(Card):
 @pytest.fixture
 def created(monkeypatch):
     ops: list[bytes] = []
-    monkeypatch.setattr(piv_cmd, "_send_create_key", lambda adm, keys, op, slot: ops.append(op))
+    monkeypatch.setattr(piv_perso, "_send_create_key", lambda adm, keys, op, slot: ops.append(op))
     return ops
 
 
@@ -396,7 +401,7 @@ def test_load_config_dry_run_warns_about_9a():
 
 
 # ------------------------------------------------------------- quickstart --- #
-def _facts(**kw) -> piv_cmd.CardFacts:
+def _facts(**kw) -> quickstart_plan.CardFacts:
     base = {
         "pin_configured": True,
         "puk_configured": True,
@@ -407,10 +412,10 @@ def _facts(**kw) -> piv_cmd.CardFacts:
         "ccc_present": True,
         **kw,
     }
-    return piv_cmd.CardFacts(**base)
+    return quickstart_plan.CardFacts(**base)
 
 
-def _opts(**kw) -> piv_cmd.QuickstartOptions:
+def _opts(**kw) -> quickstart_plan.QuickstartOptions:
     base = {
         "slot": 0x9A,
         "mechanism": ECCP256,
@@ -418,48 +423,50 @@ def _opts(**kw) -> piv_cmd.QuickstartOptions:
         "include_preperso": True,
         **kw,
     }
-    return piv_cmd.QuickstartOptions(**base)
+    return quickstart_plan.QuickstartOptions(**base)
 
 
 def test_quickstart_refuses_a_certificate_on_a_key_that_cannot_sign():
     with pytest.raises(CryptnoxError, match="create-key-object"):
-        piv_cmd._plan_quickstart(_facts(key_object_can_sign=False), _opts())
+        quickstart_plan._plan_quickstart(_facts(key_object_can_sign=False), _opts())
 
 
 def test_quickstart_refusal_names_a_sibling_that_signs():
     facts = _facts(key_object_can_sign=False, signing_siblings=("RSA2048",))
     with pytest.raises(CryptnoxError, match="pass --algorithm RSA2048") as exc:
-        piv_cmd._plan_quickstart(facts, _opts())
+        quickstart_plan._plan_quickstart(facts, _opts())
     assert "create-key-object" not in str(exc.value)
 
 
 def test_quickstart_refusal_on_a_finalized_applet_offers_no_new_object():
     facts = _facts(key_object_can_sign=False, applet_secured=True)
     with pytest.raises(CryptnoxError) as exc:
-        piv_cmd._plan_quickstart(facts, _opts())
+        quickstart_plan._plan_quickstart(facts, _opts())
     assert "create-key-object" not in str(exc.value)
 
 
 def test_quickstart_refusal_on_9c_does_not_offer_9c():
     with pytest.raises(CryptnoxError) as exc:
-        piv_cmd._plan_quickstart(_facts(key_object_can_sign=False), _opts(slot=0x9C))
+        quickstart_plan._plan_quickstart(_facts(key_object_can_sign=False), _opts(slot=0x9C))
     assert "Use slot 9C" not in str(exc.value)
 
 
 def test_quickstart_on_a_finalized_applet_plans_no_new_object():
     facts = _facts(key_object_present=False, applet_secured=True)
     with pytest.raises(CryptnoxError, match="finalized"):
-        piv_cmd._plan_quickstart(facts, _opts(cert_mode="none"))
+        quickstart_plan._plan_quickstart(facts, _opts(cert_mode="none"))
 
 
 def test_quickstart_refuses_a_missing_object_the_profile_would_create_unsigning():
     with pytest.raises(CryptnoxError, match="would create"):
-        piv_cmd._plan_quickstart(_facts(key_object_present=False), _opts(new_object_can_sign=False))
+        quickstart_plan._plan_quickstart(
+            _facts(key_object_present=False), _opts(new_object_can_sign=False)
+        )
 
 
 def test_quickstart_refuses_a_profile_that_would_create_a_key_that_cannot_sign():
     with pytest.raises(CryptnoxError, match="profile 'cryptnox-default'"):
-        piv_cmd._plan_quickstart(
+        quickstart_plan._plan_quickstart(
             _facts(structure_present=False, key_object_present=False),
             _opts(new_object_can_sign=False),
         )
@@ -475,7 +482,7 @@ def test_quickstart_refuses_a_profile_that_would_create_a_key_that_cannot_sign()
     ],
 )
 def test_quickstart_plans_when_the_certificate_can_be_made(facts, opts):
-    assert piv_cmd._plan_quickstart(facts, opts)
+    assert quickstart_plan._plan_quickstart(facts, opts)
 
 
 # ------------------------------------------------------ quickstart wiring --- #
@@ -487,7 +494,9 @@ def _quickstart(monkeypatch, facts, *args):
         yield object()
 
     monkeypatch.setattr(piv_cmd.AppContext, "open_session", no_card)
-    monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x"))
+    monkeypatch.setattr(
+        piv_quickstart, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x")
+    )
     return run(["--json", "--yes", "piv", "quickstart", *args])
 
 
@@ -518,8 +527,8 @@ def test_quickstart_creates_the_object_with_the_profile_role(monkeypatch):
         raise CryptnoxError("stop after the create step")
 
     facts = _facts(key_object_present=False)
-    monkeypatch.setattr(piv_cmd, "_create_key_object", spy)
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
+    monkeypatch.setattr(quickstart_steps, "_create_key_object", spy)
+    monkeypatch.setattr(quickstart_preflight, "_select", lambda s: object())
     accept_any_pin(monkeypatch)
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     result = _quickstart(
@@ -582,7 +591,7 @@ def test_6a86_with_a_readable_listing_names_the_missing_algorithm_and_a_signer()
 
 def test_quickstart_points_at_create_key_object_with_the_profile_role():
     with pytest.raises(CryptnoxError) as exc:
-        piv_cmd._plan_quickstart(
+        quickstart_plan._plan_quickstart(
             _facts(key_object_present=False),
             _opts(include_preperso=False, cert_mode="none", new_object_roles="AUTHENTICATE"),
         )
@@ -592,7 +601,7 @@ def test_quickstart_points_at_create_key_object_with_the_profile_role():
 
 def test_quickstart_refuses_an_unsigning_object_before_suggesting_it():
     with pytest.raises(CryptnoxError, match="would create"):
-        piv_cmd._plan_quickstart(
+        quickstart_plan._plan_quickstart(
             _facts(key_object_present=False),
             _opts(include_preperso=False, new_object_can_sign=False),
         )
@@ -601,12 +610,12 @@ def test_quickstart_refuses_an_unsigning_object_before_suggesting_it():
 def test_quickstart_finalized_refusal_comes_first():
     facts = _facts(key_object_present=False, applet_secured=True)
     with pytest.raises(CryptnoxError, match="finalized"):
-        piv_cmd._plan_quickstart(facts, _opts(include_preperso=False))
+        quickstart_plan._plan_quickstart(facts, _opts(include_preperso=False))
 
 
 def test_quickstart_replaces_the_certificate_of_a_key_that_cannot_sign():
     facts = _facts(other_cert="ECCP256", other_cert_replaceable=True, key_object_can_sign=True)
-    steps = {s.step: s for s in piv_cmd._plan_quickstart(facts, _opts())}
+    steps = {s.step: s for s in quickstart_plan._plan_quickstart(facts, _opts())}
     assert steps["generate-key"].run and steps["certificate"].run
     assert steps["certificate"].reason == "replaces the slot's ECCP256 certificate"
 
@@ -617,26 +626,26 @@ def test_quickstart_replaces_the_certificate_of_a_key_that_cannot_sign():
 def test_quickstart_refuses_to_replace_a_certificate_it_cannot_account_for(other, text):
     facts = _facts(other_cert=other, key_object_can_sign=True)
     with pytest.raises(CryptnoxError, match=text):
-        piv_cmd._plan_quickstart(facts, _opts())
-    steps = {s.step: s for s in piv_cmd._plan_quickstart(facts, _opts(cert_mode="none"))}
+        quickstart_plan._plan_quickstart(facts, _opts())
+    steps = {s.step: s for s in quickstart_plan._plan_quickstart(facts, _opts(cert_mode="none"))}
     assert steps["generate-key"].run and not steps["certificate"].run
 
 
 def test_quickstart_never_creates_an_object_and_skips_its_key():
     facts = _facts(key_object_present=False, other_cert="ECCP256", other_cert_replaceable=True)
-    steps = {s.step: s for s in piv_cmd._plan_quickstart(facts, _opts(cert_mode="none"))}
+    steps = {s.step: s for s in quickstart_plan._plan_quickstart(facts, _opts(cert_mode="none"))}
     assert steps["create-key-object"].run and steps["generate-key"].run
 
 
 def test_missing_structure_advice_names_the_chosen_profile():
     facts = _facts(structure_present=False, key_object_present=False)
     with pytest.raises(CryptnoxError, match="load-config --profile ssh"):
-        piv_cmd._plan_quickstart(facts, _opts(include_preperso=False, profile_name="ssh"))
+        quickstart_plan._plan_quickstart(facts, _opts(include_preperso=False, profile_name="ssh"))
 
 
 def test_unsigning_role_advice_offers_the_signing_role():
     with pytest.raises(CryptnoxError, match="use --role SIGN\\+AUTHENTICATE"):
-        piv_cmd._plan_quickstart(
+        quickstart_plan._plan_quickstart(
             _facts(key_object_present=False),
             _opts(
                 include_preperso=False,
@@ -748,12 +757,12 @@ def test_generate_key_warns_only_for_the_certified_key(monkeypatch, algorithm, w
         yield object()
 
     monkeypatch.setattr(piv_cmd.AppContext, "open_session", no_card)
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: b"cert")
-    monkeypatch.setattr(piv_cmd, "_certificate_mechanism", lambda der: ECCP256)
+    monkeypatch.setattr(piv_perso, "_select", lambda s: object())
+    monkeypatch.setattr(piv_perso, "_read_cert_der", lambda piv, name: b"cert")
+    monkeypatch.setattr(piv_perso, "_certificate_mechanism", lambda der: ECCP256)
     public = ec.generate_private_key(ec.SECP256R1()).public_key()
     monkeypatch.setattr(
-        piv_cmd,
+        piv_perso,
         "_generate_key_on_card",
         lambda *a, **k: SimpleNamespace(
             public_key=public, path="admin-channel", management_key_auth=False

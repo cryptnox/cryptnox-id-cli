@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from cryptnox_id_cli.applets.piv import inventory as inventory_mod
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.cli.commands.info import _read_cplc
-from cryptnox_id_cli.cli.commands.piv import SLOT_CERT_OBJECT, _read_cert_der
+from cryptnox_id_cli.cli.commands.piv.primitives import SLOT_CERT_OBJECT, _read_cert_der
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.remote.policy import PIV_SSD_AID
 from cryptnox_id_cli.state.detector import StateDetector

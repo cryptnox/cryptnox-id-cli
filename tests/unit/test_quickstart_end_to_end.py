@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""``piv quickstart`` end to end, with nothing in ``piv.py`` patched.
+"""``piv quickstart`` end to end, with nothing in the ``piv`` commands package patched.
 
 Most tests run behind ``_piv_card``, where secured commands reach a PIV applet; a few use
 the SCP03 double alone, which answers every secured command 6D00.

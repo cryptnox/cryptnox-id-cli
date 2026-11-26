@@ -12,7 +12,8 @@ import pytest
 from click.testing import CliRunner
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv.perso import keys as piv_perso
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 
@@ -39,10 +40,10 @@ def _wire(monkeypatch):
         return piv_cmd.GeneratedKey(public_key, "admin-channel", None)
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(piv_cmd, "_select", lambda session: object())
-    monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: None)
-    monkeypatch.setattr(piv_cmd, "_create_key_object", fake_create)
-    monkeypatch.setattr(piv_cmd, "_generate_key_on_card", fake_generate)
+    monkeypatch.setattr(piv_perso, "_select", lambda session: object())
+    monkeypatch.setattr(piv_perso, "_read_cert_der", lambda piv, name: None)
+    monkeypatch.setattr(piv_perso, "_create_key_object", fake_create)
+    monkeypatch.setattr(piv_perso, "_generate_key_on_card", fake_generate)
     return calls
 
 

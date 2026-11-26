@@ -16,7 +16,7 @@ import yaml
 from _cardfakes import run, wire_session
 
 from cryptnox_id_cli.applets.piv import profiles
-from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
+from cryptnox_id_cli.cli.commands.piv import preperso as preperso_cmd
 from cryptnox_id_cli.transport.apdu import Response
 
 ATR = "3BD518FF81B1FE451FC38073C821106F"

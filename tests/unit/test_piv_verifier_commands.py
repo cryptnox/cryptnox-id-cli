@@ -25,7 +25,11 @@ from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.applets.piv.verifier import PIN, Op, Outcome, Verdict
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands import piv as piv_group
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
+from cryptnox_id_cli.cli.commands.piv.quickstart import preflight as quickstart_preflight
+from cryptnox_id_cli.cli.commands.piv.quickstart import steps as quickstart_steps
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -211,16 +215,18 @@ def test_quickstart_pre_flight_names_the_cause(monkeypatch, mock_connection, sta
         yield session
 
     monkeypatch.setattr(AppContext, "open_session", open_session)
-    monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (_facts(), "x"))
-    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
     monkeypatch.setattr(
-        piv_cmd,
+        piv_quickstart, "_collect_quickstart_facts", lambda s, ref, mech: (_facts(), "x")
+    )
+    monkeypatch.setattr(quickstart_preflight, "_select", PivApplet)
+    monkeypatch.setattr(
+        quickstart_steps,
         "_set_verifier",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
     )
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     result = CliRunner().invoke(
-        piv_cmd.command, ["quickstart", "--default-keys"], obj=AppContext(json=True, yes=True)
+        piv_group.command, ["quickstart", "--default-keys"], obj=AppContext(json=True, yes=True)
     )
     assert result.exit_code != 0
     assert getattr(result.exception, "exit_code", None) == 6
@@ -317,7 +323,7 @@ def test_the_status_commands_colour_a_verdict_alike(verdict, default, style):
 
 def test_a_secret_without_a_new_value_variable_has_no_new_input():
     with pytest.raises(ValueError):
-        _ = piv_cmd._PIN_INPUT.new.new
+        _ = piv_cmd.PIN_INPUT.new.new
 
 
 # ---------------------------------------------------------- validate, unread verifier #

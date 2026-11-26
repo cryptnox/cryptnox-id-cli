@@ -23,7 +23,8 @@ import contextlib
 from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.piv.piv import PivApplet
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import objects as piv_objects
+from cryptnox_id_cli.cli.commands.piv.perso import data_objects, verifiers
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.transport.apdu import Response
@@ -43,7 +44,7 @@ def _run(args, **kw):
 # ------------------------------------------------- admin-channel warnings --- #
 def test_set_pin_warns_it_replaces_without_current_value(monkeypatch):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "_set_verifier", lambda adm, keys, ref, padded, label: OK)
+    monkeypatch.setattr(verifiers, "_set_verifier", lambda adm, keys, ref, padded, label: OK)
     result = _run(
         ["piv", "perso", "set-pin", "--default-keys"], env={"CRYPTNOX_PIV_NEW_PIN": "123456"}
     )
@@ -54,7 +55,7 @@ def test_set_pin_warns_it_replaces_without_current_value(monkeypatch):
 
 def test_set_puk_warns_it_replaces_without_current_value(monkeypatch):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "_set_verifier", lambda adm, keys, ref, padded, label: OK)
+    monkeypatch.setattr(verifiers, "_set_verifier", lambda adm, keys, ref, padded, label: OK)
     result = _run(
         ["piv", "perso", "set-puk", "--default-keys"], env={"CRYPTNOX_PIV_NEW_PUK": "12345678"}
     )
@@ -78,7 +79,7 @@ class _FakeAdmin:
 
 def test_write_object_warns_it_overwrites_container(monkeypatch, tmp_path):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", _FakeAdmin)
+    monkeypatch.setattr(data_objects, "PivAdmin", _FakeAdmin)
     blob = tmp_path / "chuid.bin"
     blob.write_bytes(b"\x01\x02")
     result = _run(
@@ -100,7 +101,7 @@ def test_write_object_warns_it_overwrites_container(monkeypatch, tmp_path):
 def test_write_standard_objects_warns_it_overwrites_containers(monkeypatch):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
     monkeypatch.setattr(
-        piv_cmd,
+        data_objects,
         "_write_standard",
         lambda adm, keys, names: [{"object": n, "ok": True, "sw": "9000"} for n in names],
     )
@@ -143,7 +144,7 @@ def _wire_card(monkeypatch, payload: bytes):
     monkeypatch.setattr(
         AppContext, "open_session", lambda self: self.make_session(_FakeConn(payload))
     )
-    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
+    monkeypatch.setattr(piv_objects, "_select", PivApplet)
 
 
 # Distinctive bytes that must not appear in the transcript when PIN-protected.

@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from cryptnox_id_cli.applets.piv import ssd
 from cryptnox_id_cli.applets.piv.admin import SCP02, SCP03
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import admin as piv_cmd
 from cryptnox_id_cli.secrets.resolver import DEFAULT_GP_KEY
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import Scp02Error

@@ -12,7 +12,7 @@ import pytest
 from _cardfakes import ResponseAdapter, run, wire_session
 
 from cryptnox_id_cli.applets.piv.admin import SCP02, InitializeUpdateRejected
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import admin as piv_cmd
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import Scp02Error
 

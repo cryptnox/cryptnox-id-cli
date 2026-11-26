@@ -23,7 +23,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv.perso import certificates, data_objects, verifiers
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.apdu import Response
 
@@ -178,7 +178,7 @@ def _admin(reply: Response):
 def test_a_refused_set_pin_or_puk_exits_6(monkeypatch, command, env, label):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
     monkeypatch.setattr(
-        piv_cmd, "_set_verifier", lambda adm, keys, ref, padded, label: _refusal(0x6A80)
+        verifiers, "_set_verifier", lambda adm, keys, ref, padded, label: _refusal(0x6A80)
     )
     res = _cardfakes.run(["--json", "piv", "perso", command, "--default-keys"], env=env)
     assert res.exit_code == STATUS_WORD_EXIT, res.output
@@ -191,7 +191,7 @@ def test_a_refused_set_pin_or_puk_exits_6(monkeypatch, command, env, label):
 
 def test_a_refused_object_write_exits_6(monkeypatch, tmp_path):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", _admin(_refusal(0x6A82)))
+    monkeypatch.setattr(data_objects, "PivAdmin", _admin(_refusal(0x6A82)))
     blob = tmp_path / "discovery.bin"
     blob.write_bytes(b"\x7e\x00")
     argv = ["piv", "perso", "write-object", "--object", "discovery", "--file", str(blob)]
@@ -205,7 +205,7 @@ def test_a_refused_object_write_exits_6(monkeypatch, tmp_path):
 
 def test_an_accepted_object_write_still_exits_0(monkeypatch, tmp_path):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", _admin(OK))
+    monkeypatch.setattr(data_objects, "PivAdmin", _admin(OK))
     blob = tmp_path / "chuid.bin"
     blob.write_bytes(b"\x01\x02")
     res = _cardfakes.run(
@@ -228,7 +228,7 @@ def test_an_accepted_object_write_still_exits_0(monkeypatch, tmp_path):
 def test_one_refused_standard_object_exits_6_and_lists_both(monkeypatch):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
     monkeypatch.setattr(
-        piv_cmd,
+        data_objects,
         "_write_standard",
         lambda adm, keys, names: [
             {"object": "chuid", "ok": True, "sw": "9000"},
@@ -265,8 +265,8 @@ def _certificate(tmp_path):
 )
 def test_a_refused_certificate_import_exits_6(monkeypatch, tmp_path, reply, code, imported):
     monkeypatch.setattr(AppContext, "open_session", _fake_session)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", lambda session: object())
-    monkeypatch.setattr(piv_cmd, "_import_cert_der", lambda adm, keys, ref, der, label: reply)
+    monkeypatch.setattr(certificates, "PivAdmin", lambda session: object())
+    monkeypatch.setattr(certificates, "_import_cert_der", lambda adm, keys, ref, der, label: reply)
     res = _cardfakes.run(
         [
             "--json",

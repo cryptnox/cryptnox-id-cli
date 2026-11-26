@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
 """``piv perso status``, ``init-config``, ``export-config`` and the load-config
-dry run, against the SCP03 double with nothing in ``piv_preperso.py`` patched."""
+dry run, against the SCP03 double with nothing in ``piv/preperso.py`` patched."""
 
 from __future__ import annotations
 
