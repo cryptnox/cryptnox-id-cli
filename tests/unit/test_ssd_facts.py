@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 
 from _cardfakes import ResponseAdapter, run, run_both_modes, wire_session
+from test_state_detector import APT, SELECT_PIV
 
 from cryptnox_id_cli.applets.piv import ssd
 from cryptnox_id_cli.applets.piv.admin import SCP02, SCP03
@@ -137,7 +138,8 @@ def test_admin_status_fails_clearly_when_nothing_selects(monkeypatch):
 
 
 def test_preperso_status_reports_the_domain_and_sends_no_initialize_update(monkeypatch):
-    conn = _conn({SELECT_SSD: (FCI_SSD, *OK), GET_E0: (E0_DES, *OK)})
+    piv = {SELECT_PIV: (bytes.fromhex(APT), *OK)}
+    conn = _conn({**piv, SELECT_SSD: (FCI_SSD, *OK), GET_E0: (E0_DES, *OK)})
     wire_session(monkeypatch, conn)
     result = run(["--json", "piv", "perso", "status"])
     assert result.exit_code == 0, result.output

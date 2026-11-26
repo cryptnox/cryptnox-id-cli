@@ -102,14 +102,18 @@ def _secured_word(secured: bool | None) -> str:
 @click.pass_obj
 def status(app: AppContext) -> None:
     """Show whether pre-personalization is still possible on this card (no authentication)."""
+    domain: SecurityDomainInfo | None = None
+    mgmt: dict[str, object] | None = None
     with app.open_session() as session:
         st = StateDetector(session, probe_fido=False, probe_desfire=False).detect()
-        try:
-            domain = describe_security_domain(session)
-        except CryptnoxError:
-            domain = None
-        mgmt = _probe_mgmt_key(session)
-    selectable = st.piv not in (PivState.NOT_PRESENT, PivState.UNKNOWN)
+        selectable = st.piv not in (PivState.NOT_PRESENT, PivState.UNKNOWN)
+        # Without an applet the domain lookup falls back to the ISD, which is no PIV admin channel.
+        if selectable:
+            try:
+                domain = describe_security_domain(session)
+            except CryptnoxError:
+                domain = None
+            mgmt = _probe_mgmt_key(session)
     # Same gate as the finalize command: selectable and not yet SECURED.
     finalize_allowed = selectable and not st.piv_secured
     load_config_allowed = st.piv == PivState.PRE_PERSONALIZED and not st.piv_secured
@@ -127,6 +131,12 @@ def status(app: AppContext) -> None:
 
     def human(con: Console) -> None:
         con.print(f"PIV lifecycle state: [bold]{st.piv.label}[/bold]")
+        if st.piv == PivState.NOT_PRESENT:
+            con.print("  No PIV applet on this card: nothing to pre-personalize or finalize.")
+            return
+        if st.piv == PivState.UNKNOWN:
+            con.print("  PIV applet state not readable: load-config and finalize not determined.")
+            return
         con.print(f"  Admin secure channel: {_domain_line(domain)}")
         con.print(f"  Finalized (SECURED): {_secured_word(st.piv_secured)}")
         con.print(f"  Management key (9B): {_mgmt_key_line(mgmt)}")

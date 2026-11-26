@@ -12,6 +12,7 @@ import pytest
 import yaml
 from _cardfakes import ResponseAdapter, run, run_both_modes, wire_session
 from test_piv_preperso_commands import PivAdminCard
+from test_state_detector import SELECT_PIV
 
 from cryptnox_id_cli.applets.piv import profiles
 from cryptnox_id_cli.applets.piv.ssd import ISD_AID
@@ -88,12 +89,32 @@ def test_status_on_a_finalized_card_refuses_both_steps(monkeypatch):
     assert "not allowed, already finalized" in human.output
 
 
-def test_status_without_a_piv_applet(monkeypatch):
-    as_json, human = _status(monkeypatch, present=False)
+class UnreadablePivCard(StatusCard):
+    def transmit(self, apdu):
+        if bytes(apdu).hex().upper().startswith(SELECT_PIV):
+            raise TransportError("reader went away")
+        return super().transmit(apdu)
+
+
+@pytest.mark.parametrize(
+    ("card", "state", "line"),
+    [
+        (StatusCard(present=False, isd=E0_KVN1_AES), "PivNotPresent", "No PIV applet on this card"),
+        (UnreadablePivCard(isd=E0_KVN1_AES), "Unknown", "PIV applet state not readable"),
+    ],
+    ids=["absent", "unreadable"],
+)
+def test_status_without_a_piv_applet_reports_nothing_to_do(monkeypatch, card, state, line):
+    wire_session(monkeypatch, ResponseAdapter(card))
+    as_json, human = run_both_modes(STATUS)
+    assert as_json.exit_code == 0, as_json.output
     payload = json.loads(as_json.stdout)
-    assert payload["management_key"] is None and not payload["finalize_allowed"]
-    assert "Management key (9B): not determined" in human.output
-    assert "Finalize: not allowed in state PivNotPresent" in human.output
+    assert payload["state"] == state
+    assert payload["security_domain"] is None and payload["management_key"] is None
+    assert not payload["load_config_allowed"] and not payload["finalize_allowed"]
+    assert line in human.output
+    assert "structure present" not in human.output
+    assert "A000000151000000" not in human.output
 
 
 @pytest.mark.parametrize(
