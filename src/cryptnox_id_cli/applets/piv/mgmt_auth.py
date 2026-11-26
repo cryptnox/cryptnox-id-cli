@@ -314,7 +314,7 @@ def authenticate(
         raise MgmtKeyError(
             f"{_PREFIX}this card has no AES key object in slot 9B (SW=6A86 for {names}). "
             "Slot 9B is laid down by pre-personalization; check the card with "
-            "'cryptnox-id factory piv preperso status'.",
+            "'cryptnox-id piv perso status'.",
             stage="missing",
             sw=found.sw,
         )
@@ -323,7 +323,7 @@ def authenticate(
         raise MgmtKeyError(
             f"{_PREFIX}slot 9B exists ({name}) but holds no key value (SW=6983), so this "
             "card cannot complete the generation over the plain path. Load a value once "
-            "with 'cryptnox-id factory piv preperso set-mgmt-key' (needs the admin "
+            "with 'cryptnox-id piv perso set-mgmt-key' (needs the admin "
             "channel), then re-run this command.",
             stage="empty",
             sw=found.sw,

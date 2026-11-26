@@ -16,7 +16,7 @@ import yaml
 from _cardfakes import run, wire_session
 
 from cryptnox_id_cli.applets.piv import profiles
-from cryptnox_id_cli.cli.commands import factory as factory_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
 from cryptnox_id_cli.transport.apdu import Response
 
 ATR = "3BD518FF81B1FE451FC38073C821106F"
@@ -30,7 +30,7 @@ GET_STATUS = "00CB3F00055C032F475300"
 STATUS_FIPS_OFF = "5318800107810100820100830100840100850100860100870100"
 STATUS_FIPS = "53188001078101008201008301008401008501008601008701FF"
 
-LOAD = ["factory", "piv", "preperso", "load-config"]
+LOAD = ["piv", "perso", "load-config"]
 
 
 def off_profile(**pin) -> dict:
@@ -177,7 +177,7 @@ def card(monkeypatch, mock_connection):
         wire_session(monkeypatch, mock_connection(ATR, exchanges, []))
         _FakeAdmin.opened = 0
         _FakeAdmin.sent = []
-        monkeypatch.setattr(factory_cmd, "PivAdmin", _FakeAdmin)
+        monkeypatch.setattr(preperso_cmd, "PivAdmin", _FakeAdmin)
 
     return wire
 
@@ -261,9 +261,9 @@ def test_a_profile_past_the_fips_mode_bounds_without_the_declaration_is_a_profil
 
 
 def test_inspect_defaults_lists_both_sets_of_bounds():
-    result = run(["--json", "factory", "piv", "preperso", "inspect-defaults"])
+    result = run(["--json", "piv", "perso", "inspect-defaults"])
     limits = json.loads(result.stdout)["pin_limits"]
     assert limits["min_length"] == 6 and limits["profile_retry_cap"] == 10
     assert limits["fips_mode_off"] == {"min_length": 4, "profile_retry_cap": 15}
-    text = " ".join(run(["factory", "piv", "preperso", "inspect-defaults"]).output.split())
+    text = " ".join(run(["piv", "perso", "inspect-defaults"]).output.split())
     assert "with FIPS mode off (profile key fips_mode: false): min length 4" in text

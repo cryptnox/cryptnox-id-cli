@@ -174,7 +174,21 @@ def test_apdu_transcript_redacts_general_authenticate_response(monkeypatch, tmp_
     assert "REDACTED" in result.output
 
 
-def test_the_old_piv_preperso_path_points_at_factory():
+def test_the_old_piv_preperso_path_points_at_piv_perso():
     result = run(["piv", "preperso", "load-config", "--profile", "ssh"])
     assert result.exit_code != 0
-    assert "now lives under `cryptnox-id factory piv preperso`" in " ".join(result.output.split())
+    assert "run `cryptnox-id piv perso load-config`" in " ".join(result.output.split())
+
+
+def test_the_old_factory_preperso_path_points_at_piv_perso():
+    result = run(["factory", "piv", "preperso", "finalize", "--default-keys"])
+    assert result.exit_code != 0
+    text = " ".join(result.output.split())
+    assert "run `cryptnox-id piv perso finalize`" in text
+    assert "MANUFACTURING MODE" not in text
+
+
+def test_an_unknown_old_preperso_command_points_at_the_help():
+    result = run(["factory", "piv", "preperso"])
+    assert result.exit_code != 0
+    assert "see `cryptnox-id piv perso --help`" in " ".join(result.output.split())

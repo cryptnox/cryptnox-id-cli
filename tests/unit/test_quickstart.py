@@ -52,7 +52,7 @@ BLANK = {"structure_present": False, "key_object_present": False}
 
 
 def test_structure_missing_without_flag_is_a_hard_error():
-    with pytest.raises(CryptnoxError, match="factory piv preperso load-config"):
+    with pytest.raises(CryptnoxError, match="piv perso load-config"):
         _plan_quickstart(_facts(**BLANK), OPTS)
 
 

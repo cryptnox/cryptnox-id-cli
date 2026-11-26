@@ -11,7 +11,7 @@ separate, isolated modules (see ``applets/``):
 * DESFire — MIFARE DESFire EV2/EV3 contactless function (needs a contactless reader).
 
 Covered: PC/SC transport and diagnostics (``readers``/``info``/``doctor``), full
-PIV personalization and factory pre-personalization over SCP02/SCP03, FIDO2
+PIV pre-personalization and personalization over SCP02/SCP03, FIDO2
 credential and policy management, DESFire application/file/key operations
 including EV3 Secure Dynamic Messaging, and read-only genuineness/attestation
 verification.

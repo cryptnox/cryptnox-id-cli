@@ -1,13 +1,11 @@
-Factory & provisioning
-======================
+Factory
+=======
 
-Manufacturing-stage material: pre-personalization lays down the PIV applet's
-*structure* — data containers, PIN/PUK verifiers, key objects — from a profile,
-over the SCP03 admin channel. Operators normally never need this; it matters
-for development/evaluation cards and for defining a deployment's card profile.
+Operations on the card as a whole: the card manager's lifecycle and the
+irreversible JCOP fuse. Setting up the PIV applet's structure is not part of
+this section; see :doc:`/piv/piv-personalization`.
 
 .. toctree::
    :maxdepth: 1
 
-   pre-personalization-profiles
    factory-commands

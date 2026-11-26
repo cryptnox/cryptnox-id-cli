@@ -9,7 +9,7 @@ import json
 
 import pytest
 from _cardfakes import ResponseAdapter, run_both_modes, wire_session
-from test_factory_preperso_commands import PivAdminCard
+from test_piv_preperso_commands import PivAdminCard
 
 from cryptnox_id_cli.transport.apdu import Response
 

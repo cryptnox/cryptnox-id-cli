@@ -14,10 +14,10 @@ Same role rule as the rest of this card: only a **SIGN-capable** slot can
 perform the handshake signature. On the ``cryptnox-default`` built-in
 profile that's slot **9C**; 9A is ``AUTHENTICATE``-only there and cannot be
 used. If the card was provisioned with the **ssh** or **ms-logon** profile
-instead, 9A is ``SIGN``-capable and works too — see :doc:`/factory/pre-personalization-profiles`.
+instead, 9A is ``SIGN``-capable and works too — see :doc:`/piv/pre-personalization-profiles`.
 ``cryptnox-default`` is one named profile among several, not necessarily
 what any given card has — check with
-``factory piv preperso export-config`` or whoever personalized the card.
+``piv perso export-config`` or whoever personalized the card.
 
 .. warning::
 
@@ -94,7 +94,7 @@ Three card-side requirements apply here specifically:
   creates one, so this only affects cards where ``oid: 7E`` was added by hand.
   Such a card is rejected outright by the minidriver: nothing enumerates and
   ``certutil -scinfo`` reports ``NTE_BAD_KEYSET``. See
-  :doc:`/factory/pre-personalization-profiles`.
+  :doc:`/piv/pre-personalization-profiles`.
 
 .. warning::
 
@@ -231,4 +231,4 @@ Next steps
 
 * :doc:`/piv/quick-start-a-working-piv-card` — provision the key and certificate this guide builds on
 * :doc:`/piv/ssh-public-key-authentication` — the same PKCS#11 path, for SSH instead of TLS
-* :doc:`/factory/pre-personalization-profiles` — the ``ssh``/``ms-logon`` profiles' 9A ``SIGN`` role
+* :doc:`/piv/pre-personalization-profiles` — the ``ssh``/``ms-logon`` profiles' 9A ``SIGN`` role

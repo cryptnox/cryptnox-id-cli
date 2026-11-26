@@ -64,7 +64,7 @@ Step 0 — pre-personalize with the ms-logon profile (once per card)
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso load-config --profile ms-logon --default-keys
+   $ cryptnox-id piv perso load-config --profile ms-logon --default-keys
    $ cryptnox-id piv quickstart --profile ms-logon --include-preperso \
         --slot 9A --algorithm RSA2048 --cert-mode csr --csr-out 9a.csr.pem --default-keys
 
@@ -81,7 +81,7 @@ same ``quickstart`` command; it skips the steps already done:
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+   $ cryptnox-id piv perso set-mgmt-key --default-keys
 
 Step 1 — get the certificate issued
 -----------------------------------
@@ -238,8 +238,8 @@ certificates:
 .. code-block:: console
 
    $ cryptnox-id remote reset --fips-off
-   $ cryptnox-id factory piv preperso load-config --profile ms-logon-nfc --default-keys
-   $ cryptnox-id factory piv preperso set-mgmt-key --default-keys
+   $ cryptnox-id piv perso load-config --profile ms-logon-nfc --default-keys
+   $ cryptnox-id piv perso set-mgmt-key --default-keys
    $ cryptnox-id piv quickstart --profile ms-logon-nfc \
         --slot 9A --algorithm RSA2048 --cert-mode csr --csr-out 9a.csr.pem --default-keys
 
@@ -247,7 +247,7 @@ certificates:
 applet as the build with FIPS mode off (:doc:`/remote/remote-guide`). The
 ``ms-logon-nfc`` profile is ``ms-logon`` with the PIN accepted over
 contactless, the 9A keys usable there after the PIN, and the 9A certificate
-and the CCC readable there (:doc:`/factory/pre-personalization-profiles`).
+and the CCC readable there (:doc:`/piv/pre-personalization-profiles`).
 ``set-mgmt-key`` gives the management key (``9B``) its value, which the
 on-card RSA generation of the last command needs
 (:doc:`/piv/piv-personalization`). Steps 1 to 3 are then the same, with the
@@ -301,5 +301,5 @@ Next steps
 ----------
 
 * :doc:`/piv/quick-start-a-working-piv-card` — the general PIV quick start and tooling interop
-* :doc:`/factory/pre-personalization-profiles` — what the ms-logon profile defines
+* :doc:`/piv/pre-personalization-profiles` — what the ms-logon profile defines
 * :doc:`/piv/piv-commands` — ``import-key``, ``import-p12``, ``quickstart``

@@ -5,8 +5,8 @@
 
 Read-only inspection (info/status/slots/certs/objects), PIN operations, the SCP03
 admin channel, and the ``perso`` namespace (PIN/PUK values, on-card key generation,
-CSR / certificates, data objects, validate/smoke-test). Factory pre-personalization
-lives under ``factory piv preperso``.
+CSR / certificates, data objects, validate/smoke-test). The pre-personalization
+commands (``cli/commands/piv_preperso.py``) are registered into ``perso`` as well.
 """
 
 from __future__ import annotations
@@ -1350,19 +1350,33 @@ def admin_authenticate(app: AppContext, default_keys: bool, key_version: int) ->
     context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
 )
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
-@click.pass_obj
-def preperso_redirect(app: AppContext, args: tuple[str, ...]) -> None:
-    """(moved) Pre-personalization is MANUFACTURING-ONLY; see `factory piv preperso`."""
-    raise CryptnoxError(
-        "Pre-personalization is a MANUFACTURING-ONLY operation and now lives under "
-        f"`{CLI_NAME} factory piv preperso`. Re-run it there."
-    )
+def preperso_redirect(args: tuple[str, ...]) -> None:
+    """(moved) Pre-personalization is under `piv perso`."""
+    raise preperso_moved(args)
+
+
+_PREPERSO_COMMANDS = (
+    "status",
+    "inspect-defaults",
+    "init-config",
+    "export-config",
+    "load-config",
+    "set-mgmt-key",
+    "finalize",
+)
+
+
+def preperso_moved(args: tuple[str, ...]) -> CryptnoxError:
+    """The error for the retired ``piv preperso`` and ``factory piv preperso`` spellings."""
+    name = next((a for a in args if a in _PREPERSO_COMMANDS), None)
+    hint = f"run `{CLI_NAME} piv perso {name}`" if name else f"see `{CLI_NAME} piv perso --help`"
+    return CryptnoxError(f"Pre-personalization commands are now under `piv perso`: {hint}.")
 
 
 # ------------------------------------------------------------------ perso --- #
 @command.group("perso")
 def perso() -> None:
-    """PIV personalization: set PIN/PUK values, generate keys, write objects."""
+    """PIV pre-personalization and personalization: structure, PIN/PUK, keys, objects."""
 
 
 @perso.command("generate-key")
@@ -3190,9 +3204,9 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
         if not opts.include_preperso:
             raise CryptnoxError(
                 "the PIV structure (containers, verifiers, key objects) is missing on "
-                f"this card. Lay it down first:\n  {CLI_NAME} factory piv preperso "
+                f"this card. Lay it down first:\n  {CLI_NAME} piv perso "
                 f"load-config --profile {opts.profile_name}\nor re-run quickstart with "
-                "--include-preperso (dev/eval cards)."
+                "--include-preperso."
             )
         steps.append(PlannedStep("preperso-load-config", True, "structure missing"))
         provided = opts.profile_provides_key_object
@@ -3212,7 +3226,7 @@ def _plan_quickstart(facts: CardFacts, opts: QuickstartOptions) -> list[PlannedS
                 f"this card has a PIV structure, but no key object for slot {slot} with this "
                 f"mechanism. Add one (permanent) with\n  {CLI_NAME} piv perso create-key-object "
                 f"--slot {slot} --algorithm {alg} --role {opts.new_object_roles}\nor re-run "
-                "quickstart with --include-preperso (dev/eval cards), which creates it with the "
+                "quickstart with --include-preperso, which creates it with the "
                 f"role from profile '{opts.profile_name}' and leaves the rest of the structure "
                 "alone."
             )
@@ -3418,8 +3432,8 @@ def _collect_quickstart_facts(session, ref: int, mech: int) -> tuple[CardFacts, 
 @click.option(
     "--include-preperso",
     is_flag=True,
-    help="If the PIV structure is missing, lay it down first (a MANUFACTURING-style "
-    "step for dev/eval cards).",
+    help="If the PIV structure is missing, lay it down first from --profile. Cards ship "
+    "without it; once laid down it can be extended but not changed.",
 )
 @click.option(
     "--profile",
@@ -3529,7 +3543,7 @@ def quickstart(
                 advice = (
                     " and no PIV structure yet. Use `--profile ms-logon --slot 9A "
                     "--include-preperso`, whose profile creates an RSA2048 object on 9A, or lay "
-                    "down a structure first with `factory piv preperso load-config`."
+                    "down a structure first with `piv perso load-config`."
                 )
             else:
                 advice = (
@@ -3652,8 +3666,8 @@ def quickstart(
             app.out.warn("quickstart has nothing left to run on this card.")
         if steps[0].run:
             app.out.warn(
-                "--include-preperso lays down the applet structure (PUT DATA ADMIN), "
-                "a manufacturing-style step intended for dev/eval cards."
+                f"--include-preperso lays down the applet structure from profile "
+                f"'{profile.name}'; it cannot be changed or removed afterwards."
             )
         if to_run and not app.yes and not click.confirm("Proceed?", default=False):
             raise click.Abort()

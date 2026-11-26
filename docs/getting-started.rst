@@ -74,9 +74,9 @@ These sit before the command and apply to it:
      - Append a redacted APDU transcript to a file.
    * - ``--dry-run``
      - Write nothing to the card. Commands that can plan (``piv quickstart``,
-       ``apdu``, ``factory``, the key imports) show the intended actions; every
-       other command refuses to run under the flag rather than executing for
-       real (fail-closed).
+       ``apdu``, ``load-config``, ``finalize``, ``factory card fuse``, the key
+       imports) show the intended actions; every other command refuses to run
+       under the flag rather than executing for real (fail-closed).
    * - ``--yes``
      - Skip destructive confirmation prompts.
    * - ``--timeout <seconds>``

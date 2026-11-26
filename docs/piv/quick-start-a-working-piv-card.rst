@@ -1,7 +1,7 @@
 Quick start: a working PIV card
 ===============================
 
-This guide takes a blank (pre-personalized) Cryptnox card to a PIV credential
+This guide takes a Cryptnox card as shipped to a PIV credential
 that standard tooling — ``yubico-piv-tool``, OpenSC/PKCS#11 — can read, verify
 and sign with. About ten minutes, one command if you let it.
 
@@ -35,20 +35,23 @@ The one-command path
 
 .. code-block:: console
 
-   $ cryptnox-id piv quickstart --default-keys --dry-run   # show the plan first
-   $ cryptnox-id piv quickstart --default-keys
+   $ cryptnox-id piv quickstart --default-keys --include-preperso --dry-run   # show the plan first
+   $ cryptnox-id piv quickstart --default-keys --include-preperso
 
 ``piv quickstart`` detects the card state, then runs whatever is still needed
-of: PIN -> PUK -> key in slot 9C (ECC P-256, generated **on-card** — the private
+of: PIV structure -> PIN -> PUK -> key in slot 9C (ECC P-256, generated **on-card** — the private
 key never exists outside the card) -> self-signed certificate -> CHUID/CCC ->
 smoke-test. Steps already done are skipped, so re-runs converge. New PIN/PUK
 values come from masked prompts or ``CRYPTNOX_PIV_NEW_PIN`` /
 ``CRYPTNOX_PIV_NEW_PUK``.
 
-On a factory-blank card that has never had its PIV structure laid down, add
-``--include-preperso`` (a manufacturing-style step, intended for development
-cards), and for a CA-issued certificate instead of a self-signed one use
-``--cert-mode csr --csr-out 9c.csr.pem``.
+Cards ship with the PIV applet installed and no structure.
+``--include-preperso`` lays it down from ``--profile`` (default
+``cryptnox-default``) and is skipped on a card that already has one. The
+structure is permanent, so choose the profile for the card's use first: for
+Windows logon use ``--profile ms-logon``, see
+:doc:`/piv/pre-personalization-profiles`. For a CA-issued certificate instead
+of a self-signed one use ``--cert-mode csr --csr-out 9c.csr.pem``.
 
 The steps, by hand
 ------------------
@@ -56,13 +59,14 @@ The steps, by hand
 The same sequence as individual commands — useful to understand what quickstart
 does, or to vary it.
 
-**Step 0 — lay down the PIV structure (once per card).** If ``piv status``
-reports a pre-personalized applet with no containers/verifiers:
+**Step 0 — lay down the PIV structure (once per card).** Cards ship
+without it; ``piv inventory`` lists no key objects, verifiers or containers
+until this step has run:
 
 .. code-block:: console
 
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --dry-run
-   $ cryptnox-id factory piv preperso load-config --profile cryptnox-default --default-keys
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --dry-run
+   $ cryptnox-id piv perso load-config --profile cryptnox-default --default-keys
 
 **Step 1 — set the PIN and PUK** (values prompted, never echoed):
 
@@ -257,5 +261,5 @@ Next steps
 ----------
 
 * :doc:`/piv/piv-personalization` — the full lifecycle, key import, finalize
-* :doc:`/factory/pre-personalization-profiles` — customizing the pre-personalization profile
+* :doc:`/piv/pre-personalization-profiles` — customizing the pre-personalization profile
 * :doc:`/piv/piv-commands` — every ``piv`` command

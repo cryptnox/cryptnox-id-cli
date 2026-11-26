@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""`factory piv preperso set-mgmt-key`: what it writes, and what it refuses to write.
+"""`piv perso set-mgmt-key`: what it writes, and what it refuses to write.
 
 Loading a card's administration key changes who can administer the card, so the
 command's value is mostly in its refusals: it never creates a missing key object, and
@@ -19,7 +19,7 @@ import pytest
 from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.piv import mgmt_auth as ma
-from cryptnox_id_cli.cli.commands import factory as factory_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.transport.apdu import Response
@@ -85,7 +85,7 @@ def _run(monkeypatch, session, adm, args, *, env_key: str | None = KEY256.hex())
         yield session
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(factory_cmd, "PivAdmin", lambda s: adm)
+    monkeypatch.setattr(preperso_cmd, "PivAdmin", lambda s: adm)
     for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):
         monkeypatch.setenv(var, "40" * 16)
     monkeypatch.delenv("CARD_PIV_MGMT_KEY", raising=False)
@@ -96,7 +96,7 @@ def _run(monkeypatch, session, adm, args, *, env_key: str | None = KEY256.hex())
     return CliRunner().invoke(root, args)
 
 
-BASE = ["--json", "factory", "piv", "preperso", "set-mgmt-key"]
+BASE = ["--json", "piv", "perso", "set-mgmt-key"]
 
 
 def test_an_empty_object_is_loaded_with_one_write(monkeypatch):
@@ -226,17 +226,19 @@ def test_status_reports_whether_9b_holds_a_value(monkeypatch):
         yield session
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(factory_cmd, "PivAdmin", lambda s: adm)
-    monkeypatch.setattr(factory_cmd, "describe_security_domain", lambda s: None)
+    monkeypatch.setattr(preperso_cmd, "PivAdmin", lambda s: adm)
+    monkeypatch.setattr(preperso_cmd, "describe_security_domain", lambda s: None)
 
     class _State:
-        piv = factory_cmd.PivState.PRE_PERSONALIZED
+        piv = preperso_cmd.PivState.PRE_PERSONALIZED
         piv_secured = None
 
     monkeypatch.setattr(
-        factory_cmd, "StateDetector", lambda *a, **kw: type("D", (), {"detect": lambda s: _State})()
+        preperso_cmd,
+        "StateDetector",
+        lambda *a, **kw: type("D", (), {"detect": lambda s: _State})(),
     )
-    result = CliRunner().invoke(root, ["--json", "factory", "piv", "preperso", "status"])
+    result = CliRunner().invoke(root, ["--json", "piv", "perso", "status"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["management_key"] == {
         "present": True,

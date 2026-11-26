@@ -21,6 +21,7 @@ from cryptnox_id_cli.cli.commands import genuine as genuine_cmd
 from cryptnox_id_cli.cli.commands import info as info_cmd
 from cryptnox_id_cli.cli.commands import mifare as mifare_cmd
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as piv_preperso_cmd
 from cryptnox_id_cli.cli.commands import readers as readers_cmd
 from cryptnox_id_cli.cli.commands import remote as remote_cmd
 from cryptnox_id_cli.cli.commands import report as report_cmd
@@ -85,7 +86,7 @@ def main(
 ) -> None:
     """Manage the Cryptnox multi-applet smartcard (PIV / FIDO2 / DESFire).
 
-    PIV management, factory pre-personalization and personalization run over a
+    PIV management, pre-personalization and personalization run over a
     contact or contactless reader; MIFARE DESFire needs a contactless reader; FIDO2
     needs an Administrator terminal on Windows. Cryptnox/ACS readers are picked by default.
     """
@@ -108,6 +109,8 @@ main.add_command(info_cmd.command)
 main.add_command(doctor_cmd.command)
 main.add_command(apdu_cmd.command)
 main.add_command(piv_cmd.command)
+for _cmd in piv_preperso_cmd.COMMANDS:
+    piv_cmd.perso.add_command(_cmd)
 main.add_command(mifare_cmd.command)
 main.add_command(fido_cmd.command)
 main.add_command(genuine_cmd.command)

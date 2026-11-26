@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Cryptnox SA
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-Commercial
 
-"""``factory piv preperso status``, ``init-config``, ``export-config`` and the load-config
-dry run, against the SCP03 double with nothing in ``factory.py`` patched."""
+"""``piv perso status``, ``init-config``, ``export-config`` and the load-config
+dry run, against the SCP03 double with nothing in ``piv_preperso.py`` patched."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import json
 import pytest
 import yaml
 from _cardfakes import ResponseAdapter, run, run_both_modes, wire_session
-from test_factory_preperso_commands import PivAdminCard
+from test_piv_preperso_commands import PivAdminCard
 
 from cryptnox_id_cli.applets.piv import profiles
 from cryptnox_id_cli.applets.piv.ssd import ISD_AID
@@ -19,7 +19,7 @@ from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import TransportError
 
-STATUS = ["factory", "piv", "preperso", "status"]
+STATUS = ["piv", "perso", "status"]
 E0_KVN1_AES = bytes.fromhex("E012C00401018810C00402018810C00403018810")
 
 
@@ -125,9 +125,7 @@ def test_status_describes_the_admin_secure_channel(monkeypatch, kw, line, scp):
 
 def test_init_config_writes_a_loadable_profile(tmp_path):
     out = tmp_path / "profile.yaml"
-    as_json, human = run_both_modes(
-        ["factory", "piv", "preperso", "init-config", "--out", str(out)]
-    )
+    as_json, human = run_both_modes(["piv", "perso", "init-config", "--out", str(out)])
     assert json.loads(as_json.stdout) == {"profile": "cryptnox-default", "out": str(out)}
     loaded = profiles.from_yaml(out.read_text(encoding="utf-8"))
     loaded.ensure_valid()
@@ -138,7 +136,7 @@ def test_init_config_writes_a_loadable_profile(tmp_path):
 def test_export_config_writes_an_observed_snapshot(monkeypatch, tmp_path):
     wire_session(monkeypatch, ResponseAdapter(StatusCard()))
     out = tmp_path / "snapshot.yaml"
-    args = ["factory", "piv", "preperso", "export-config", "--out", str(out)]
+    args = ["piv", "perso", "export-config", "--out", str(out)]
     as_json, human = run_both_modes(args)
     assert as_json.exit_code == 0, as_json.output
     snapshot = yaml.safe_load(out.read_text(encoding="utf-8"))
@@ -154,7 +152,7 @@ def test_export_config_writes_an_observed_snapshot(monkeypatch, tmp_path):
     ids=["neither", "both"],
 )
 def test_load_config_wants_exactly_one_source(args):
-    result = run(["factory", "piv", "preperso", "load-config", *args])
+    result = run(["piv", "perso", "load-config", *args])
     assert result.exit_code == 2
     assert "specify exactly one of --file or --profile" in result.output
 
@@ -165,7 +163,7 @@ def test_load_config_dry_run_previews_without_a_reader(monkeypatch, profile):
         raise TransportError("no reader found")
 
     monkeypatch.setattr(AppContext, "open_session", no_reader)
-    args = ["--json", "factory", "piv", "preperso", "load-config", "--dry-run"]
+    args = ["--json", "piv", "perso", "load-config", "--dry-run"]
     result = run([*args, "--profile", profile])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
@@ -176,7 +174,7 @@ def test_load_config_dry_run_previews_without_a_reader(monkeypatch, profile):
 def test_load_config_dry_run_previews_when_the_piv_applet_does_not_answer(monkeypatch):
     conn = ResponseAdapter(StatusCard(present=False))
     wire_session(monkeypatch, conn)
-    args = ["--json", "factory", "piv", "preperso", "load-config", "--dry-run"]
+    args = ["--json", "piv", "perso", "load-config", "--dry-run"]
     result = run([*args, "--profile", "ms-logon-nfc"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["dry_run"] is True

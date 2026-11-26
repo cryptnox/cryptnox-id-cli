@@ -21,8 +21,8 @@ from _cardfakes import run, wire_session
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles
-from cryptnox_id_cli.cli.commands import factory as factory_cmd
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.apdu import Response
 
@@ -41,7 +41,7 @@ GET_STATUS = "00CB3F00055C032F475300"
 STATUS_FIPS_OFF = "5318800107810100820100830100840100850100860100870100"
 STATUS_FIPS = "53188001078101008201008301008401008501008601008701FF"
 
-LOAD = ["factory", "piv", "preperso", "load-config"]
+LOAD = ["piv", "perso", "load-config"]
 
 
 def ops(name: str) -> dict[str, str]:
@@ -214,7 +214,7 @@ def card(monkeypatch, mock_connection):
         exchanges = {SELECT_PIV: f"{APT}|9000", GET_STATUS: f"{status}|9000"}
         wire_session(monkeypatch, mock_connection(ATR, exchanges, []))
         _FakeAdmin.sent = []
-        monkeypatch.setattr(factory_cmd, "PivAdmin", _FakeAdmin)
+        monkeypatch.setattr(preperso_cmd, "PivAdmin", _FakeAdmin)
 
     return wire
 
