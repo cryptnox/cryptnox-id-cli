@@ -27,7 +27,7 @@ reader_contactless_url = "https://shop.cryptnox.com/product/cryptnox-contactless
 project = product_name
 author = "Cryptnox"
 copyright = "2026, Cryptnox SA"  # noqa: A001 — footer format matches docs.cryptnox.com/cryptnox-cli
-release = "1.2.0"  # keep in sync with the CLI release (see internal release checklist)
+release = "1.3.0"  # keep in sync with the CLI release (see internal release checklist)
 version = release
 
 # -- Versioned docs, same scheme as docs.cryptnox.com/cryptnox-hardware-wallet:
@@ -36,7 +36,7 @@ version = release
 #    The sidebar dropdown (_templates/layout.html) is rendered from this list —
 #    append the new slug when publishing a new minor version, oldest first.
 docs_version = "v" + ".".join(release.split(".")[:2])  # e.g. "v0.1"
-docs_versions = ["v1.0", "v1.1"]
+docs_versions = ["v1.0", "v1.1", "v1.2"]
 if docs_version not in docs_versions:  # the version being built is always listed
     docs_versions.append(docs_version)
 
