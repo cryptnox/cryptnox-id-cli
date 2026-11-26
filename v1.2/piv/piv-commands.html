@@ -27,7 +27,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Quick start: a passkey on the card" href="../fido2/quick-start-a-passkey-on-the-card.html" />
-    <link rel="prev" title="PIV personalization" href="piv-personalization.html" />
+    <link rel="prev" title="Pre-personalization profiles" href="pre-personalization-profiles.html" />
  
 <!-- Open Graph / social preview -->
 <meta property="og:type" content="website" />
@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -91,6 +91,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Commands</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#inspection">Inspection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#pin">PIN</a></li>
@@ -98,6 +99,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#admin-channel">Admin channel</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#certificates-and-objects">Certificates and objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#attestation">Attestation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pre-personalization-piv-perso">Pre-personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#personalization-piv-perso">Personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
 </ul>
@@ -298,6 +300,59 @@ whatever ships bundled (duplicates are collapsed), so it extends the trust store
 than replacing it. <code class="docutils literal notranslate"><span class="pre">genuine</span> <span class="pre">verify</span> <span class="pre">--anchors</span> <span class="pre">DIR</span></code> accepts a directory the same way for
 that command alone.</p>
 </section>
+<section id="pre-personalization-piv-perso">
+<span id="piv-preperso-commands"></span><h2>Pre-personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)<a class="headerlink" href="#pre-personalization-piv-perso" title="Link to this heading"></a></h2>
+<p>Cards ship with the PIV applet installed and no structure. Pre-personalization
+lays down that <em>structure</em> (data containers, PIN/PUK verifiers, key objects)
+from a profile, over the admin channel, once per card and before the
+personalization commands below. <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>
+describes the profiles.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv perso status            lifecycle + structure overview
+piv perso inspect-defaults  show the built-in profiles
+piv perso init-config       write a built-in profile to editable YAML
+piv perso export-config     read-only snapshot of the card's structure
+piv perso load-config       apply a profile to the card (supports --dry-run)
+piv perso set-mgmt-key      load the PIV management key (9B) value
+piv perso finalize          IRREVERSIBLY lock the applet structure
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">status</span></code> never authenticates: the finalize (SECURED) state comes from the
+applet’s own status object, and the admin security domain’s SCP version and key
+versions from its key information template. On this chip an INITIALIZE UPDATE
+that is not followed by a successful EXTERNAL AUTHENTICATE counts as a failed
+authentication, so a read-only status must not send one. <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> lists
+the structure itself.</p>
+<p><code class="docutils literal notranslate"><span class="pre">load-config</span></code> sends one structural operation per SCP03 session (a platform
+requirement of this card), so a profile load is a sequence of short commands;
+it stops at the first rejection and reports exactly what was applied.</p>
+<p>The PIV <strong>management key</strong> (key reference <code class="docutils literal notranslate"><span class="pre">9B</span></code>) is the applet’s own
+administration key. Profiles create its key object but never carry a value,
+because profiles are shareable files; <code class="docutils literal notranslate"><span class="pre">set-mgmt-key</span></code> writes the value over the
+admin channel from <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> or <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code>
+(<code class="docutils literal notranslate"><span class="pre">CARD_PIV_MGMT_KEY</span></code> is accepted as an alias). With <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> the
+published value is written and the variable is not read. It refuses to create a
+missing <code class="docutils literal notranslate"><span class="pre">9B</span></code> object and refuses to overwrite a value that is already set
+unless <code class="docutils literal notranslate"><span class="pre">--replace</span></code> is given; <code class="docutils literal notranslate"><span class="pre">status</span></code> shows whether <code class="docutils literal notranslate"><span class="pre">9B</span></code> holds a value.</p>
+<p>Built-in profiles: <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> (the applet’s own reference structure),
+<code class="docutils literal notranslate"><span class="pre">developer</span></code> / <code class="docutils literal notranslate"><span class="pre">npivp-lab</span></code> (the same structure, labelled for non-production
+use), <code class="docutils literal notranslate"><span class="pre">ssh</span></code> (9A gets SIGN added, nothing else changes — see
+<a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>), and <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> (Windows smart-card logon /
+Remote Desktop: 9A keys are SIGN-capable and an importable RSA-2048 object
+coexists on 9A — see the
+<a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>), and <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> (the same
+for a card presented over NFC: the PIN is accepted over contactless, which only
+the applet build with FIPS mode off allows).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">finalize</span></code> is <strong>irreversible</strong> — it locks the applet’s structure for the
+card’s lifetime. A full reset of the PIV applet runs through the Cryptnox
+remote PIV service (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>). It is gated by a
+typed confirmation token when run interactively, or the
+<code class="docutils literal notranslate"><span class="pre">--i-understand-this-is-irreversible</span></code> flag when run non-interactively —
+either satisfies the gate. Never run it on a card you are still developing
+against.</p>
+</div>
+</section>
 <section id="personalization-piv-perso">
 <h2>Personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)<a class="headerlink" href="#personalization-piv-perso" title="Link to this heading"></a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>piv perso set-pin                 set the initial PIN (over SCP03)
@@ -353,7 +408,7 @@ and finishes the generation over plain APDUs, authenticating the PIV management
 key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) first. The management key is contact-only and its value comes from
 <code class="docutils literal notranslate"><span class="pre">--default-keys</span></code> (development cards) or <code class="docutils literal notranslate"><span class="pre">PIV_MGMT_KEY</span></code>; a card whose <code class="docutils literal notranslate"><span class="pre">9B</span></code>
 object holds no value is reported with the command that loads one
-(<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">set-mgmt-key</span></code>). ECC is unaffected, and cards that
+(<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">set-mgmt-key</span></code>). ECC is unaffected, and cards that
 return the full template take the admin channel as before.</p></li>
 <li><p>When that path is taken, the key pair from the first attempt is replaced by the
 one generated over the plain path, whose public half is the one reported; RSA
@@ -396,7 +451,7 @@ automatically.</p></li>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="piv-personalization.html" class="btn btn-neutral float-left" title="PIV personalization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pre-personalization-profiles.html" class="btn btn-neutral float-left" title="Pre-personalization profiles" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../fido2/quick-start-a-passkey-on-the-card.html" class="btn btn-neutral float-right" title="Quick start: a passkey on the card" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

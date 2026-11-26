@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -101,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -205,7 +206,7 @@ no-extra-software path this guide describes.</p>
 </section>
 <section id="step-0-pre-personalize-with-the-ms-logon-profile-once-per-card">
 <h2>Step 0 — pre-personalize with the ms-logon profile (once per card)<a class="headerlink" href="#step-0-pre-personalize-with-the-ms-logon-profile-once-per-card" title="Link to this heading"></a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--default-keys
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--include-preperso<span class="w"> </span><span class="se">\</span>
 <span class="w">     </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9a.csr.pem<span class="w"> </span>--default-keys
 </pre></div>
@@ -219,7 +220,7 @@ and a card fresh from pre-personalization holds no value for it
 (<a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a>). <code class="docutils literal notranslate"><span class="pre">quickstart</span></code> then stops at
 <code class="docutils literal notranslate"><span class="pre">generate-key</span></code> and names the command that loads one. Run it, then repeat the
 same <code class="docutils literal notranslate"><span class="pre">quickstart</span></code> command; it skips the steps already done:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>set-mgmt-key<span class="w"> </span>--default-keys
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-mgmt-key<span class="w"> </span>--default-keys
 </pre></div>
 </div>
 </section>
@@ -374,8 +375,8 @@ when the PIN was created for it. Four commands set a card up that way; all run
 on a <strong>contact</strong> reader, and the first erases the card’s PIV keys and
 certificates:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>remote<span class="w"> </span>reset<span class="w"> </span>--fips-off
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon-nfc<span class="w"> </span>--default-keys
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>set-mgmt-key<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon-nfc<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-mgmt-key<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--profile<span class="w"> </span>ms-logon-nfc<span class="w"> </span><span class="se">\</span>
 <span class="w">     </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>RSA2048<span class="w"> </span>--cert-mode<span class="w"> </span>csr<span class="w"> </span>--csr-out<span class="w"> </span>9a.csr.pem<span class="w"> </span>--default-keys
 </pre></div>
@@ -384,7 +385,7 @@ certificates:</p>
 applet as the build with FIPS mode off (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>). The
 <code class="docutils literal notranslate"><span class="pre">ms-logon-nfc</span></code> profile is <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> with the PIN accepted over
 contactless, the 9A keys usable there after the PIN, and the 9A certificate
-and the CCC readable there (<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>).
+and the CCC readable there (<a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>).
 <code class="docutils literal notranslate"><span class="pre">set-mgmt-key</span></code> gives the management key (<code class="docutils literal notranslate"><span class="pre">9B</span></code>) its value, which the
 on-card RSA generation of the last command needs
 (<a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a>). Steps 1 to 3 are then the same, with the
@@ -437,7 +438,7 @@ recognition are verifiable standalone with <code class="docutils literal notrans
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the general PIV quick start and tooling interop</p></li>
-<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — what the ms-logon profile defines</p></li>
+<li><p><a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — what the ms-logon profile defines</p></li>
 <li><p><a class="reference internal" href="piv-commands.html"><span class="doc">PIV commands</span></a> — <code class="docutils literal notranslate"><span class="pre">import-key</span></code>, <code class="docutils literal notranslate"><span class="pre">import-p12</span></code>, <code class="docutils literal notranslate"><span class="pre">quickstart</span></code></p></li>
 </ul>
 </section>

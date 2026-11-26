@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -100,6 +100,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -162,10 +163,10 @@ after a PIN prompt — the key never leaves the card, same as
 perform the handshake signature. On the <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> built-in
 profile that’s slot <strong>9C</strong>; 9A is <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code>-only there and cannot be
 used. If the card was provisioned with the <strong>ssh</strong> or <strong>ms-logon</strong> profile
-instead, 9A is <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>-capable and works too — see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.
+instead, 9A is <code class="docutils literal notranslate"><span class="pre">SIGN</span></code>-capable and works too — see <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.
 <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is one named profile among several, not necessarily
 what any given card has — check with
-<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code> or whoever personalized the card.</p>
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">export-config</span></code> or whoever personalized the card.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Whichever slot you use, <strong>it must be reached over the contact
@@ -240,7 +241,7 @@ default warns on that combination). See <a class="reference internal" href="wind
 creates one, so this only affects cards where <code class="docutils literal notranslate"><span class="pre">oid:</span> <span class="pre">7E</span></code> was added by hand.
 Such a card is rejected outright by the minidriver: nothing enumerates and
 <code class="docutils literal notranslate"><span class="pre">certutil</span> <span class="pre">-scinfo</span></code> reports <code class="docutils literal notranslate"><span class="pre">NTE_BAD_KEYSET</span></code>. See
-<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p></li>
+<a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>.</p></li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -376,7 +377,7 @@ contact reader.</p></li>
 <ul class="simple">
 <li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
 <li><p><a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a> — the same PKCS#11 path, for SSH instead of TLS</p></li>
-<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — the <code class="docutils literal notranslate"><span class="pre">ssh</span></code>/<code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profiles’ 9A <code class="docutils literal notranslate"><span class="pre">SIGN</span></code> role</p></li>
+<li><p><a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — the <code class="docutils literal notranslate"><span class="pre">ssh</span></code>/<code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profiles’ 9A <code class="docutils literal notranslate"><span class="pre">SIGN</span></code> role</p></li>
 </ul>
 </section>
 </section>

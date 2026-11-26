@@ -14,7 +14,7 @@
 
   
     <link rel="shortcut icon" href="../_static/favicon.png"/>
-    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/factory/pre-personalization-profiles.html" />
+    <link rel="canonical" href="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/piv/pre-personalization-profiles.html" />
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=84a24d03"></script>
@@ -26,12 +26,12 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Factory commands" href="factory-commands.html" />
-    <link rel="prev" title="Factory &amp; provisioning" href="index.html" />
+    <link rel="next" title="PIV commands" href="piv-commands.html" />
+    <link rel="prev" title="PIV personalization" href="piv-personalization.html" />
  
 <!-- Open Graph / social preview -->
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/factory/pre-personalization-profiles.html" />
+<meta property="og:url" content="https://docs.cryptnox.com/cryptnox-id-cli/v1.2/piv/pre-personalization-profiles.html" />
 <meta property="og:title" content="Pre-personalization profiles | Cryptnox Docs" />
 <meta property="og:description" content="Cryptnox ID CLI — command reference for Cryptnox PIV and identity smart cards: provisioning, certificates, PIN management and card verification." />
 <meta property="og:site_name" content="Cryptnox Docs" />
@@ -70,7 +70,7 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">General</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
@@ -79,30 +79,27 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Factory &amp; provisioning</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Pre-personalization profiles</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#built-in-profiles">Built-in profiles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#inspecting-profiles">Inspecting profiles</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#profile-yaml">Profile YAML</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#applying-a-profile">Applying a profile</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#next-steps">Next steps</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="factory-commands.html">Factory commands</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html">Quick start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-public-key-authentication.html">SSH public-key authentication</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/ssh-user-certificates.html">SSH user certificates</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/tls-client-authentication.html">TLS client authentication</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/macos-smart-card-login.html">macOS smart-card login</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/piv-personalization.html">PIV personalization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../piv/piv-commands.html">Commands</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick-start-a-working-piv-card.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="windows-logon-and-remote-desktop.html">Windows logon &amp; Remote Desktop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-public-key-authentication.html">SSH public-key authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh-user-certificates.html">SSH user certificates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pre-personalization profiles</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#built-in-profiles">Built-in profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inspecting-profiles">Inspecting profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#profile-yaml">Profile YAML</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#applying-a-profile">Applying a profile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
 <ul>
@@ -142,7 +139,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Factory &amp; provisioning</a></li>
       <li class="breadcrumb-item active">Pre-personalization profiles</li>
       <li class="wy-breadcrumbs-aside">
       </li>
@@ -154,12 +150,12 @@
              
   <section id="pre-personalization-profiles">
 <h1>Pre-personalization profiles<a class="headerlink" href="#pre-personalization-profiles" title="Link to this heading"></a></h1>
-<p>A <strong>profile</strong> describes the PIV applet structure to lay down during factory
+<p>A <strong>profile</strong> describes the PIV applet structure to lay down during
 pre-personalization: the data containers, the PIN/PUK verifiers and their
 policy, and the asymmetric key slots with their access rules and mechanisms.
-<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">load-config</span></code> turns a profile into a sequence of
+<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">load-config</span></code> turns a profile into a sequence of
 OpenFIPS201 <code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">DATA</span> <span class="pre">ADMIN</span></code> commands over SCP03. See
-<a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a> for where this fits in the full lifecycle.</p>
+<a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a> for where this fits in the full lifecycle.</p>
 <section id="built-in-profiles">
 <h2>Built-in profiles<a class="headerlink" href="#built-in-profiles" title="Link to this heading"></a></h2>
 <dl>
@@ -176,7 +172,7 @@ differs (<code class="docutils literal notranslate"><span class="pre">developer-
 should never be mistaken for production units.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">ssh</span></code></dt><dd><p>SSH auth (raw public key or SSH user certificates) via PKCS#11
-(<code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> / OpenSC) — see <a class="reference internal" href="../piv/ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>. Only change
+(<code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code> / OpenSC) — see <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>. Only change
 from <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>: the 9A (PIV Authentication) key gets
 <code class="docutils literal notranslate"><span class="pre">SIGN</span></code> added to its role (<code class="docutils literal notranslate"><span class="pre">SIGN+AUTHENTICATE</span></code>). 9C cannot be used for
 this regardless of role: OpenSC’s PIV driver requires re-authentication
@@ -197,12 +193,12 @@ above instead if you only need SSH and don’t need the extra RSA object.</p>
 <p><strong>That RSA object is why this profile works on Windows.</strong> The Windows inbox
 PIV minidriver enumerates RSA keys only; given an EC key it builds no key
 container at all, so the card looks empty to Windows (see
-<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>). The object can be filled either way:</p>
+<a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>). The object can be filled either way:</p>
 <ul class="simple">
 <li><p><strong>generated on-card</strong> — <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span> <span class="pre">--profile</span> <span class="pre">ms-logon</span> <span class="pre">--slot</span> <span class="pre">9A</span>
 <span class="pre">--algorithm</span> <span class="pre">RSA2048</span></code> (the private key never leaves the card);</p></li>
 <li><p><strong>imported</strong>, for an AD-issued credential (CSR -&gt; CA -&gt; import, or PKCS#12
-import via <a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a>).</p></li>
+import via <a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a>).</p></li>
 </ul>
 <p>The object carries the <code class="docutils literal notranslate"><span class="pre">IMPORTABLE</span></code> attribute so the second path is
 available; that attribute permits import, it does not prevent on-card
@@ -225,14 +221,14 @@ Install the other build first with <code class="docutils literal notranslate"><s
 (<a class="reference internal" href="../remote/remote-guide.html"><span class="doc">Remote service guide</span></a>), then load the profile over a <strong>contact</strong>
 reader. A card set up this way is not a FIPS-validated configuration, and
 its PIN crosses the radio link unprotected: see
-<a class="reference internal" href="../piv/windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>.</p>
+<a class="reference internal" href="windows-logon-and-remote-desktop.html"><span class="doc">Windows logon &amp; Remote Desktop</span></a>.</p>
 </dd>
 </dl>
 </section>
 <section id="inspecting-profiles">
 <h2>Inspecting profiles<a class="headerlink" href="#inspecting-profiles" title="Link to this heading"></a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>inspect-defaults
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>init-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--out<span class="w"> </span>profile.yaml
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>inspect-defaults
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>init-config<span class="w"> </span>--profile<span class="w"> </span>ms-logon<span class="w"> </span>--out<span class="w"> </span>profile.yaml
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">inspect-defaults</span></code> shows the applet’s supported algorithms, key slots, and
@@ -391,13 +387,13 @@ applet takes up to 127 there, but it reports at most 15 back);</p></li>
 <section id="applying-a-profile">
 <h2>Applying a profile<a class="headerlink" href="#applying-a-profile" title="Link to this heading"></a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>preview<span class="w"> </span>the<span class="w"> </span>exact<span class="w"> </span>APDUs<span class="w"> </span>without<span class="w"> </span>touching<span class="w"> </span>the<span class="w"> </span>card
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
 
 <span class="gp"># </span>apply<span class="w"> </span><span class="o">(</span>development/evaluation<span class="w"> </span>cards<span class="o">)</span>
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
 
 <span class="gp"># </span>or<span class="w"> </span>apply<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>profile<span class="w"> </span>file
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--file<span class="w"> </span>profile.yaml<span class="w"> </span>--default-keys
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--file<span class="w"> </span>profile.yaml<span class="w"> </span>--default-keys
 </pre></div>
 </div>
 <p>Each builder command is sent as a <strong>single short APDU in its own SCP03
@@ -407,9 +403,9 @@ session) — the CLI handles session setup/teardown per command for you.</p>
 <section id="next-steps">
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="../piv/piv-personalization.html"><span class="doc">PIV personalization</span></a> — the full lifecycle this structure feeds into</p></li>
-<li><p><a class="reference internal" href="../piv/quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the condensed, one-command path</p></li>
-<li><p><a class="reference internal" href="factory-commands.html"><span class="doc">Factory commands</span></a> — the full <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span></code> command reference</p></li>
+<li><p><a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a> — the full lifecycle this structure feeds into</p></li>
+<li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — the condensed, one-command path</p></li>
+<li><p><a class="reference internal" href="piv-commands.html#piv-preperso-commands"><span class="std std-ref">Pre-personalization (piv perso)</span></a> — the pre-personalization command reference</p></li>
 </ul>
 </section>
 </section>
@@ -418,8 +414,8 @@ session) — the CLI handles session setup/teardown per command for you.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="Factory &amp; provisioning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="factory-commands.html" class="btn btn-neutral float-right" title="Factory commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="piv-personalization.html" class="btn btn-neutral float-left" title="PIV personalization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="piv-commands.html" class="btn btn-neutral float-right" title="PIV commands" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
@@ -448,9 +444,9 @@ session) — the CLI handles session setup/teardown per command for you.</p>
       <span class="version-caret">&#9660;</span>
     </button>
     <ul class="version-dropdown-list" id="version-dropdown-list" role="listbox">
-      <li role="option" class="version-option" data-url="../../v1.0/factory/pre-personalization-profiles.html">CLI version v1.0</li>
-      <li role="option" class="version-option" data-url="../../v1.1/factory/pre-personalization-profiles.html">CLI version v1.1</li>
-      <li role="option" class="version-option selected" data-url="../factory/pre-personalization-profiles.html">CLI version v1.2</li>
+      <li role="option" class="version-option" data-url="../../v1.0/piv/pre-personalization-profiles.html">CLI version v1.0</li>
+      <li role="option" class="version-option" data-url="../../v1.1/piv/pre-personalization-profiles.html">CLI version v1.1</li>
+      <li role="option" class="version-option selected" data-url="../piv/pre-personalization-profiles.html">CLI version v1.2</li>
     </ul>
   </div>
 </div>

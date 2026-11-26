@@ -78,7 +78,7 @@
 <li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -90,6 +90,7 @@
 <li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -203,8 +204,7 @@ driven by one tool: <code class="docutils literal notranslate"><span class="pre"
 <li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#getting-a-shareable-diagnostic">Getting a shareable diagnostic</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="factory/pre-personalization-profiles.html">Pre-personalization profiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="factory/factory-commands.html">Factory commands</a></li>
 </ul>
 </li>
@@ -283,16 +283,24 @@ driven by one tool: <code class="docutils literal notranslate"><span class="pre"
 </li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#quickstart-one-shot">Quickstart (one shot)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-0-factory-pre-personalize-the-applet-structure">Step 0 — factory: pre-personalize the applet structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-0-pre-personalize-the-applet-structure">Step 0 — pre-personalize the applet structure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-1-set-the-pin-and-puk">Step 1 — set the PIN and PUK</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-2-generate-keys-on-the-card">Step 2 — generate keys on the card</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-2b-import-an-external-private-key">Step 2b — import an external private key</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-3-csr-and-certificates-on-card-signing">Step 3 — CSR and certificates (on-card signing)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-4-data-objects">Step 4 — data objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-5-validate-and-smoke-test">Step 5 — validate and smoke-test</a></li>
-<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-6-finalize-irreversible-factory">Step 6 — finalize (irreversible, factory)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#step-6-finalize-irreversible">Step 6 — finalize (irreversible)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#rotating-the-piv-admin-keys">Rotating the PIV admin keys</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-personalization.html#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="piv/pre-personalization-profiles.html">Pre-personalization profiles</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="piv/pre-personalization-profiles.html#built-in-profiles">Built-in profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/pre-personalization-profiles.html#inspecting-profiles">Inspecting profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/pre-personalization-profiles.html#profile-yaml">Profile YAML</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/pre-personalization-profiles.html#applying-a-profile">Applying a profile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/pre-personalization-profiles.html#next-steps">Next steps</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a><ul>
@@ -302,6 +310,7 @@ driven by one tool: <code class="docutils literal notranslate"><span class="pre"
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#admin-channel">Admin channel</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#certificates-and-objects">Certificates and objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#attestation">Attestation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#pre-personalization-piv-perso">Pre-personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#personalization-piv-perso">Personalization (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span></code>)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="piv/piv-commands.html#notes">Notes</a></li>
 </ul>

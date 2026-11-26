@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -100,6 +100,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -151,7 +152,7 @@
              
   <section id="quick-start-a-working-piv-card">
 <h1>Quick start: a working PIV card<a class="headerlink" href="#quick-start-a-working-piv-card" title="Link to this heading"></a></h1>
-<p>This guide takes a blank (pre-personalized) Cryptnox card to a PIV credential
+<p>This guide takes a Cryptnox card as shipped to a PIV credential
 that standard tooling — <code class="docutils literal notranslate"><span class="pre">yubico-piv-tool</span></code>, OpenSC/PKCS#11 — can read, verify
 and sign with. About ten minutes, one command if you let it.</p>
 <section id="prerequisites">
@@ -180,29 +181,33 @@ warning in <a class="reference internal" href="../getting-started.html"><span cl
 </section>
 <section id="the-one-command-path">
 <h2>The one-command path<a class="headerlink" href="#the-one-command-path" title="Link to this heading"></a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># show the plan first</span>
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--include-preperso<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># show the plan first</span>
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>quickstart<span class="w"> </span>--default-keys<span class="w"> </span>--include-preperso
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code> detects the card state, then runs whatever is still needed
-of: PIN -&gt; PUK -&gt; key in slot 9C (ECC P-256, generated <strong>on-card</strong> — the private
+of: PIV structure -&gt; PIN -&gt; PUK -&gt; key in slot 9C (ECC P-256, generated <strong>on-card</strong> — the private
 key never exists outside the card) -&gt; self-signed certificate -&gt; CHUID/CCC -&gt;
 smoke-test. Steps already done are skipped, so re-runs converge. New PIN/PUK
 values come from masked prompts or <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PIN</span></code> /
 <code class="docutils literal notranslate"><span class="pre">CRYPTNOX_PIV_NEW_PUK</span></code>.</p>
-<p>On a factory-blank card that has never had its PIV structure laid down, add
-<code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code> (a manufacturing-style step, intended for development
-cards), and for a CA-issued certificate instead of a self-signed one use
-<code class="docutils literal notranslate"><span class="pre">--cert-mode</span> <span class="pre">csr</span> <span class="pre">--csr-out</span> <span class="pre">9c.csr.pem</span></code>.</p>
+<p>Cards ship with the PIV applet installed and no structure.
+<code class="docutils literal notranslate"><span class="pre">--include-preperso</span></code> lays it down from <code class="docutils literal notranslate"><span class="pre">--profile</span></code> (default
+<code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>) and is skipped on a card that already has one. The
+structure is permanent, so choose the profile for the card’s use first: for
+Windows logon use <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">ms-logon</span></code>, see
+<a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>. For a CA-issued certificate instead
+of a self-signed one use <code class="docutils literal notranslate"><span class="pre">--cert-mode</span> <span class="pre">csr</span> <span class="pre">--csr-out</span> <span class="pre">9c.csr.pem</span></code>.</p>
 </section>
 <section id="the-steps-by-hand">
 <h2>The steps, by hand<a class="headerlink" href="#the-steps-by-hand" title="Link to this heading"></a></h2>
 <p>The same sequence as individual commands — useful to understand what quickstart
 does, or to vary it.</p>
-<p><strong>Step 0 — lay down the PIV structure (once per card).</strong> If <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">status</span></code>
-reports a pre-personalized applet with no containers/verifiers:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
-<span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
+<p><strong>Step 0 — lay down the PIV structure (once per card).</strong> Cards ship
+without it; <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">inventory</span></code> lists no key objects, verifiers or containers
+until this step has run:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--dry-run
+<span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>cryptnox-default<span class="w"> </span>--default-keys
 </pre></div>
 </div>
 <p><strong>Step 1 — set the PIN and PUK</strong> (values prompted, never echoed):</p>
@@ -404,7 +409,7 @@ every write goes over SCP03 via <code class="docutils literal notranslate"><span
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="piv-personalization.html"><span class="doc">PIV personalization</span></a> — the full lifecycle, key import, finalize</p></li>
-<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — customizing the pre-personalization profile</p></li>
+<li><p><a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — customizing the pre-personalization profile</p></li>
 <li><p><a class="reference internal" href="piv-commands.html"><span class="doc">PIV commands</span></a> — every <code class="docutils literal notranslate"><span class="pre">piv</span></code> command</p></li>
 </ul>
 </section>

@@ -83,7 +83,7 @@
 <li class="toctree-l1"><a class="reference internal" href="json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -95,6 +95,7 @@
 <li class="toctree-l1"><a class="reference internal" href="piv/tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="piv/pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv/piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -179,8 +180,8 @@ guess — pass this explicitly.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code></p></td>
 <td><p>Write nothing to the card. Planning-capable commands (<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">quickstart</span></code>,
-<code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">send</span></code>/<code class="docutils literal notranslate"><span class="pre">select</span></code>/<code class="docutils literal notranslate"><span class="pre">transcript</span></code>, <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span>
-<span class="pre">load-config</span></code>/<code class="docutils literal notranslate"><span class="pre">finalize</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">import-key</span></code>/<code class="docutils literal notranslate"><span class="pre">import-p12</span></code>,
+<code class="docutils literal notranslate"><span class="pre">apdu</span> <span class="pre">send</span></code>/<code class="docutils literal notranslate"><span class="pre">select</span></code>/<code class="docutils literal notranslate"><span class="pre">transcript</span></code>, <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span>
+<span class="pre">load-config</span></code>/<code class="docutils literal notranslate"><span class="pre">finalize</span></code>/<code class="docutils literal notranslate"><span class="pre">import-key</span></code>/<code class="docutils literal notranslate"><span class="pre">import-p12</span></code>,
 <code class="docutils literal notranslate"><span class="pre">remote</span> <span class="pre">consumer-lock</span></code>) show the intended actions; read-only commands run normally; every other
 command refuses to run under the flag (fail-closed) instead of silently
 executing.</p></td>

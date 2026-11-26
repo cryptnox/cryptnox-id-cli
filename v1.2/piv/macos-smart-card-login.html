@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -102,6 +102,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -174,7 +175,7 @@ without it, nothing else in this guide will work.</p>
 <h2>How it has to look<a class="headerlink" href="#how-it-has-to-look" title="Link to this heading"></a></h2>
 <p>Same role rule as the rest of this card: the login/authentication signature
 needs a <strong>SIGN-capable</strong> slot. This guide is written and tested against
-<strong>9A</strong>, provisioned with the <strong>ssh</strong> profile (see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>)
+<strong>9A</strong>, provisioned with the <strong>ssh</strong> profile (see <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>)
 — the same key used in <a class="reference internal" href="ssh-public-key-authentication.html"><span class="doc">SSH public-key authentication</span></a>/<a class="reference internal" href="tls-client-authentication.html"><span class="doc">TLS client authentication</span></a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -187,7 +188,7 @@ breaks SSH/TLS via OpenSC — see <a class="reference internal" href="ssh-public
 <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> card, see the next section.</p>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> is one named profile among several, not necessarily
-what any given card has — check with <code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code>
+what any given card has — check with <code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">export-config</span></code>
 or whoever personalized the card. Unlike Windows AD, macOS local pairing
 doesn’t require a specific EKU or UPN in the certificate — a plain client
 certificate from <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> is enough.</p>
@@ -351,7 +352,7 @@ works normally.</p></li>
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
-<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile options for the signing slot</p></li>
+<li><p><a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile options for the signing slot</p></li>
 </ul>
 </section>
 </section>

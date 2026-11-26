@@ -79,7 +79,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../json-output.html">JSON output</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../exit-codes.html">Exit codes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory &amp; provisioning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../factory/index.html">Factory</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PIV</span></p>
@@ -104,6 +104,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tls-client-authentication.html">TLS client authentication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="macos-smart-card-login.html">macOS smart-card login</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-personalization.html">PIV personalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pre-personalization-profiles.html">Pre-personalization profiles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="piv-commands.html">Commands</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">FIDO2</span></p>
@@ -163,9 +164,9 @@ and the server authorizes it like any other public key in
 <p class="admonition-title">Note</p>
 <p>Everything below that references <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code> applies to a card
 provisioned with that specific built-in profile — one option among
-several (see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>), not necessarily what any given
+several (see <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>), not necessarily what any given
 card actually has. Check which profile your card was provisioned with
-(<code class="docutils literal notranslate"><span class="pre">factory</span> <span class="pre">piv</span> <span class="pre">preperso</span> <span class="pre">export-config</span></code>, or ask whoever personalized it)
+(<code class="docutils literal notranslate"><span class="pre">piv</span> <span class="pre">perso</span> <span class="pre">export-config</span></code>, or ask whoever personalized it)
 before assuming this section applies to you.</p>
 </div>
 <div class="admonition warning">
@@ -187,7 +188,7 @@ below). 9A (PIV Authentication) is <code class="docutils literal notranslate"><s
 profile change before it can be used — the built-in <strong>ssh</strong> profile changes
 only 9A’s role (no extra objects, unlike <strong>ms-logon</strong>, which also adds
 <code class="docutils literal notranslate"><span class="pre">SIGN+AUTHENTICATE</span></code> to 9A but includes an importable RSA-2048 object for
-AD-issued credentials you don’t need here) — see <a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>
+AD-issued credentials you don’t need here) — see <a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a>
 and <a class="reference internal" href="#fixing-it-give-9a-the-sign-role">Fixing it: give 9A the SIGN role</a>.</p>
 <p>This guide’s steps below use whichever slot has your key + certificate —
 <a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> puts them on 9C by default, which per the warning
@@ -233,7 +234,7 @@ contactless-only reader (see Prerequisites below).</p>
 <p>You don’t need the full <code class="docutils literal notranslate"><span class="pre">ms-logon</span></code> profile for this — the built-in <code class="docutils literal notranslate"><span class="pre">ssh</span></code>
 profile changes only 9A’s <code class="docutils literal notranslate"><span class="pre">role</span></code> (<code class="docutils literal notranslate"><span class="pre">AUTHENTICATE</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">AUTHENTICATE,</span>
 <span class="pre">SIGN</span></code>); everything else is identical to <code class="docutils literal notranslate"><span class="pre">cryptnox-default</span></code>. See
-<a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> for the full built-in profile list.</p>
+<a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> for the full built-in profile list.</p>
 <p>The profile applies at <strong>pre-personalization</strong>: it sets the key’s role at
 the structural level, and an existing key object keeps its role. If your card
 already has a different profile applied (e.g. it already went through
@@ -267,7 +268,7 @@ while <code class="docutils literal notranslate"><span class="pre">piv</span> <s
 Nothing is wrong with the card and the PIN you set is kept: move the card
 to a contact reader and continue from <code class="docutils literal notranslate"><span class="pre">self-sign-cert</span></code>.</p>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>factory<span class="w"> </span>piv<span class="w"> </span>preperso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ssh<span class="w"> </span>--default-keys
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>load-config<span class="w"> </span>--profile<span class="w"> </span>ssh<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-puk<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>set-pin<span class="w"> </span>--default-keys
 <span class="gp">$ </span>cryptnox-id<span class="w"> </span>piv<span class="w"> </span>perso<span class="w"> </span>generate-key<span class="w"> </span>--slot<span class="w"> </span>9A<span class="w"> </span>--algorithm<span class="w"> </span>ECCP256<span class="w"> </span><span class="se">\</span>
@@ -398,7 +399,7 @@ see Prerequisites.</p></li>
 <h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="quick-start-a-working-piv-card.html"><span class="doc">Quick start: a working PIV card</span></a> — provision the key and certificate this guide builds on</p></li>
-<li><p><a class="reference internal" href="../factory/pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile YAML grammar (role, access mode, mechanisms)</p></li>
+<li><p><a class="reference internal" href="pre-personalization-profiles.html"><span class="doc">Pre-personalization profiles</span></a> — profile YAML grammar (role, access mode, mechanisms)</p></li>
 </ul>
 </section>
 </section>
