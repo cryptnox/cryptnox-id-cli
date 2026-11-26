@@ -25,6 +25,9 @@ from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
 from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
 from cryptnox_id_cli.cli.commands.piv.perso import keys as piv_perso
+from cryptnox_id_cli.cli.commands.piv.quickstart import plan as quickstart_plan
+from cryptnox_id_cli.cli.commands.piv.quickstart import preflight as quickstart_preflight
+from cryptnox_id_cli.cli.commands.piv.quickstart import steps as quickstart_steps
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.transport.apdu import Response
@@ -412,7 +415,7 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
         digest_alg = utils.Prehashed(keyimport.digest_for_mechanism(mech))
         return build(lambda digest: rsa_key.sign(digest, padding.PKCS1v15(), digest_alg))
 
-    facts = piv_quickstart.CardFacts(
+    facts = quickstart_plan.CardFacts(
         pin_configured=True,
         puk_configured=True,
         structure_present=True,
@@ -426,9 +429,9 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
     monkeypatch.setattr(
         piv_quickstart, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x")
     )
-    monkeypatch.setattr(piv_quickstart, "_select", lambda s: object())
+    monkeypatch.setattr(quickstart_preflight, "_select", lambda s: object())
     accept_any_pin(monkeypatch)
-    monkeypatch.setattr(piv_quickstart, "_sign_with_session", sign_off_card)
+    monkeypatch.setattr(quickstart_steps, "_sign_with_session", sign_off_card)
     monkeypatch.setenv("PIV_MGMT_KEY", KEY256.hex())
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):

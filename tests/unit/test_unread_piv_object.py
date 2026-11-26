@@ -15,7 +15,7 @@ from test_piv_preperso_commands import PivAdminCard
 from test_quickstart import OPTS, _facts
 from test_state_detector import APT, SELECT_PIV
 
-from cryptnox_id_cli.cli.commands.piv.quickstart import _plan_quickstart
+from cryptnox_id_cli.cli.commands.piv.quickstart.plan import _plan_quickstart
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.errors import CryptnoxError, TransportError
 

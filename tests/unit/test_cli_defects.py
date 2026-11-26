@@ -128,7 +128,7 @@ def test_the_public_zero_key_is_not_redacted(monkeypatch):
 
 
 def _done_slot_facts():
-    from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv.quickstart import plan as piv_cmd
 
     return piv_cmd.CardFacts(
         pin_configured=True,
@@ -146,6 +146,7 @@ def _wire_quickstart(monkeypatch, cert_der: bytes | None = None):
     import contextlib
 
     from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv.quickstart import preflight, steps
     from cryptnox_id_cli.cli.context import AppContext
 
     @contextlib.contextmanager
@@ -156,11 +157,12 @@ def _wire_quickstart(monkeypatch, cert_der: bytes | None = None):
     monkeypatch.setattr(
         piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (_done_slot_facts(), "x")
     )
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
+    monkeypatch.setattr(preflight, "_select", lambda s: object())
+    monkeypatch.setattr(steps, "_select", lambda s: object())
     accept_any_pin(monkeypatch)
-    monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: cert_der)
+    monkeypatch.setattr(steps, "_read_cert_der", lambda piv, name: cert_der)
     monkeypatch.setattr(
-        piv_cmd, "_sign_with_session", lambda session, ref, mech, pin, build: b"\x00" * 64
+        steps, "_sign_with_session", lambda session, ref, mech, pin, build: b"\x00" * 64
     )
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
 

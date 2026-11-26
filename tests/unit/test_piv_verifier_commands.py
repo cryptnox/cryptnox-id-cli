@@ -28,6 +28,8 @@ from cryptnox_id_cli.applets.piv.verifier import PIN, Op, Outcome, Verdict
 from cryptnox_id_cli.cli.commands import piv as piv_group
 from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
 from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
+from cryptnox_id_cli.cli.commands.piv.quickstart import preflight as quickstart_preflight
+from cryptnox_id_cli.cli.commands.piv.quickstart import steps as quickstart_steps
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.pcsc import CardSession
 
@@ -216,9 +218,9 @@ def test_quickstart_pre_flight_names_the_cause(monkeypatch, mock_connection, sta
     monkeypatch.setattr(
         piv_quickstart, "_collect_quickstart_facts", lambda s, ref, mech: (_facts(), "x")
     )
-    monkeypatch.setattr(piv_quickstart, "_select", PivApplet)
+    monkeypatch.setattr(quickstart_preflight, "_select", PivApplet)
     monkeypatch.setattr(
-        piv_quickstart,
+        quickstart_steps,
         "_set_verifier",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
     )

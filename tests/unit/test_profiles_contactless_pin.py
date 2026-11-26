@@ -23,6 +23,7 @@ from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles
 from cryptnox_id_cli.cli.commands.piv import preperso as preperso_cmd
 from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
+from cryptnox_id_cli.cli.commands.piv.quickstart import plan as quickstart_plan
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.apdu import Response
 
@@ -252,7 +253,7 @@ def test_the_build_with_fips_mode_off_takes_the_profile(card):
 # --------------------------------------------------------------------------- #
 # quickstart                                                                  #
 # --------------------------------------------------------------------------- #
-BLANK = piv_cmd.CardFacts(
+BLANK = quickstart_plan.CardFacts(
     pin_configured=False,
     puk_configured=False,
     structure_present=False,
