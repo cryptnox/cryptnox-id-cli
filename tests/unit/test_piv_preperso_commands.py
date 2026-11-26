@@ -12,7 +12,7 @@ from _cardfakes import ResponseAdapter, fake_tty, run, wire_session
 from test_scp03 import GP_KEY, FakeScp03Card
 from test_state_detector import APT, GET_STATUS, SELECT_PIV
 
-from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
+from cryptnox_id_cli.cli.commands.piv import preperso as preperso_cmd
 from cryptnox_id_cli.transport.apdu import Response
 from cryptnox_id_cli.transport.scp03 import Scp03Keys
 

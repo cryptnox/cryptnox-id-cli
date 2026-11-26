@@ -26,9 +26,6 @@ from cryptnox_id_cli.applets.piv.ssd import (
     SecurityDomainInfo,
     describe_security_domain,
 )
-from cryptnox_id_cli.cli.commands.piv import (
-    _refuse_on_fips_mode_build,
-)
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.secrets.resolver import (
     resolve_mgmt_key,
@@ -37,6 +34,8 @@ from cryptnox_id_cli.secrets.resolver import (
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.state.model import PivState
 from cryptnox_id_cli.transport.errors import CryptnoxError, StatusWordError
+
+from .primitives import _refuse_on_fips_mode_build
 
 
 def _probe_mgmt_key(session: object) -> dict[str, object] | None:

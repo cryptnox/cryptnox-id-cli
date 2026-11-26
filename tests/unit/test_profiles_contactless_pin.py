@@ -21,8 +21,8 @@ from _cardfakes import run, wire_session
 from cryptnox_id_cli.applets.piv import perso as perso_mod
 from cryptnox_id_cli.applets.piv import preperso as pp
 from cryptnox_id_cli.applets.piv import profiles
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
-from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
+from cryptnox_id_cli.cli.commands.piv import preperso as preperso_cmd
+from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.transport.apdu import Response
 

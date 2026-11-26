@@ -12,7 +12,8 @@ from click.testing import CliRunner
 
 from cryptnox_id_cli.applets.piv.piv import PivApplet
 from cryptnox_id_cli.cli.commands import piv as piv_cmd
-from cryptnox_id_cli.cli.commands.piv import (
+from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
+from cryptnox_id_cli.cli.commands.piv.quickstart import (
     CardFacts,
     PlannedStep,
     QuickstartOptions,
@@ -195,7 +196,7 @@ def _invoke(args, monkeypatch=None, facts=None, state="PivPrePersonalized"):
 
         monkeypatch.setattr(AppContext, "open_session", lambda self: _DummySession())
         monkeypatch.setattr(
-            piv_cmd, "_collect_quickstart_facts", lambda session, ref, mech: (facts, state)
+            piv_quickstart, "_collect_quickstart_facts", lambda session, ref, mech: (facts, state)
         )
     return CliRunner().invoke(piv_cmd.command, args, obj=AppContext(json=True))
 
@@ -237,7 +238,7 @@ def _invoke_capturing_mechanism(args, monkeypatch, facts=None, state="PivPrePers
         return facts, state
 
     monkeypatch.setattr(AppContext, "open_session", lambda self: _DummySession())
-    monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", _spy)
+    monkeypatch.setattr(piv_quickstart, "_collect_quickstart_facts", _spy)
     result = CliRunner().invoke(piv_cmd.command, args, obj=AppContext(json=True))
     return result, seen
 
@@ -396,7 +397,7 @@ def test_facts_distinguish_a_missing_object_from_a_missing_structure(mock_connec
     """A 9A ECC object and a PIN verifier exist; RSA-2048 on 9A does not. That is
     'structure present, object missing', which must not be read as 'no structure'."""
     from cryptnox_id_cli.applets.piv import inventory as inv
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     exchanges = {
         _ext(inv.ID_KEY): f"{KEY_9A_ECC}|9000",
@@ -418,7 +419,7 @@ def test_facts_distinguish_a_missing_object_from_a_missing_structure(mock_connec
     ids=["unknown-answer", "probe-failed"],
 )
 def test_facts_refuse_a_verifier_the_probe_left_unknown(mock_connection, puk, deny, reason):
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     exchanges = {SELECT_PIV: f"{APT}|9000", "00200080": "|63C3"}
     if puk:
@@ -432,7 +433,7 @@ def test_facts_refuse_a_verifier_the_probe_left_unknown(mock_connection, puk, de
 
 
 def test_facts_count_more_than_fifteen_tries_as_unset(mock_connection):
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     exchanges = {"00200080": "|63D4", "00200081": "|63D4"}
     facts, state = _collect_quickstart_facts(_session(mock_connection, exchanges), 0x9C, 0x11)
@@ -441,7 +442,7 @@ def test_facts_count_more_than_fifteen_tries_as_unset(mock_connection):
 
 
 def test_facts_without_any_listed_object_mean_no_structure(mock_connection):
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     facts, _ = _collect_quickstart_facts(_session(mock_connection, {}), 0x9C, 0x11)
     assert facts.structure_present is False
@@ -453,7 +454,7 @@ def test_facts_fall_back_to_the_probe_when_the_listing_is_withheld(mock_connecti
     probe decides again, as it did before the listing existed."""
     from cryptnox_id_cli.applets.piv import inventory as inv
     from cryptnox_id_cli.applets.piv import keyimport
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     probe = keyimport.probe_apdu(0x9C, 0x11).to_bytes().hex().upper()
     withheld = {_ext(inv.ID_KEY): "|6986", _ext(inv.ID_VERIFIER): "|6986"}
@@ -470,7 +471,7 @@ def test_facts_fall_back_to_the_probe_when_the_listing_is_withheld(mock_connecti
 def test_facts_read_whether_the_key_signs(mock_connection):
     """9A holds an AUTHENTICATE-only ECC key and a SIGN+AUTHENTICATE RSA key."""
     from cryptnox_id_cli.applets.piv import inventory as inv
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     key_9a_rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
     exchanges = {
@@ -489,7 +490,7 @@ def test_facts_read_whether_the_key_signs(mock_connection):
 def test_facts_leave_the_role_unknown_when_the_listing_is_withheld(mock_connection):
     from cryptnox_id_cli.applets.piv import inventory as inv
     from cryptnox_id_cli.applets.piv import keyimport
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     probe = keyimport.probe_apdu(0x9A, 0x11).to_bytes().hex().upper()
     withheld = {_ext(inv.ID_KEY): "|6986", _ext(inv.ID_VERIFIER): "|6986", probe: "|6982"}
@@ -499,7 +500,7 @@ def test_facts_leave_the_role_unknown_when_the_listing_is_withheld(mock_connecti
 
 def test_facts_carry_the_finalized_state(mock_connection):
     from cryptnox_id_cli.applets.piv import inventory as inv
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     secured = "531880010F8101008201008301008401008501008601008701FF"
     exchanges = {_ext(inv.ID_KEY): f"{KEY_9A_ECC}|9000", _ext(inv.ID_STATUS): f"{secured}|9000"}
@@ -543,7 +544,7 @@ def test_facts_judge_the_certificate_by_its_key(mock_connection, ecc_role, repla
     """The 9A certificate is for the ECC key. Working on the RSA object, it counts as
     present unless that ECC key cannot sign (the repair case, where it is replaced)."""
     from cryptnox_id_cli.applets.piv import inventory as inv
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     ecc = KEY_9A_ECC.replace("8F0101", f"8F01{ecc_role}")
     rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
@@ -564,7 +565,7 @@ def test_facts_treat_a_certificate_for_a_missing_key_as_replaceable(mock_connect
     """The 9A certificate is ECC P-256, but 9A holds only an RSA object: the certificate
     belongs to no key on the card, so quickstart may replace it."""
     from cryptnox_id_cli.applets.piv import inventory as inv
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     rsa_sign = KEY_9A_ECC.replace("8E01118F0101", "8E01078F0105")
     exchanges = {
@@ -579,7 +580,7 @@ def test_facts_treat_a_certificate_for_a_missing_key_as_replaceable(mock_connect
 def test_facts_with_a_withheld_listing_never_call_a_certificate_replaceable(mock_connection):
     from cryptnox_id_cli.applets.piv import inventory as inv
     from cryptnox_id_cli.applets.piv import keyimport
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     probe = keyimport.probe_apdu(0x9A, 0x07).to_bytes().hex().upper()
     exchanges = {
@@ -639,9 +640,9 @@ def _pre_flight(monkeypatch, sw: int):
         seen.append(empty)
         raise CryptnoxError("stop after the pre-flight")
 
-    monkeypatch.setattr(piv_cmd, "_apply_pin_truth", stop)
+    monkeypatch.setattr(piv_quickstart, "_apply_pin_truth", stop)
     monkeypatch.setattr(
-        piv_cmd,
+        piv_quickstart,
         "_set_verifier",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("write reached the card")),
     )
@@ -659,9 +660,9 @@ def _quickstart(monkeypatch, conn, facts: CardFacts, *args: str, yes: bool = Tru
 
     monkeypatch.setattr(AppContext, "open_session", open_session)
     monkeypatch.setattr(
-        piv_cmd, "_collect_quickstart_facts", lambda session, ref, mech: (facts, "PivState")
+        piv_quickstart, "_collect_quickstart_facts", lambda session, ref, mech: (facts, "PivState")
     )
-    monkeypatch.setattr(piv_cmd, "_select", PivApplet)
+    monkeypatch.setattr(piv_quickstart, "_select", PivApplet)
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "999999")
     return CliRunner().invoke(
         piv_cmd.command,
@@ -781,7 +782,7 @@ def test_apply_pin_truth_never_unflips_a_planned_step():
 def test_facts_with_a_withheld_listing_replace_a_certificate_whose_key_is_absent(mock_connection):
     from cryptnox_id_cli.applets.piv import inventory as inv
     from cryptnox_id_cli.applets.piv import keyimport
-    from cryptnox_id_cli.cli.commands.piv import _collect_quickstart_facts
+    from cryptnox_id_cli.cli.commands.piv.quickstart import _collect_quickstart_facts
 
     probe = keyimport.probe_apdu(0x9A, 0x11).to_bytes().hex().upper()
     exchanges = {

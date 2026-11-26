@@ -28,11 +28,8 @@ from cryptnox_id_cli.applets.piv.ssd import (
     put_key_apdu,
 )
 from cryptnox_id_cli.cli.commands.info import _read_cplc
-from cryptnox_id_cli.cli.commands.piv import (
-    _key_encryption_key,
-    _open_domain_channel,
-    preperso_moved,
-)
+from cryptnox_id_cli.cli.commands.piv.admin import _key_encryption_key, _open_domain_channel
+from cryptnox_id_cli.cli.commands.piv.perso import preperso_moved
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.secrets.resolver import (
     CARD_MANAGER_KEY_ENVS,

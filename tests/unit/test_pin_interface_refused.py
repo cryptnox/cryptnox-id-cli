@@ -19,7 +19,7 @@ import pytest
 
 from cryptnox_id_cli.applets.piv import verifier
 from cryptnox_id_cli.applets.piv.piv import PivApplet
-from cryptnox_id_cli.cli.commands.piv import _sign_with_session
+from cryptnox_id_cli.cli.commands.piv.primitives import _sign_with_session
 from cryptnox_id_cli.state import StateDetector
 from cryptnox_id_cli.state.model import PivState
 from cryptnox_id_cli.transport.errors import CryptnoxError

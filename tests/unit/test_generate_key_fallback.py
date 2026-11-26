@@ -22,7 +22,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from cryptnox_id_cli.applets.piv import mgmt_auth as ma
 from cryptnox_id_cli.applets.piv import perso as perso_mod
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import quickstart as piv_quickstart
+from cryptnox_id_cli.cli.commands.piv.perso import keys as piv_perso
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.transport.apdu import Response
@@ -292,9 +294,9 @@ def test_the_json_payload_reports_the_path_and_the_management_key(template, monk
         yield session
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: None)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", lambda s: adm)
+    monkeypatch.setattr(piv_perso, "_select", lambda s: object())
+    monkeypatch.setattr(piv_perso, "_read_cert_der", lambda piv, name: None)
+    monkeypatch.setattr(piv_perso, "PivAdmin", lambda s: adm)
     for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):
         monkeypatch.setenv(var, "40" * 16)  # the admin channel is stubbed out anyway
 
@@ -321,9 +323,9 @@ def test_the_exit_code_for_a_management_key_failure_is_seven(template, monkeypat
 
     monkeypatch.setenv("PIV_MGMT_KEY", KEY256.hex())
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
-    monkeypatch.setattr(piv_cmd, "_read_cert_der", lambda piv, name: None)
-    monkeypatch.setattr(piv_cmd, "PivAdmin", lambda s: adm)
+    monkeypatch.setattr(piv_perso, "_select", lambda s: object())
+    monkeypatch.setattr(piv_perso, "_read_cert_der", lambda piv, name: None)
+    monkeypatch.setattr(piv_perso, "PivAdmin", lambda s: adm)
     for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):
         monkeypatch.setenv(var, "40" * 16)  # the admin channel is stubbed out anyway
 
@@ -410,7 +412,7 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
         digest_alg = utils.Prehashed(keyimport.digest_for_mechanism(mech))
         return build(lambda digest: rsa_key.sign(digest, padding.PKCS1v15(), digest_alg))
 
-    facts = piv_cmd.CardFacts(
+    facts = piv_quickstart.CardFacts(
         pin_configured=True,
         puk_configured=True,
         structure_present=True,
@@ -421,10 +423,12 @@ def test_quickstart_reopens_the_admin_channel_after_the_fallback(template, rsa_k
     )
     monkeypatch.setattr(AppContext, "open_session", fake_session)
     monkeypatch.setattr(PivAdmin, "open", open_channel)
-    monkeypatch.setattr(piv_cmd, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x"))
-    monkeypatch.setattr(piv_cmd, "_select", lambda s: object())
+    monkeypatch.setattr(
+        piv_quickstart, "_collect_quickstart_facts", lambda s, ref, mech: (facts, "x")
+    )
+    monkeypatch.setattr(piv_quickstart, "_select", lambda s: object())
     accept_any_pin(monkeypatch)
-    monkeypatch.setattr(piv_cmd, "_sign_with_session", sign_off_card)
+    monkeypatch.setattr(piv_quickstart, "_sign_with_session", sign_off_card)
     monkeypatch.setenv("PIV_MGMT_KEY", KEY256.hex())
     monkeypatch.setenv("CRYPTNOX_PIV_PIN", "123456")
     for var in ("PIV_SCP03_ENC", "PIV_SCP03_MAC", "PIV_SCP03_DEK"):

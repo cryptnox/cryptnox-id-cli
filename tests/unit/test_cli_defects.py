@@ -79,7 +79,7 @@ def test_load_spki_takes_der_and_refuses_junk(tmp_path):
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ec
 
-    from cryptnox_id_cli.cli.commands import piv as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv.perso import certificates as piv_cmd
 
     public = ec.generate_private_key(ec.SECP256R1()).public_key()
     der = public.public_bytes(
@@ -107,7 +107,7 @@ def test_cplc_serial_with_short_and_long_form_length(raw, serial):
 
 
 def test_objects_read_out_is_private(tmp_path):
-    from cryptnox_id_cli.cli.commands import piv as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv import objects as piv_cmd
 
     path = tmp_path / "obj.bin"
     piv_cmd._write_private(str(path), b"data")
@@ -128,7 +128,7 @@ def test_the_public_zero_key_is_not_redacted(monkeypatch):
 
 
 def _done_slot_facts():
-    from cryptnox_id_cli.cli.commands import piv as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
 
     return piv_cmd.CardFacts(
         pin_configured=True,
@@ -145,7 +145,7 @@ def _done_slot_facts():
 def _wire_quickstart(monkeypatch, cert_der: bytes | None = None):
     import contextlib
 
-    from cryptnox_id_cli.cli.commands import piv as piv_cmd
+    from cryptnox_id_cli.cli.commands.piv import quickstart as piv_cmd
     from cryptnox_id_cli.cli.context import AppContext
 
     @contextlib.contextmanager

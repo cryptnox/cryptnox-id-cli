@@ -16,7 +16,8 @@ import contextlib
 from click.testing import CliRunner
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv.perso import keys as piv_perso
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 
@@ -30,9 +31,9 @@ def _wire(monkeypatch, *, cert_present: bool):
         yield object()
 
     monkeypatch.setattr(AppContext, "open_session", fake_session)
-    monkeypatch.setattr(piv_cmd, "_select", lambda session: object())
+    monkeypatch.setattr(piv_perso, "_select", lambda session: object())
     monkeypatch.setattr(
-        piv_cmd, "_read_cert_der", lambda piv, name: b"\x30\x03" if cert_present else None
+        piv_perso, "_read_cert_der", lambda piv, name: b"\x30\x03" if cert_present else None
     )
 
     def fake_generate(app, adm, keys, ref, mech, *, label, default_keys=False):
@@ -40,7 +41,7 @@ def _wire(monkeypatch, *, cert_present: bool):
         public_key = ec.generate_private_key(ec.SECP256R1()).public_key()
         return piv_cmd.GeneratedKey(public_key, "admin-channel", None)
 
-    monkeypatch.setattr(piv_cmd, "_generate_key_on_card", fake_generate)
+    monkeypatch.setattr(piv_perso, "_generate_key_on_card", fake_generate)
     return calls
 
 

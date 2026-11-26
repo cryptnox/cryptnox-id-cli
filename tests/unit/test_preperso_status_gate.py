@@ -9,7 +9,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from cryptnox_id_cli.cli.commands import piv_preperso as preperso_cmd
+from cryptnox_id_cli.cli.commands.piv import preperso as preperso_cmd
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.state.model import PivState

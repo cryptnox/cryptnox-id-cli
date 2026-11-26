@@ -20,7 +20,8 @@ from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 from cryptography.x509.oid import NameOID
 
 from cryptnox_id_cli.applets.piv import perso as perso_mod
-from cryptnox_id_cli.cli.commands import piv as piv_cmd
+from cryptnox_id_cli.cli.commands.piv import primitives as piv_cmd
+from cryptnox_id_cli.cli.commands.piv.perso import certificates as piv_perso
 from cryptnox_id_cli.cli.context import AppContext
 from cryptnox_id_cli.cli.main import main as root
 from cryptnox_id_cli.secrets.redaction import Redactor
@@ -124,7 +125,7 @@ def _wire(monkeypatch, session: _Session, *, imported: list) -> None:
     monkeypatch.setattr(AppContext, "open_session", open_session)
     monkeypatch.setattr(piv_cmd, "_select", _Piv)
     monkeypatch.setattr(
-        piv_cmd,
+        piv_perso,
         "_import_cert_der",
         lambda adm, keys, ref, der, *, label: (imported.append(der), Response(b"", 0x90, 0x00))[1],
     )
@@ -261,7 +262,9 @@ def test_human_output_lists_the_checks_made(monkeypatch, files):
 def test_human_output_for_a_refused_import(monkeypatch, files):
     _wire(monkeypatch, _Session(), imported=[])
     monkeypatch.setattr(
-        piv_cmd, "_import_cert_der", lambda adm, keys, ref, der, *, label: Response(b"", 0x6A, 0x84)
+        piv_perso,
+        "_import_cert_der",
+        lambda adm, keys, ref, der, *, label: Response(b"", 0x6A, 0x84),
     )
     args = ["--slot", "9A", "--cert", files["cert"], "--default-keys"]
     result = CliRunner().invoke(root, ["piv", "perso", "import-cert", *args])
