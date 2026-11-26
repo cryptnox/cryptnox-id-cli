@@ -1,0 +1,133 @@
+/* Width matches cryptnox-cli: that site keeps the sphinx_rtd_theme default
+   content column (800px) — no override here either.
+
+   What it fixes instead: the theme forces `white-space: nowrap` on responsive-
+   table cells, which is what pushes wide tables into a horizontal scrollbar.
+   Let cells wrap normally so tables fold within the column. */
+
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
+
+/* Nav header — same as docs.cryptnox.com/cryptnox-cli */
+/* Project name text color */
+.wy-side-nav-search > a,
+.wy-side-nav-search .wy-dropdown > a {
+    color: #fcb770;
+}
+
+/* Home icon color */
+.wy-side-nav-search .icon::before,
+.wy-side-nav-search .fa-home::before {
+    color: #fcb770;
+}
+
+/* Logo size - 80% of original */
+.wy-side-nav-search .wy-dropdown > a img.logo,
+.wy-side-nav-search > a img.logo {
+    width: 80%;
+    height: auto;
+}
+
+/* Home icon color in breadcrumbs/content area */
+.wy-breadcrumbs li a .fa-home::before,
+.wy-breadcrumbs li a .icon-home::before,
+.wy-breadcrumbs .fa-home,
+.wy-breadcrumbs .icon-home {
+    color: #fcb770;
+}
+
+/* Menu list hover - white text */
+.wy-menu-vertical a:hover {
+    color: #ffffff !important;
+    background: #fcb770 !important;
+}
+
+.wy-menu-vertical li.current a:hover {
+    color: #ffffff !important;
+    background: #fcb770 !important;
+}
+
+.wy-menu-vertical li.current > a:hover {
+    color: #ffffff !important;
+    background: #fcb770 !important;
+}
+
+/* Version selector (same styling as the cryptnox-hardware-wallet docs) */
+#version-selector-container {
+    margin-bottom: .4em;
+    padding: 4px 10px 10px;
+}
+
+.version-dropdown {
+    position: relative;
+    width: 80%;
+    margin: 0 auto;
+}
+
+.version-dropdown-btn {
+    width: 100%;
+    padding: 5px 10px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fcfcfc;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+.version-dropdown-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.version-caret {
+    font-size: 10px;
+    position: absolute;
+    right: 10px;
+}
+
+.version-dropdown-list {
+    display: none;
+    position: fixed;
+    background-color: #0d1a26;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    z-index: 9999;
+}
+
+.version-dropdown-list.open {
+    display: block;
+}
+
+.version-option {
+    padding: 7px 10px;
+    color: #d0d8e0;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+}
+
+.version-option:hover {
+    background-color: #fcb770;
+    color: #101f2e;
+}
+
+.version-option.selected {
+    font-weight: bold;
+    color: #fcfcfc;
+    background-color: rgba(252, 183, 112, 0.15);
+}
+
+/* Hide the theme's rst-versions flyout; the dropdown replaces it */
+.rst-versions {
+    display: none !important;
+}
